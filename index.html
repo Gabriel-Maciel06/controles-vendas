@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Vendas Maciel</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Boxicons for Icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <i class='bx bx-trending-up logo-icon'></i>
+                <span class="logo-text" style="font-size: 1.1rem">Controle Vendas Maciel</span>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#sales" class="nav-item active" data-target="sales">
+                    <i class='bx bx-grid-alt'></i>
+                    <span>Painel de Vendas</span>
+                </a>
+                <a href="#calendar" class="nav-item" data-target="calendar">
+                    <i class='bx bx-calendar'></i>
+                    <span>Calendário</span>
+                </a>
+                <a href="#crm" class="nav-item" data-target="crm">
+                    <i class='bx bx-user-circle'></i>
+                    <span>CRM / Relacionamento</span>
+                </a>
+                <a href="#samples" class="nav-item" data-target="samples">
+                    <i class='bx bx-box'></i>
+                    <span>Gestão de Amostras</span>
+                </a>
+                <a href="#reminders" class="nav-item" data-target="reminders">
+                    <i class='bx bx-check-square'></i>
+                    <span>Lembretes</span>
+                </a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">VP</div>
+                <div class="user-info">
+                    <span class="user-name">Vendedor</span>
+                    <span class="user-role">Comercial</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Topbar (Optional, can hold search/notifications) -->
+            <header class="topbar">
+                <div class="page-title">
+                    <h1 id="current-page-title">Painel de Vendas</h1>
+                </div>
+                <div class="topbar-actions">
+                    <div style="position: relative;">
+                        <button id="btn-notifications" class="icon-btn"><i class='bx bx-bell'></i><span
+                                class="badge-dot" id="notif-dot"></span></button>
+                        <div id="notifications-panel" class="dropdown-panel hidden">
+                            <div class="dropdown-header">
+                                <h3>Notificações</h3>
+                            </div>
+                            <div id="notifications-list" class="dropdown-body">
+                                <!-- Rendered via JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-settings" class="icon-btn"><i class='bx bx-cog'></i></button>
+                </div>
+            </header>
+
+            <!-- Settings Modal -->
+            <div id="settings-modal" class="modal-overlay hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Configurações do Sistema</h2>
+                        <button id="btn-close-settings" class="icon-btn"><i class='bx bx-x'></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <section class="settings-section">
+                            <h3>Regras de Comissão (Fixo em R$)</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Google</label>
+                                    <input type="number" id="setting-google" value="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Reativação</label>
+                                    <input type="number" id="setting-reativacao" value="100">
+                                </div>
+                                <div class="form-group">
+                                    <label>Introdução</label>
+                                    <input type="number" id="setting-introducao" value="25">
+                                </div>
+                            </div>
+                        </section>
+                        <section class="settings-section">
+                            <h3>Gestão de Dados</h3>
+                            <button id="btn-export-data" class="btn btn-primary"><i class='bx bx-download'></i> Exportar
+                                Backup</button>
+                            <button id="btn-clear-data" class="btn btn-outline"
+                                style="color:var(--danger); border-color:var(--danger);"><i class='bx bx-trash'></i>
+                                Apagar Tudo</button>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Views Container -->
+            <div class="views-container">
+                <!-- View: Sales Dashboard -->
+                <section id="view-sales" class="view-section active">
+                    <!-- KPI Cards Row -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="color: var(--primary); background: var(--primary-light);"><i
+                                    class='bx bx-search-alt'></i></div>
+                            <div class="kpi-info">
+                                <h3>Google</h3>
+                                <p id="kpi-google-count">0</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="color: var(--accent); background: rgba(16, 185, 129, 0.15);"><i
+                                    class='bx bx-user-check'></i></div>
+                            <div class="kpi-info">
+                                <h3>Reativação</h3>
+                                <p id="kpi-reativacao-count">0</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="color: var(--warning); background: rgba(245, 158, 11, 0.15);">
+                                <i class='bx bx-star'></i>
+                            </div>
+                            <div class="kpi-info">
+                                <h3>Introdução</h3>
+                                <p id="kpi-introducao-count">0</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card highlight">
+                            <div class="kpi-icon"><i class='bx bx-money'></i></div>
+                            <div class="kpi-info">
+                                <h3>Comissão Total</h3>
+                                <p id="kpi-total-commission">R$ 0,00</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <!-- Form Column -->
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>Registrar Venda</h2>
+                            </div>
+                            <form id="sales-form" class="app-form">
+                                <div class="form-group">
+                                    <label for="sale-client">Nome do Cliente</label>
+                                    <input type="text" id="sale-client" required placeholder="Ex: Mercado Silva">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="sale-type">Tipo de Venda</label>
+                                        <select id="sale-type" required>
+                                            <option value="">Selecione...</option>
+                                            <option value="Google">Google (Novo Cntto)</option>
+                                            <option value="Reativacao">Reativação</option>
+                                            <option value="Introducao">Introdução de Produto</option>
+                                            <option value="Normal">Venda Normal / Carteira</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="sale-boxes">Caixas 20056 (Qtd)</label>
+                                        <input type="number" id="sale-boxes" min="0" value="0">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="sale-date">Data da Venda</label>
+                                        <input type="date" id="sale-date" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="sale-faturamento">Data Prev. Faturamento</label>
+                                        <input type="date" id="sale-faturamento" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sale-value">Valor Faturado (R$)</label>
+                                    <input type="number" id="sale-value" step="0.01" min="0" required
+                                        placeholder="0.00">
+                                </div>
+
+                                <button type="submit" class="btn btn-primary"><i class='bx bx-plus'></i> Registrar
+                                    Venda</button>
+                            </form>
+                        </div>
+
+                        <!-- Table Column -->
+                        <div class="panel list-panel">
+                            <div class="panel-header">
+                                <h2>Vendas Recentes</h2>
+                                <button class="btn btn-sm btn-outline" onclick="SalesModule.loadSales()"><i
+                                        class='bx bx-refresh'></i></button>
+                            </div>
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Tipo</th>
+                                            <th>Valor</th>
+                                            <th>Comissão</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sales-table-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Calendar -->
+                <section id="view-calendar" class="view-section hidden">
+                    <div class="panel list-panel">
+                        <div class="panel-header">
+                            <h2 id="calendar-title">Próximos Faturamentos e Follow-ups</h2>
+                            <div class="topbar-actions">
+                                <button id="btn-prev-month" class="btn btn-sm btn-outline hidden"
+                                    title="Mês Anterior"><i class='bx bx-chevron-left'></i></button>
+                                <button id="btn-next-month" class="btn btn-sm btn-outline hidden" title="Próximo Mês"><i
+                                        class='bx bx-chevron-right'></i></button>
+                                <button id="btn-toggle-calendar" class="btn btn-sm btn-outline"
+                                    title="Alternar Visualização"><i class='bx bx-calendar'></i></button>
+                            </div>
+                        </div>
+                        <div id="calendar-list-container" class="table-container">
+                            <table class="app-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Cliente</th>
+                                        <th>Tipo Evento</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendar-table-body">
+                                    <!-- Rendered via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Grid Container (Hidden by default) -->
+                        <div id="calendar-grid-container" class="calendar-grid-container hidden">
+                            <div class="calendar-days-header">
+                                <div>Dom</div>
+                                <div>Seg</div>
+                                <div>Ter</div>
+                                <div>Qua</div>
+                                <div>Qui</div>
+                                <div>Sex</div>
+                                <div>Sáb</div>
+                            </div>
+                            <div id="calendar-grid" class="calendar-grid">
+                                <!-- Rendered via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: CRM -->
+                <section id="view-crm" class="view-section hidden">
+                    <div class="dashboard-grid">
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>Registrar Contato (Follow-up)</h2>
+                            </div>
+                            <form id="crm-form" class="app-form">
+                                <div class="form-group">
+                                    <label for="crm-client">Cliente</label>
+                                    <input type="text" id="crm-client" required placeholder="Ex: Mercado Silva">
+                                </div>
+                                <div class="form-group">
+                                    <label for="crm-date">Data do Contato</label>
+                                    <input type="date" id="crm-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="crm-notes">Anotações / Feedback</label>
+                                    <input type="text" id="crm-notes" required placeholder="Resumo da conversa...">
+                                </div>
+                                <button type="submit" class="btn btn-primary"><i class='bx bx-phone-call'></i> Salvar
+                                    Contato</button>
+                            </form>
+                        </div>
+
+                        <div class="panel list-panel">
+                            <div class="panel-header">
+                                <h2>Alertas de Follow-up (CRM)</h2>
+                            </div>
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Último Contato</th>
+                                            <th>Recomendação</th>
+                                            <th>Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="crm-alerts-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Samples -->
+                <section id="view-samples" class="view-section hidden">
+                    <div class="dashboard-grid">
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>Registrar Envio de Amostra</h2>
+                            </div>
+                            <form id="sample-form" class="app-form">
+                                <div class="form-group">
+                                    <label for="sample-client">Cliente</label>
+                                    <input type="text" id="sample-client" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sample-product">Produto</label>
+                                    <input type="text" id="sample-product" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sample-date">Data de Envio</label>
+                                    <input type="date" id="sample-date" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><i class='bx bx-send'></i> Registrar
+                                    Amostra</button>
+                            </form>
+                        </div>
+
+                        <div class="panel list-panel">
+                            <div class="panel-header">
+                                <h2>Acompanhamento de Amostras</h2>
+                            </div>
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Produto</th>
+                                            <th>Retorno Estimado</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="samples-table-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: Reminders -->
+                <section id="view-reminders" class="view-section hidden">
+                    <div class="dashboard-grid">
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>Novo Lembrete</h2>
+                            </div>
+                            <form id="reminder-form" class="app-form">
+                                <div class="form-group">
+                                    <label for="reminder-title">Tarefa / Assunto</label>
+                                    <input type="text" id="reminder-title" required
+                                        placeholder="Ex: Enviar proposta para cliente X">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="reminder-date">Data Limite</label>
+                                        <input type="date" id="reminder-date" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="reminder-time">Horário Limite</label>
+                                        <input type="time" id="reminder-time" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="reminder-priority">Prioridade</label>
+                                        <select id="reminder-priority" required>
+                                            <option value="Baixa">Baixa</option>
+                                            <option value="Media" selected>Média</option>
+                                            <option value="Alta">Alta</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><i class='bx bx-plus'></i> Adicionar
+                                    Lembrete</button>
+                            </form>
+                        </div>
+
+                        <div class="panel list-panel">
+                            <div class="panel-header">
+                                <h2>Meus Lembretes Pendentes</h2>
+                            </div>
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data e Hora Limite</th>
+                                            <th>Tarefa</th>
+                                            <th>Prioridade</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reminders-table-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="logo-container" style="justify-content: center; margin-bottom: 2rem;">
+                <i class='bx bx-lock-alt logo-icon' style="font-size: 3rem;"></i>
+            </div>
+            <h2 style="margin-bottom: 1rem;">Acesso Restrito</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Por favor, insira a senha para acessar o
+                Controle Vendas Maciel.</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <input type="password" id="login-password" required placeholder="Digite a senha..."
+                        style="text-align: center; font-size: 1.1rem; letter-spacing: 2px;">
+                </div>
+                <p id="login-error"
+                    style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;">Senha
+                    incorreta. Tente novamente.</p>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Entrar <i
+                        class='bx bx-right-arrow-alt'></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/sales.js"></script>
+    <script src="js/crm.js"></script>
+    <script src="js/samples.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/reminders.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
