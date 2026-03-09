@@ -3,7 +3,7 @@
  * Handles memory caching and API synchronization.
  */
 
-const API_BASE_URL = "http://127.0.0.1:8001/api";
+const API_BASE_URL = "https://controles-vendas.onrender.com/api";
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',
