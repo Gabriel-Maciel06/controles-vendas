@@ -498,14 +498,13 @@
                                 // Função interna para não depender do DataStore.js
                                 const syncItem = async (type, item) => {
                                     try {
-                                        // Remove ID local para o banco gerar um novo se necessário
-                                        // mas mantém se for para sobrescrever
-                                        await fetch(`https://controles-vendas.onrender.com/api/${type}`, {
+                                        const res = await fetch(`https://controles-vendas.onrender.com/api/${type}`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify(item)
                                         });
-                                    } catch (err) { console.error("Erro ao sincronizar", err); }
+                                        if (!res.ok) console.error(`Erro ao subir ${type}:`, await res.text());
+                                    } catch (err) { console.error("Erro de rede ao sincronizar", err); }
                                 };
 
                                 const mapping = {
@@ -516,9 +515,12 @@
                                 };
 
                                 let successCount = 0;
+                                console.log("Dados recebidos no arquivo:", Object.keys(data));
+
                                 for (const key in mapping) {
-                                    if (Array.isArray(data[key])) {
-                                        for (const item of data[key]) {
+                                    const items = data[key] || data[key.replace('crm_', '')]; // Tenta com e sem prefixo
+                                    if (Array.isArray(items)) {
+                                        for (const item of items) {
                                             await syncItem(mapping[key], item);
                                             successCount++;
                                         }
@@ -526,11 +528,13 @@
                                 }
 
                                 if (successCount > 0) {
-                                    alert(`Importação finalizada! ${successCount} itens adicionados. O sistema irá reiniciar.`);
+                                    alert(`Sucesso! ${successCount} itens importados. O sistema irá reiniciar.`);
                                 } else {
-                                    alert("Nenhum dado encontrado no arquivo ou erro na estrutura.");
+                                    alert("Erro: O arquivo não contém dados válidos. Verifique o console (F12) para detalhes.");
+                                    console.log("Conteúdo esperado:", Object.keys(mapping));
                                 }
                                 location.reload();
+
 
                             }
                         } catch (err) {
