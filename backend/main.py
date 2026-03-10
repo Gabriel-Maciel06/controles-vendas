@@ -56,6 +56,9 @@ class SaleBase(BaseModel):
     createdAt: str
     updatedAt: str = None
 
+    class Config:
+        orm_mode = True
+
 class CustomerBase(BaseModel):
     id: str
     name: str # Nome do cliente
@@ -73,6 +76,9 @@ class CustomerBase(BaseModel):
     createdAt: str
     updatedAt: str = None
 
+    class Config:
+        orm_mode = True
+
 class SampleBase(BaseModel):
     id: str
     client: str
@@ -82,6 +88,9 @@ class SampleBase(BaseModel):
     status: str
     createdAt: str
     updatedAt: str = None
+
+    class Config:
+        orm_mode = True
 
 class ReminderBase(BaseModel):
     id: str
@@ -93,10 +102,16 @@ class ReminderBase(BaseModel):
     createdAt: str
     updatedAt: str = None
 
+    class Config:
+        orm_mode = True
+
 class SettingBase(BaseModel):
     google: float = 100
     reativacao: float = 100
     introducao: float = 25
+
+    class Config:
+        orm_mode = True
 
 # --- API Endpoints ---
 
