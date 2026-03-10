@@ -141,6 +141,49 @@ const AppModule = {
             downloadAnchorNode.remove();
         });
 
+        // Lógica de Importação Blindada
+        const btnImport = document.getElementById('btn-import-data');
+        const fileInput = document.getElementById('import-file');
+
+        if (btnImport && fileInput) {
+            btnImport.onclick = () => fileInput.click();
+
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        if (confirm("Importar backup? Isso limpará os dados atuais do servidor e colocará os do arquivo.")) {
+                            btnImport.innerText = "Sincronizando...";
+                            btnImport.disabled = true;
+
+                            const keys = ['crm_sales', 'crm_customers', 'crm_samples', 'crm_reminders'];
+                            for (const key of keys) {
+                                if (Array.isArray(importedData[key])) {
+                                    for (const item of importedData[key]) {
+                                        await DataStore.add(key, item);
+                                    }
+                                }
+                            }
+                            alert("Sucesso! O sistema será reiniciado.");
+                            location.reload();
+                        }
+                    } catch (err) {
+                        alert("Erro no arquivo de backup.");
+                    } finally {
+                        btnImport.innerText = "Importar Backup";
+                        btnImport.disabled = false;
+                    }
+                };
+                reader.readAsText(file);
+            };
+        }
+
+
+
         // Notifications
         if (btnNotif && panelNotif) {
             btnNotif.addEventListener('click', () => {
@@ -196,6 +239,32 @@ const AppModule = {
 
         if (!dotOnly) {
             document.getElementById('notifications-list').innerHTML = notifs.join('');
+        }
+        // Mobile Menu Toggle
+        const btnToggle = document.getElementById('btn-menu-toggle');
+        const sidebar = document.getElementById('main-sidebar');
+        const wrapper = document.getElementById('app-wrapper');
+
+        if (btnToggle && sidebar) {
+            btnToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('mobile-active');
+            });
+
+            // Close menu when clicking outside or on a nav item
+            document.addEventListener('click', (e) => {
+                if (!sidebar.contains(e.target) && sidebar.classList.contains('mobile-active')) {
+                    sidebar.classList.remove('mobile-active');
+                }
+            });
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('mobile-active');
+                    }
+                });
+            });
         }
     }
 };
