@@ -326,8 +326,9 @@
                                         <tr>
                                             <th>Cliente</th>
                                             <th>Último Contato</th>
+                                            <th>Anotações</th>
                                             <th>Recomendação</th>
-                                            <th>Ação</th>
+                                            <th>Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="crm-alerts-body">
@@ -338,6 +339,21 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- CRM History Modal -->
+                <div id="crm-history-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h2>Histórico de Relacionamento</h2>
+                            <button class="btn-sm"
+                                onclick="document.getElementById('crm-history-modal').classList.add('hidden')"><i
+                                    class='bx bx-x'></i></button>
+                        </div>
+                        <div class="modal-body" id="crm-history-content">
+                            <!-- JS content -->
+                        </div>
+                    </div>
+                </div>
 
                 <!-- View: Samples -->
                 <section id="view-samples" class="view-section hidden">

@@ -36,17 +36,17 @@ class SaleBase(BaseModel):
 
 class CustomerBase(BaseModel):
     id: str
-    name: str
-    company: str
-    phone: str
+    name: str # Nome do cliente
+    company: str = None
+    phone: str = None
     email: str = None
     address: str = None
     cnpj: str = None
     instagram: str = None
     segment: str = None
-    status: str
-    lastContactDate: str
-    nextFollowUp: str
+    status: str = "Ativo"
+    lastContactDate: str = None
+    nextFollowUp: str = None
     notes: str = None
     createdAt: str
     updatedAt: str = None
