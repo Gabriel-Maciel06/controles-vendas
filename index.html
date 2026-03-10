@@ -17,9 +17,9 @@
 
 <body>
 
-    <div class="app-container">
+    <div class="app-container" id="app-wrapper">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="main-sidebar">
             <div class="logo-container">
                 <i class='bx bx-trending-up logo-icon'></i>
                 <span class="logo-text" style="font-size: 1.1rem">Controle Vendas Maciel</span>
@@ -470,6 +470,73 @@
         </div>
     </div>
 
+    <!-- High Priority Script for Backup Import -->
+    <script>
+        // Esse script roda antes de tudo para garantir que o botão de importar funcione
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnImport = document.getElementById('btn-import-data');
+            const fileInput = document.getElementById('import-file');
+
+            if (btnImport && fileInput) {
+                btnImport.onclick = (e) => {
+                    e.preventDefault();
+                    fileInput.click();
+                };
+
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            if (confirm("Deseja importar os dados? Isso substituirá o que estiver no sistema agora.")) {
+                                btnImport.innerText = "Sincronizando...";
+                                btnImport.disabled = true;
+
+                                // Função interna para não depender do DataStore.js
+                                const syncItem = async (type, item) => {
+                                    try {
+                                        await fetch(`https://controles-vendas.onrender.com/api/${type}`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(item)
+                                        });
+                                    } catch (err) { console.error("Erro ao sincronizar", err); }
+                                };
+
+                                const mapping = {
+                                    'crm_sales': 'sales',
+                                    'crm_customers': 'customers',
+                                    'crm_samples': 'samples',
+                                    'crm_reminders': 'reminders'
+                                };
+
+                                for (const key in mapping) {
+                                    if (Array.isArray(data[key])) {
+                                        for (const item of data[key]) {
+                                            await syncItem(mapping[key], item);
+                                        }
+                                    }
+                                }
+
+                                alert("Importação finalizada! O sistema irá reiniciar.");
+                                location.reload();
+                            }
+                        } catch (err) {
+                            alert("Erro ao ler o arquivo de backup.");
+                        } finally {
+                            btnImport.innerText = "Importar Backup";
+                            btnImport.disabled = false;
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+            }
+        });
+    </script>
+
     <!-- Scripts -->
     <script src="js/data.js"></script>
     <script src="js/sales.js"></script>
@@ -478,6 +545,7 @@
     <script src="js/calendar.js"></script>
     <script src="js/reminders.js"></script>
     <script src="js/app.js"></script>
+
 </body>
 
 </html>
