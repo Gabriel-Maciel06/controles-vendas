@@ -27,52 +27,10 @@ const SalesModule = {
         this.dom.dateInput.value = today;
         this.dom.fatInput.value = today;
 
-        // Auto-fix legacy data and recalculate all commissions automatically
-        this.fixLegacyData();
-
+        // Recalculate all commissions automatically
         this.loadSales();
     },
 
-    fixLegacyData() {
-        let sales = DataStore.get(STORAGE_KEYS.SALES);
-        let updated = true; // Forçar update pra garantir que todos os caches limpem as virgulas e tipos
-
-        sales.forEach(s => {
-            // Trim and fix types deeply
-            if (s.type) {
-                let upper = s.type.toUpperCase().trim();
-                if (upper.includes('GOOGLE')) s.type = 'Google';
-                else if (upper.includes('REATIVA')) s.type = 'Reativacao';
-                else if (upper.includes('INTRODU')) s.type = 'Introducao';
-                else if (upper.includes('NORMAL')) s.type = 'Normal';
-                else s.type = s.type.trim();
-            }
-
-            // Clean date if it contains time tracking
-            if (s.saleDate && s.saleDate.includes('T')) {
-                s.saleDate = s.saleDate.split('T')[0];
-            }
-
-            // Normalize decimal comma to dot in value
-            let valueStr = String(s.value || "0").replace(',', '.');
-            s.value = parseFloat(valueStr);
-
-            // Exactly the user's math
-            const fixedRules = this.getFixedRules();
-            const fixed = fixedRules[s.type] || 0;
-            const boxesQty = parseInt(s.boxes20056) || 0;
-            const boxes = boxesQty * this.RULES.BOX_20056_VALUE;
-            const variable = s.value * this.RULES.VARIABLE_PCT;
-            const correctComm = fixed + boxes + variable;
-
-            s.commission = correctComm;
-            s.boxes20056 = boxesQty; // Ensure it exists
-        });
-
-        if (updated) {
-            DataStore.set(STORAGE_KEYS.SALES, sales);
-        }
-    },
 
     cacheDOM() {
         this.dom = {
@@ -221,9 +179,9 @@ const SalesModule = {
         this.dom.kpiTotalComm.innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalCommission);
     },
 
-    deleteSale(id) {
+    async deleteSale(id) {
         if (!confirm('Excluir esta venda?')) return;
-        DataStore.remove(STORAGE_KEYS.SALES, id);
+        await DataStore.remove(STORAGE_KEYS.SALES, id);
         this.loadSales();
         if (typeof CalendarModule !== 'undefined') CalendarModule.loadEvents();
     },

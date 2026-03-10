@@ -23,6 +23,7 @@ const AppModule = {
         }
 
         this.initTopbarFeatures();
+        this.initMobileMenu();
     },
 
     checkAuth() {
@@ -117,7 +118,6 @@ const AppModule = {
 
                 // Force Recalculation if SalesModule is active
                 if (window.SalesModule) {
-                    window.SalesModule.fixLegacyData();
                     window.SalesModule.loadSales();
                 }
             });
@@ -240,32 +240,31 @@ const AppModule = {
         if (!dotOnly) {
             document.getElementById('notifications-list').innerHTML = notifs.join('');
         }
-        // Mobile Menu Toggle
+    },
+
+    initMobileMenu() {
         const btnToggle = document.getElementById('btn-menu-toggle');
         const sidebar = document.getElementById('main-sidebar');
-        const wrapper = document.getElementById('app-wrapper');
+        if (!btnToggle || !sidebar) return;
 
-        if (btnToggle && sidebar) {
-            btnToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                sidebar.classList.toggle('mobile-active');
-            });
+        btnToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('mobile-active');
+        });
 
-            // Close menu when clicking outside or on a nav item
-            document.addEventListener('click', (e) => {
-                if (!sidebar.contains(e.target) && sidebar.classList.contains('mobile-active')) {
+        document.addEventListener('click', (e) => {
+            if (!sidebar.contains(e.target) && !btnToggle.contains(e.target) && sidebar.classList.contains('mobile-active')) {
+                sidebar.classList.remove('mobile-active');
+            }
+        });
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
                     sidebar.classList.remove('mobile-active');
                 }
             });
-
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    if (window.innerWidth <= 768) {
-                        sidebar.classList.remove('mobile-active');
-                    }
-                });
-            });
-        }
+        });
     }
 };
 
