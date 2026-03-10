@@ -7,26 +7,34 @@ from pydantic import BaseModel
 import models
 from database import engine, get_db
 
-# Create all database tables
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Controle Vendas Maciel API")
 
-# Configure CORS
-origins = [
-    "https://controles-vendas.vercel.app",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-]
-
+# Configure CORS - Simplificado para garantir funcionamento no Render/Vercel
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex="https://.*\.vercel\.app", # Allow all Vercel previews
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False, # Não necessário para localStorage auth
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    try:
+        models.Base.metadata.create_all(bind=engine)
+        print("Banco de dados inicializado com sucesso!")
+    except Exception as e:
+        print(f"Erro ao inicializar banco de dados: {e}")
+
+# --- debug endpoint ---
+@app.get("/api/db-check")
+def db_check(db: Session = Depends(get_db)):
+    try:
+        # Tenta uma consulta simples
+        db.execute("SELECT 1")
+        return {"status": "ok", "database": "conectado"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # --- Pydantic Schemas for Validation ---
 class SaleBase(BaseModel):
