@@ -518,43 +518,25 @@
                                 };
 
                                 let successCount = 0;
-                                let errorCount = 0;
-                                console.log("Iniciando importação. Chaves no arquivo:", Object.keys(data));
+                                console.log("Dados recebidos no arquivo:", Object.keys(data));
 
                                 for (const key in mapping) {
-                                    const items = data[key] || data[key.replace('crm_', '')];
+                                    const items = data[key] || data[key.replace('crm_', '')]; // Tenta com e sem prefixo
                                     if (Array.isArray(items)) {
-                                        console.log(`Importando ${items.length} itens para ${mapping[key]}...`);
                                         for (const item of items) {
-                                            try {
-                                                const res = await fetch(`https://controles-vendas.onrender.com/api/${mapping[key]}`, {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify(item)
-                                                });
-                                                if (res.ok) successCount++;
-                                                else {
-                                                    errorCount++;
-                                                    console.error(`Erro ao importar item de ${mapping[key]}:`, await res.text());
-                                                }
-                                                // Pequena pausa para não sobrecarregar o banco grátis
-                                                await new Promise(r => setTimeout(r, 50));
-                                            } catch (e) {
-                                                errorCount++;
-                                                console.error("Erro de rede:", e);
-                                            }
+                                            await syncItem(mapping[key], item);
+                                            successCount++;
                                         }
                                     }
                                 }
 
                                 if (successCount > 0) {
-                                    alert(`Sucesso! ${successCount} itens importados.${errorCount > 0 ? ` (${errorCount} falhas)` : ''} O sistema irá reiniciar.`);
+                                    alert(`Sucesso! ${successCount} itens importados. O sistema irá reiniciar.`);
                                 } else {
-                                    alert("Erro: Nenhum dado foi importado. Verifique se o arquivo está correto ou se o servidor está online.");
-                                    console.log("Dica: O arquivo deve conter chaves como crm_sales, crm_customers, etc.");
+                                    alert("Erro: O arquivo não contém dados válidos. Verifique o console (F12) para detalhes.");
+                                    console.log("Conteúdo esperado:", Object.keys(mapping));
                                 }
                                 location.reload();
-
 
 
                             }

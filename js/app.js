@@ -118,6 +118,7 @@ const AppModule = {
 
                 // Force Recalculation if SalesModule is active
                 if (window.SalesModule) {
+                    window.SalesModule.fixLegacyData();
                     window.SalesModule.loadSales();
                 }
             });

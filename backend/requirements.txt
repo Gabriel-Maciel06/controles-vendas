@@ -3,5 +3,4 @@ uvicorn
 sqlalchemy
 pydantic
 python-dotenv
-cors
 psycopg2-binary

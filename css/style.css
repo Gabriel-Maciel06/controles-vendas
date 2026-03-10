@@ -288,29 +288,6 @@ button {
     }
 }
 
-/* Temporary Empty State Styling */
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 400px;
-    background: var(--bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px dashed var(--border-color);
-    text-align: center;
-    padding: 2rem;
-}
-
-.empty-state h2 {
-    margin-bottom: 0.5rem;
-    color: var(--text-main);
-}
-
-.empty-state p {
-    color: var(--text-muted);
-}
-
 /* 
 ============================================
     DASHBOARD & KPI CARDS
@@ -883,22 +860,79 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* Mobile Responsiveness Extra */
 @media (max-width: 480px) {
-    .views-container { padding: 0.75rem; }
-    .kpi-grid { grid-template-columns: 1fr; gap: 0.75rem; }
-    .topbar { padding: 0 0.75rem; height: 56px; }
-    .page-title h1 { font-size: 0.9rem; }
-    .modal-content { width: 98%; padding: 1rem; max-height: 95vh; }
-    .form-row { flex-direction: column; gap: 0.75rem; }
-    .btn { width: 100%; justify-content: center; }
-    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .app-table { min-width: 480px; }
-    .dashboard-grid { grid-template-columns: 1fr; }
-    .kpi-card { padding: 0.75rem 1rem; }
-    .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-    #notifications-panel { right: 0.5rem; width: calc(100vw - 1rem); max-width: 340px; }
+    .views-container {
+        padding: 0.75rem;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .topbar {
+        padding: 0 0.75rem;
+        height: 56px;
+    }
+
+    .page-title h1 {
+        font-size: 0.9rem;
+    }
+
+    .modal-content {
+        width: 98%;
+        padding: 1rem;
+        max-height: 95vh;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .app-table {
+        min-width: 480px;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .kpi-card {
+        padding: 0.75rem 1rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    #notifications-panel {
+        right: 0.5rem;
+        width: calc(100vw - 1rem);
+        max-width: 340px;
+    }
 }
 
 @media (max-width: 768px) {
-    input, select, textarea { max-width: 100%; box-sizing: border-box; }
-    .form-group { width: 100%; }
+
+    input,
+    select,
+    textarea {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .form-group {
+        width: 100%;
+    }
 }

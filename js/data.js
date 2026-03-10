@@ -71,14 +71,14 @@ const DataStore = {
 
     async add(key, record) {
         if (!record.id) record.id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
-        
+
         // Injetar timestamps exigidos pelo Backend
         const now = new Date().toISOString();
         if (!record.createdAt) record.createdAt = now;
         if (!record.updatedAt) record.updatedAt = now;
 
         const endpoint = STORAGE_MAP[key];
-        
+
         // Atualizar cache local primeiro (Otimista)
         if (Array.isArray(this.cache[key])) {
             this.cache[key].push(record);
