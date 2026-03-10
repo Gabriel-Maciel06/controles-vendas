@@ -17,9 +17,9 @@
 
 <body>
 
-    <div class="app-container">
+    <div class="app-container" id="app-wrapper">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="main-sidebar">
             <div class="logo-container">
                 <i class='bx bx-trending-up logo-icon'></i>
                 <span class="logo-text" style="font-size: 1.1rem">Controle Vendas Maciel</span>
@@ -62,7 +62,10 @@
             <!-- Topbar (Optional, can hold search/notifications) -->
             <header class="topbar">
                 <div class="page-title">
+                    <button id="btn-menu-toggle" class="icon-btn mobile-only" style="margin-right: 1rem;"><i
+                            class='bx bx-menu'></i></button>
                     <h1 id="current-page-title">Painel de Vendas</h1>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 1rem;">v2.0-cloud</span>
                 </div>
                 <div class="topbar-actions">
                     <div style="position: relative;">
@@ -110,6 +113,11 @@
                             <h3>Gestão de Dados</h3>
                             <button id="btn-export-data" class="btn btn-primary"><i class='bx bx-download'></i> Exportar
                                 Backup</button>
+                            <button id="btn-import-data" class="btn btn-outline"
+                                style="border-color: var(--primary); color: var(--primary);"><i
+                                    class='bx bx-upload'></i> Importar Backup</button>
+                            <input type="file" id="import-file" style="display: none;" accept=".json">
+
                             <button id="btn-clear-data" class="btn btn-outline"
                                 style="color:var(--danger); border-color:var(--danger);"><i class='bx bx-trash'></i>
                                 Apagar Tudo</button>
@@ -465,6 +473,104 @@
         </div>
     </div>
 
+    <!-- High Priority Script for Backup Import -->
+    <script>
+        // Esse script roda antes de tudo para garantir que o botão de importar funcione
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnImport = document.getElementById('btn-import-data');
+            const fileInput = document.getElementById('import-file');
+
+            if (btnImport && fileInput) {
+                btnImport.onclick = (e) => {
+                    e.preventDefault();
+                    fileInput.click();
+                };
+
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            if (confirm("Deseja importar os dados? Isso substituirá o que estiver no sistema agora.")) {
+                                btnImport.innerText = "Sincronizando...";
+                                btnImport.disabled = true;
+
+                                // Função interna para não depender do DataStore.js
+                                const syncItem = async (type, item) => {
+                                    try {
+                                        const res = await fetch(`https://controles-vendas.onrender.com/api/${type}`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(item)
+                                        });
+                                        if (!res.ok) console.error(`Erro ao subir ${type}:`, await res.text());
+                                    } catch (err) { console.error("Erro de rede ao sincronizar", err); }
+                                };
+
+                                const mapping = {
+                                    'crm_sales': 'sales',
+                                    'crm_customers': 'customers',
+                                    'crm_samples': 'samples',
+                                    'crm_reminders': 'reminders'
+                                };
+
+                                let successCount = 0;
+                                let errorCount = 0;
+                                console.log("Iniciando importação. Chaves no arquivo:", Object.keys(data));
+
+                                for (const key in mapping) {
+                                    const items = data[key] || data[key.replace('crm_', '')];
+                                    if (Array.isArray(items)) {
+                                        console.log(`Importando ${items.length} itens para ${mapping[key]}...`);
+                                        for (const item of items) {
+                                            try {
+                                                const res = await fetch(`https://controles-vendas.onrender.com/api/${mapping[key]}`, {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify(item)
+                                                });
+                                                if (res.ok) successCount++;
+                                                else {
+                                                    errorCount++;
+                                                    console.error(`Erro ao importar item de ${mapping[key]}:`, await res.text());
+                                                }
+                                                // Pequena pausa para não sobrecarregar o banco grátis
+                                                await new Promise(r => setTimeout(r, 50));
+                                            } catch (e) {
+                                                errorCount++;
+                                                console.error("Erro de rede:", e);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (successCount > 0) {
+                                    alert(`Sucesso! ${successCount} itens importados.${errorCount > 0 ? ` (${errorCount} falhas)` : ''} O sistema irá reiniciar.`);
+                                } else {
+                                    alert("Erro: Nenhum dado foi importado. Verifique se o arquivo está correto ou se o servidor está online.");
+                                    console.log("Dica: O arquivo deve conter chaves como crm_sales, crm_customers, etc.");
+                                }
+                                location.reload();
+
+
+
+                            }
+                        } catch (err) {
+                            alert("Erro ao ler o arquivo de backup.");
+                        } finally {
+                            btnImport.innerText = "Importar Backup";
+                            btnImport.disabled = false;
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+            }
+        });
+    </script>
+
     <!-- Scripts -->
     <script src="js/data.js"></script>
     <script src="js/sales.js"></script>
@@ -473,6 +579,7 @@
     <script src="js/calendar.js"></script>
     <script src="js/reminders.js"></script>
     <script src="js/app.js"></script>
+
 </body>
 
 </html>
