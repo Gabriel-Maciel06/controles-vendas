@@ -90,9 +90,17 @@ const DataStore = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(record)
             });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                console.error("Server error:", errorData);
+                throw new Error(`Erro no servidor: ${res.status}`);
+            }
+
             return await res.json();
         } catch (error) {
             console.error("API Error adding:", error);
+            alert("⚠️ ERRO DE SINCRONIZAÇÃO: O dado foi registrado localmente mas NÃO foi salvo no servidor. Verifique sua conexão ou se o backend está online. Erro: " + error.message);
             return record;
         }
     },
@@ -116,9 +124,13 @@ const DataStore = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
+
+            if (!res.ok) throw new Error(`Erro no servidor: ${res.status}`);
+
             return await res.json();
         } catch (error) {
             console.error("API Error updating:", error);
+            alert("⚠️ ERRO AO ATUALIZAR: As mudanças podem ser perdidas ao atualizar a página.");
             return data;
         }
     },
@@ -132,12 +144,14 @@ const DataStore = {
         }
 
         try {
-            await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
+            const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
                 method: 'DELETE'
             });
+            if (!res.ok) throw new Error(`Erro no servidor: ${res.status}`);
             return true;
         } catch (error) {
             console.error("API Error removing:", error);
+            alert("⚠️ ERRO AO EXCLUIR: O item pode reaparecer ao atualizar a página.");
             return false;
         }
     }

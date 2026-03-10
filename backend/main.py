@@ -12,10 +12,17 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Controle Vendas Maciel API")
 
-# Configure CORS so the local HTML file can talk to the API
+# Configure CORS
+origins = [
+    "https://controles-vendas.vercel.app",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all for now during dev
+    allow_origins=origins,
+    allow_origin_regex="https://.*\.vercel\.app", # Allow all Vercel previews
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
