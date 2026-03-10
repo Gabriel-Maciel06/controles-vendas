@@ -498,6 +498,8 @@
                                 // Função interna para não depender do DataStore.js
                                 const syncItem = async (type, item) => {
                                     try {
+                                        // Remove ID local para o banco gerar um novo se necessário
+                                        // mas mantém se for para sobrescrever
                                         await fetch(`https://controles-vendas.onrender.com/api/${type}`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
@@ -513,16 +515,23 @@
                                     'crm_reminders': 'reminders'
                                 };
 
+                                let successCount = 0;
                                 for (const key in mapping) {
                                     if (Array.isArray(data[key])) {
                                         for (const item of data[key]) {
                                             await syncItem(mapping[key], item);
+                                            successCount++;
                                         }
                                     }
                                 }
 
-                                alert("Importação finalizada! O sistema irá reiniciar.");
+                                if (successCount > 0) {
+                                    alert(`Importação finalizada! ${successCount} itens adicionados. O sistema irá reiniciar.`);
+                                } else {
+                                    alert("Nenhum dado encontrado no arquivo ou erro na estrutura.");
+                                }
                                 location.reload();
+
                             }
                         } catch (err) {
                             alert("Erro ao ler o arquivo de backup.");
