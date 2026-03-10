@@ -1,9 +1,10 @@
+import os
+from typing import List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
 from pydantic import BaseModel
-
 import models
 from database import engine, get_db
 
@@ -30,9 +31,15 @@ def startup_event():
 @app.get("/api/db-check")
 def db_check(db: Session = Depends(get_db)):
     try:
-        # Tenta uma consulta simples
-        db.execute("SELECT 1")
-        return {"status": "ok", "database": "conectado"}
+        # Tenta uma consulta simples usando text()
+        db.execute(text("SELECT 1"))
+        db_type = "postgres" if "postgres" in str(engine.url) else "sqlite"
+        return {
+            "status": "ok", 
+            "database": "conectado",
+            "type": db_type,
+            "url_provided": bool(os.getenv("DATABASE_URL"))
+        }
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
