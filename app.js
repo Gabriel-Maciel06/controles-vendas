@@ -141,14 +141,14 @@ const AppModule = {
             downloadAnchorNode.remove();
         });
 
-        // Import Backup Logic
+        // Lógica de Importação Blindada
         const btnImport = document.getElementById('btn-import-data');
         const fileInput = document.getElementById('import-file');
 
         if (btnImport && fileInput) {
-            btnImport.addEventListener('click', () => fileInput.click());
+            btnImport.onclick = () => fileInput.click();
 
-            fileInput.addEventListener('change', (e) => {
+            fileInput.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
@@ -156,11 +156,10 @@ const AppModule = {
                 reader.onload = async (event) => {
                     try {
                         const importedData = JSON.parse(event.target.result);
-                        if (confirm("Deseja importar os dados? Isso substituirá o que estiver no sistema agora.")) {
-                            btnImport.innerText = "Importando...";
+                        if (confirm("Importar backup? Isso limpará os dados atuais do servidor e colocará os do arquivo.")) {
+                            btnImport.innerText = "Sincronizando...";
                             btnImport.disabled = true;
 
-                            // Loop through all keys and sync to Cloud
                             const keys = ['crm_sales', 'crm_customers', 'crm_samples', 'crm_reminders'];
                             for (const key of keys) {
                                 if (Array.isArray(importedData[key])) {
@@ -169,27 +168,20 @@ const AppModule = {
                                     }
                                 }
                             }
-
-                            // Handle settings too
-                            if (importedData.crm_settings) {
-                                await DataStore.set(STORAGE_KEYS.SETTINGS, importedData.crm_settings);
-                            }
-
-                            alert("Importação concluída com sucesso! O sistema irá reiniciar.");
+                            alert("Sucesso! O sistema será reiniciado.");
                             location.reload();
                         }
                     } catch (err) {
-                        console.error("Import error", err);
-                        alert("Erro ao importar: Arquivo inválido.");
+                        alert("Erro no arquivo de backup.");
                     } finally {
                         btnImport.innerText = "Importar Backup";
                         btnImport.disabled = false;
-                        fileInput.value = '';
                     }
                 };
                 reader.readAsText(file);
-            });
+            };
         }
+
 
 
         // Notifications
