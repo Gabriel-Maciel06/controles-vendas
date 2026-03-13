@@ -77,11 +77,17 @@ const AppModule = {
                 viewSections.forEach(section => {
                     if (section.id === `view-${targetId}`) {
                         // Small delay to reset animation
-                        section.classList.remove('active');
-                        void section.offsetWidth; // Trigger reflow
+                        section.classList.remove('hidden');
                         section.classList.add('active');
+                        
+                        // Executar update do Dashboard apenas quando ele for mostrado 
+                        // para que a biblioteca do Chart renderize com as dimensões certas
+                        if(targetId === 'dashboard' && typeof DashboardModule !== 'undefined') {
+                            DashboardModule.update();
+                        }
                     } else {
                         section.classList.remove('active');
+                        section.classList.add('hidden');
                     }
                 });
             });
