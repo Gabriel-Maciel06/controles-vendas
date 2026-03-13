@@ -24,6 +24,15 @@ def startup_event():
     try:
         models.Base.metadata.create_all(bind=engine)
         print("Banco de dados inicializado com sucesso!")
+        
+        # Auto-migration for new fields
+        with engine.begin() as conn:
+            for col in ['products', 'buyerName', 'source']:
+                try:
+                    conn.execute(text(f"ALTER TABLE customers ADD COLUMN {col} VARCHAR;"))
+                except Exception:
+                    pass # Column already exists
+                    
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
 
@@ -73,6 +82,9 @@ class CustomerBase(BaseModel):
     lastContactDate: str = None
     nextFollowUp: str = None
     notes: str = None
+    products: str = None
+    buyerName: str = None
+    source: str = None
     createdAt: str
     updatedAt: str = None
 

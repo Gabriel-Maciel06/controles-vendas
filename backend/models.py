@@ -31,6 +31,9 @@ class Customer(Base):
     lastContactDate = Column(String)
     nextFollowUp = Column(String)
     notes = Column(String, nullable=True)
+    products = Column(String, nullable=True)
+    buyerName = Column(String, nullable=True)
+    source = Column(String, nullable=True)
     createdAt = Column(String)
     updatedAt = Column(String, nullable=True)
 

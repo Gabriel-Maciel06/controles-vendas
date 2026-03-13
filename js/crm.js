@@ -14,6 +14,10 @@ const CRMModule = {
         this.dom = {
             form: document.getElementById('crm-form'),
             client: document.getElementById('crm-client'),
+            phone: document.getElementById('crm-phone'),
+            buyer: document.getElementById('crm-buyer'),
+            products: document.getElementById('crm-products'),
+            source: document.getElementById('crm-source'),
             dateInput: document.getElementById('crm-date'),
             notes: document.getElementById('crm-notes'),
             alertsBody: document.getElementById('crm-alerts-body')
@@ -31,6 +35,10 @@ const CRMModule = {
         const clientName = this.dom.client.value;
         const contactDate = this.dom.dateInput.value;
         const notes = this.dom.notes.value;
+        const phone = this.dom.phone.value;
+        const buyerName = this.dom.buyer.value;
+        const products = this.dom.products.value;
+        const source = this.dom.source.value;
 
         // Calculate next follow-up (e.g., +15 days)
         const dateObj = new Date(contactDate + 'T00:00:00');
@@ -40,6 +48,10 @@ const CRMModule = {
         // ALIGNED WITH BACKEND FIELDS
         const newContact = {
             name: clientName,           // instead of client
+            phone: phone,
+            buyerName: buyerName,
+            products: products,
+            source: source,
             lastContactDate: contactDate, // instead of contactDate
             notes: notes,
             nextFollowUp: nextFollowUp,
@@ -50,6 +62,10 @@ const CRMModule = {
 
         this.dom.client.value = '';
         this.dom.notes.value = '';
+        this.dom.phone.value = '';
+        this.dom.buyer.value = '';
+        this.dom.products.value = '';
+        this.dom.source.value = '';
         this.dom.client.focus();
 
         this.loadAlerts();
@@ -139,11 +155,19 @@ const CRMModule = {
         else {
             history.forEach(h => {
                 const date = (h.lastContactDate || h.contactDate || '').split('-').reverse().join('/');
+                
+                let detailsHtml = '';
+                if(h.phone) detailsHtml += `<strong>Tel:</strong> ${this.escapeHTML(h.phone)} | `;
+                if(h.buyerName) detailsHtml += `<strong>Comprador:</strong> ${this.escapeHTML(h.buyerName)} | `;
+                if(h.products) detailsHtml += `<strong>Produtos:</strong> ${this.escapeHTML(h.products)} | `;
+                if(h.source) detailsHtml += `<strong>Origem:</strong> ${this.escapeHTML(h.source)}`;
+                
                 html += `
                     <div style="margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border-left: 3px solid var(--primary);">
                         <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
                             <span style="font-weight:700; color: var(--primary);">${date}</span>
                         </div>
+                        ` + (detailsHtml ? `<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">${detailsHtml.replace(/ \| $/, '')}</p>` : '') + `
                         <p style="font-size: 0.95rem; color: var(--text-main);">${this.escapeHTML(h.notes || 'Sem anotações.')}</p>
                     </div>
                 `;
