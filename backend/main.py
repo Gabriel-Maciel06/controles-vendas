@@ -45,6 +45,14 @@ def startup_event():
                 except Exception as e:
                     conn.rollback()
                     print(f"Aviso migr. coluna {col} (pode já existir): {e}")
+            for table in ['sales', 'customers', 'samples', 'settings', 'reminders']:
+                try:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN profile VARCHAR DEFAULT 'default';"))
+                    conn.commit()
+                    print(f"Coluna profile adicionada à tabela {table}.")
+                except Exception as e:
+                    conn.rollback()
+                    pass
                     
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
@@ -68,6 +76,7 @@ def db_check(db: Session = Depends(get_db)):
 # --- Pydantic Schemas for Validation ---
 class SaleBase(BaseModel):
     id: str
+    profile: str = "default"
     client: str
     type: str
     boxes20056: int = 0
@@ -83,6 +92,7 @@ class SaleBase(BaseModel):
 
 class CustomerBase(BaseModel):
     id: str
+    profile: str = "default"
     name: str # Nome do cliente
     company: str = None
     phone: str = None
@@ -106,6 +116,7 @@ class CustomerBase(BaseModel):
 
 class SampleBase(BaseModel):
     id: str
+    profile: str = "default"
     client: str
     product: str
     sendDate: str
@@ -119,6 +130,7 @@ class SampleBase(BaseModel):
 
 class ReminderBase(BaseModel):
     id: str
+    profile: str = "default"
     title: str
     dateLimit: str
     timeLimit: str = None
@@ -131,6 +143,7 @@ class ReminderBase(BaseModel):
         orm_mode = True
 
 class SettingBase(BaseModel):
+    profile: str = "default"
     google: float = 100
     reativacao: float = 100
     introducao: float = 25
@@ -146,8 +159,8 @@ def read_root():
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
-def get_sales(db: Session = Depends(get_db)):
-    return db.query(models.Sale).all()
+def get_sales(profile: str = "default", db: Session = Depends(get_db)):
+    return db.query(models.Sale).filter(models.Sale.profile == profile).all()
 
 @app.post("/api/sales", response_model=SaleBase)
 def create_sale(sale: SaleBase, db: Session = Depends(get_db)):
@@ -181,8 +194,8 @@ def delete_sale(sale_id: str, db: Session = Depends(get_db)):
 
 # --- CUSTOMERS ---
 @app.get("/api/customers", response_model=List[CustomerBase])
-def get_customers(db: Session = Depends(get_db)):
-    return db.query(models.Customer).all()
+def get_customers(profile: str = "default", db: Session = Depends(get_db)):
+    return db.query(models.Customer).filter(models.Customer.profile == profile).all()
 
 @app.post("/api/customers", response_model=CustomerBase)
 def create_customer(customer: CustomerBase, db: Session = Depends(get_db)):
@@ -216,8 +229,8 @@ def delete_customer(customer_id: str, db: Session = Depends(get_db)):
 
 # --- SAMPLES ---
 @app.get("/api/samples", response_model=List[SampleBase])
-def get_samples(db: Session = Depends(get_db)):
-    return db.query(models.Sample).all()
+def get_samples(profile: str = "default", db: Session = Depends(get_db)):
+    return db.query(models.Sample).filter(models.Sample.profile == profile).all()
 
 @app.post("/api/samples", response_model=SampleBase)
 def create_sample(sample: SampleBase, db: Session = Depends(get_db)):
@@ -251,8 +264,8 @@ def delete_sample(sample_id: str, db: Session = Depends(get_db)):
 
 # --- REMINDERS ---
 @app.get("/api/reminders", response_model=List[ReminderBase])
-def get_reminders(db: Session = Depends(get_db)):
-    return db.query(models.Reminder).all()
+def get_reminders(profile: str = "default", db: Session = Depends(get_db)):
+    return db.query(models.Reminder).filter(models.Reminder.profile == profile).all()
 
 @app.post("/api/reminders", response_model=ReminderBase)
 def create_reminder(reminder: ReminderBase, db: Session = Depends(get_db)):
@@ -286,9 +299,9 @@ def delete_reminder(reminder_id: str, db: Session = Depends(get_db)):
 
 # --- SETTINGS ---
 @app.get("/api/settings", response_model=SettingBase)
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(profile: str = "default", db: Session = Depends(get_db)):
     # Simple key-value store in db
-    settings = db.query(models.Setting).all()
+    settings = db.query(models.Setting).filter(models.Setting.profile == profile).all()
     result = SettingBase().dict() # defaults
     for s in settings:
         if s.key in result:
@@ -296,13 +309,14 @@ def get_settings(db: Session = Depends(get_db)):
     return result
 
 @app.post("/api/settings")
-def save_settings(settings: dict, db: Session = Depends(get_db)):
-    # Clear old
-    db.query(models.Setting).delete()
+def save_settings(settings: dict, profile: str = "default", db: Session = Depends(get_db)):
+    # Clear old for this profile
+    db.query(models.Setting).filter(models.Setting.profile == profile).delete()
     
     # Save new
     for k, v in settings.items():
-        db_setting = models.Setting(id=k, key=k, value=str(v))
+        if k == 'profile': continue
+        db_setting = models.Setting(id=f"{profile}_{k}", profile=profile, key=k, value=str(v))
         db.add(db_setting)
     
     db.commit()
