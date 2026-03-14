@@ -936,3 +936,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         width: 100%;
     }
 }
+
+/* Utilidades */
+.hidden {
+    display: none !important;
+}

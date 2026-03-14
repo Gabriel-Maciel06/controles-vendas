@@ -102,6 +102,9 @@ const AppModule = {
             const boxesLabel = document.querySelector('label[for="sale-boxes"]');
             if (boxesLabel) boxesLabel.innerText = "Qtd. Vinhos";
 
+            const valueLabel = document.querySelector('label[for="sale-value"]');
+            if (valueLabel) valueLabel.innerText = "Valor Venda (R$)";
+
             const fatInput = document.getElementById('sale-faturamento');
             if (fatInput) fatInput.removeAttribute('required');
 
@@ -118,6 +121,39 @@ const AppModule = {
             // Mudar texto de Comissão para Lucro nos KPIs
             const commTitle = document.querySelector('.kpi-card.highlight h3');
             if (commTitle) commTitle.innerText = "Lucro Total";
+        } else {
+            // RESET PARA PERFIL MACIEL (Default)
+            document.title = "Controle Vendas Maciel";
+            document.documentElement.style.removeProperty('--primary');
+            document.documentElement.style.removeProperty('--accent');
+            document.documentElement.style.removeProperty('--bg-sidebar');
+
+            const logoText = document.querySelector('.logo-text');
+            if (logoText) logoText.innerHTML = "Controle Vendas Maciel";
+
+            // Garantir que campos da mamae fiquem ocultos
+            document.getElementById('mamae-product-group')?.classList.add('hidden');
+            document.getElementById('mamae-cost-group')?.classList.add('hidden');
+
+            // Garantir que campos originais apareçam
+            const saleTypeGroup = document.getElementById('sale-type')?.closest('.form-group');
+            const saleBoxesGroup = document.getElementById('sale-boxes')?.closest('.form-group');
+            if (saleTypeGroup) saleTypeGroup.style.display = 'block';
+            if (saleBoxesGroup) saleBoxesGroup.style.display = 'block';
+
+            // Restaurar labels
+            const boxesLabel = document.querySelector('label[for="sale-boxes"]');
+            if (boxesLabel) boxesLabel.innerText = "Caixas 20056 (Qtd)";
+
+            const valueLabel = document.querySelector('label[for="sale-value"]');
+            if (valueLabel) valueLabel.innerText = "Valor Faturado (R$)";
+
+            const fatInput = document.getElementById('sale-faturamento');
+            if (fatInput) fatInput.setAttribute('required', 'true');
+
+            // Restaurar KPI
+            const commTitle = document.querySelector('.kpi-card.highlight h3');
+            if (commTitle) commTitle.innerText = "Comissão Total";
         }
     },
 
