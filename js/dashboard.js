@@ -55,8 +55,8 @@ const DashboardModule = {
     },
 
     updateGoalProgress(sales, currentMonthPrefix) {
-        // Filtrar e somar as vendas apenas do mês vigente pelo date
-        const currentMonthSales = sales.filter(s => s.date && s.date.startsWith(currentMonthPrefix));
+        // Filtrar e somar as vendas apenas do mês vigente pelo saleDate
+        const currentMonthSales = sales.filter(s => s.saleDate && s.saleDate.startsWith(currentMonthPrefix));
         const totalRealized = currentMonthSales.reduce((sum, s) => sum + (parseFloat(s.value) || 0), 0);
         
         const goal = parseFloat(this.dom.goalInput.value) || Number(localStorage.getItem('crm_monthly_goal')) || 0;
@@ -131,8 +131,8 @@ const DashboardModule = {
         const monthlyData = {};
         
         sales.forEach(s => {
-            if (!s.date) return;
-            const monthKey = s.date.substring(0, 7); // Ex: "2023-10"
+            if (!s.saleDate) return;
+            const monthKey = s.saleDate.substring(0, 7); // Ex: "2023-10"
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = { vendas: 0, comissao: 0 };
             }
