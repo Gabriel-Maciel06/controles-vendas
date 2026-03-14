@@ -53,6 +53,15 @@ def startup_event():
                 except Exception as e:
                     conn.rollback()
                     pass
+            for col in ['productName', 'costPrice']:
+                try:
+                    target_type = "FLOAT" if col == 'costPrice' else "VARCHAR"
+                    conn.execute(text(f'ALTER TABLE sales ADD COLUMN "{col}" {target_type};'))
+                    conn.commit()
+                    print(f"Coluna {col} adicionada à tabela sales.")
+                except Exception as e:
+                    conn.rollback()
+                    pass
                     
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
@@ -78,6 +87,8 @@ class SaleBase(BaseModel):
     id: str
     profile: str = "default"
     client: str
+    productName: str = None
+    costPrice: float = None
     type: str
     boxes20056: int = 0
     saleDate: str

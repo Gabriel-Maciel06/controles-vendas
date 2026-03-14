@@ -7,6 +7,8 @@ class Sale(Base):
     id = Column(String, primary_key=True, index=True)
     profile = Column(String, default="default")
     client = Column(String)
+    productName = Column(String, nullable=True)
+    costPrice = Column(Float, nullable=True)
     type = Column(String)
     boxes20056 = Column(Integer)
     saleDate = Column(String)
