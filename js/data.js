@@ -30,13 +30,14 @@ const DataStore = {
     isReady: false,
 
     async init() {
+        const profile = sessionStorage.getItem('maciel_profile') || 'default';
         try {
             const [salesRes, customersRes, samplesRes, settingsRes, remindersRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/sales`),
-                fetch(`${API_BASE_URL}/customers`),
-                fetch(`${API_BASE_URL}/samples`),
-                fetch(`${API_BASE_URL}/settings`),
-                fetch(`${API_BASE_URL}/reminders`)
+                fetch(`${API_BASE_URL}/sales?profile=${profile}`),
+                fetch(`${API_BASE_URL}/customers?profile=${profile}`),
+                fetch(`${API_BASE_URL}/samples?profile=${profile}`),
+                fetch(`${API_BASE_URL}/settings?profile=${profile}`),
+                fetch(`${API_BASE_URL}/reminders?profile=${profile}`)
             ]);
 
             this.cache.crm_sales = await salesRes.json();
@@ -59,8 +60,9 @@ const DataStore = {
         this.cache[key] = data;
         // Só dispara API se for as configurações
         if (key === STORAGE_KEYS.SETTINGS) {
+            const profile = sessionStorage.getItem('maciel_profile') || 'default';
             try {
-                await fetch(`${API_BASE_URL}/settings`, {
+                await fetch(`${API_BASE_URL}/settings?profile=${profile}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -71,6 +73,9 @@ const DataStore = {
 
     async add(key, record) {
         if (!record.id) record.id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+
+        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        record.profile = profile;
 
         // Injetar timestamps exigidos pelo Backend
         const now = new Date().toISOString();
@@ -109,6 +114,7 @@ const DataStore = {
         const endpoint = STORAGE_MAP[key];
         const now = new Date().toISOString();
         data.updatedAt = now;
+        data.profile = sessionStorage.getItem('maciel_profile') || 'default';
 
         // Atualizar cache local
         if (Array.isArray(this.cache[key])) {

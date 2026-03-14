@@ -59,6 +59,14 @@ const SalesModule = {
     },
 
     calculateCommission(type, boxesQty, totalValue) {
+        const profile = sessionStorage.getItem('maciel_profile');
+        
+        if (profile === 'mamae') {
+            // Comissão padrão de 10% para venda de produtos (Modificável)
+            const comissaoPersonalizadaPcnt = 0.10;
+            return (parseFloat(totalValue) || 0) * comissaoPersonalizadaPcnt;
+        }
+
         const fixedRules = this.getFixedRules();
         let fixed = fixedRules[type] || 0;
         let boxes = (parseInt(boxesQty) || 0) * this.RULES.BOX_20056_VALUE;
@@ -86,10 +94,17 @@ const SalesModule = {
 
         await DataStore.add(STORAGE_KEYS.SALES, newSale);
 
-        // Form reset - but keep dates
+        // Form reset - mas preservando a data
         this.dom.client.value = '';
-        this.dom.type.value = '';
-        this.dom.boxes.value = '0';
+        const profile = sessionStorage.getItem('maciel_profile');
+        if (profile === 'mamae') {
+            this.dom.type.value = 'Normal'; // Padrão Produto
+            this.dom.boxes.value = '0'; // Caixas irrelevantes
+        } else {
+            this.dom.type.value = '';
+            this.dom.boxes.value = '0';
+        }
+        
         this.dom.value.value = '';
         this.dom.client.focus();
 

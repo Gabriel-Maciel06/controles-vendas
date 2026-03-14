@@ -35,6 +35,7 @@ const AppModule = {
         // Check if already authenticated in this session
         if (sessionStorage.getItem('maciel_auth') === 'true') {
             overlay.style.display = 'none';
+            this.applyProfileTheme();
             return;
         }
 
@@ -44,13 +45,54 @@ const AppModule = {
             // Configured password: as requested by the user, we need A password, let's set a default one
             if (pass === 'maciel123' || pass === '1234') { // generic passwords for now
                 sessionStorage.setItem('maciel_auth', 'true');
+                sessionStorage.setItem('maciel_profile', 'default');
                 overlay.style.display = 'none';
+                this.applyProfileTheme();
+            } else if (pass.toLowerCase() === 'mamae') { 
+                sessionStorage.setItem('maciel_auth', 'true');
+                sessionStorage.setItem('maciel_profile', 'mamae');
+                overlay.style.display = 'none';
+                this.applyProfileTheme();
             } else {
                 errorMsg.style.display = 'block';
                 passInput.value = '';
                 passInput.focus();
             }
         });
+    },
+
+    applyProfileTheme() {
+        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        if (profile === 'mamae') {
+            document.title = "Controle Vendas Mamãe";
+            document.documentElement.style.setProperty('--primary', '#9d174d'); // Vinho/Bordô escuro
+            document.documentElement.style.setProperty('--accent', '#db2777'); // Vinho rosa/claro para contraste
+            document.documentElement.style.setProperty('--bg-sidebar', '#4c0519'); // Sidebar vinho super escuro
+            
+            const logoText = document.querySelector('.logo-text');
+            if (logoText) {
+                logoText.innerHTML = "Controle<br>Mamãe";
+            }
+            
+            // Injetar CSS para esconder as opções de Google e Reativacao que não pertencem ao perfil
+            const style = document.createElement('style');
+            style.innerHTML = `
+                /* Esconder opções no select de Venda */
+                #sale-type option[value="Google"],
+                #sale-type option[value="Reativacao"],
+                #sale-type option[value="Introducao"] {
+                    display: none !important;
+                }
+                
+                /* Esconder painéis de KPI do topo */
+                .kpi-card:has(#kpi-google-count),
+                .kpi-card:has(#kpi-reativacao-count),
+                .kpi-card:has(#kpi-introducao-count) {
+                    display: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
     },
 
     initNavigation() {
