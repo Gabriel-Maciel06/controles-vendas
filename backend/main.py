@@ -35,13 +35,16 @@ def startup_event():
         print("Banco de dados inicializado com sucesso!")
         
         # Auto-migration for new fields
-        # Usamos AUTOCOMMIT para evitar que caso já exista 'products', a transação não aborte as próximas
-        with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        print("Executando auto-migration...")
+        with engine.connect() as conn:
             for col in ['products', 'buyerName', 'source']:
                 try:
-                    conn.execute(text(f"ALTER TABLE customers ADD COLUMN {col} VARCHAR;"))
-                except Exception:
-                    pass # Column already exists
+                    conn.execute(text(f'ALTER TABLE customers ADD COLUMN "{col}" VARCHAR;'))
+                    conn.commit()
+                    print(f"Coluna {col} adicionada à tabela customers.")
+                except Exception as e:
+                    conn.rollback()
+                    print(f"Aviso migr. coluna {col} (pode já existir): {e}")
                     
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
