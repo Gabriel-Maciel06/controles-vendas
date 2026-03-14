@@ -182,7 +182,7 @@ const DashboardModule = {
                         yAxisID: 'y'
                     },
                     {
-                        label: 'Comissão Acumulada (R$)',
+                        label: profile === 'mamae' ? 'Lucro Acumulado (R$)' : 'Comissão Acumulada (R$)',
                         data: dataComissao.length ? dataComissao : [0],
                         borderColor: accentColor,
                         backgroundColor: 'transparent',

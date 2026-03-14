@@ -104,6 +104,20 @@ const AppModule = {
 
             const fatInput = document.getElementById('sale-faturamento');
             if (fatInput) fatInput.removeAttribute('required');
+
+            // Mostrar campos novos
+            document.getElementById('mamae-product-group')?.classList.remove('hidden');
+            document.getElementById('mamae-cost-group')?.classList.remove('hidden');
+
+            // Esconder campos irrelevantes para ela (Tipo e Caixas - vamos esconder o container row)
+            const saleTypeGroup = document.getElementById('sale-type').closest('.form-group');
+            const saleBoxesGroup = document.getElementById('sale-boxes').closest('.form-group');
+            if (saleTypeGroup) saleTypeGroup.style.display = 'none';
+            if (saleBoxesGroup) saleBoxesGroup.style.display = 'none';
+
+            // Mudar texto de Comissão para Lucro nos KPIs
+            const commTitle = document.querySelector('.kpi-card.highlight h3');
+            if (commTitle) commTitle.innerText = "Lucro Total";
         }
     },
 

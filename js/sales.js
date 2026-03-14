@@ -42,6 +42,8 @@ const SalesModule = {
             fatInput: document.getElementById('sale-faturamento'),
             value: document.getElementById('sale-value'),
             tableBody: document.getElementById('sales-table-body'),
+            productName: document.getElementById('sale-product-name'),
+            costValue: document.getElementById('sale-cost-value'),
 
             // KPIs
             kpiGoogle: document.getElementById('kpi-google-count'),
@@ -62,9 +64,10 @@ const SalesModule = {
         const profile = sessionStorage.getItem('maciel_profile');
         
         if (profile === 'mamae') {
-            // Comissão padrão de 10% para venda de produtos (Modificável)
-            const comissaoPersonalizadaPcnt = 0.10;
-            return (parseFloat(totalValue) || 0) * comissaoPersonalizadaPcnt;
+            // No perfil da mãe, comissão = Lucro (Venda - Custo)
+            const saleValue = parseFloat(totalValue) || 0;
+            const costValue = parseFloat(this.dom.costValue.value) || 0;
+            return saleValue - costValue;
         }
 
         const fixedRules = this.getFixedRules();
@@ -84,6 +87,8 @@ const SalesModule = {
 
         const newSale = {
             client: this.dom.client.value,
+            productName: this.dom.productName.value || "",
+            costPrice: parseFloat(this.dom.costValue.value) || 0,
             type: type,
             boxes20056: boxes,
             saleDate: this.dom.dateInput.value,
@@ -98,8 +103,10 @@ const SalesModule = {
         this.dom.client.value = '';
         const profile = sessionStorage.getItem('maciel_profile');
         if (profile === 'mamae') {
-            this.dom.type.value = 'Normal'; // Padrão Produto
-            this.dom.boxes.value = '0'; // Caixas irrelevantes
+            this.dom.type.value = 'Normal'; 
+            this.dom.boxes.value = '0';
+            this.dom.productName.value = '';
+            this.dom.costValue.value = '';
         } else {
             this.dom.type.value = '';
             this.dom.boxes.value = '0';
@@ -140,14 +147,22 @@ const SalesModule = {
             "Normal": '<span class="badge badge-muted">Normal</span>'
         };
 
+        const profile = sessionStorage.getItem('maciel_profile');
+
         recent.forEach(sale => {
             const tr = document.createElement('tr');
 
             const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+            // Se for perfil mamae, mostramos o nome do produto no lugar da badge de 'Normal'
+            let statusHTML = typeMapping[sale.type] || sale.type;
+            if (profile === 'mamae' && sale.productName) {
+                statusHTML = `<span class="badge badge-muted" style="background:#4c0519; color:white;">${this.escapeHTML(sale.productName)}</span>`;
+            }
+
             tr.innerHTML = `
                 <td><strong>${this.escapeHTML(sale.client)}</strong></td>
-                <td>${typeMapping[sale.type] || sale.type}</td>
+                <td>${statusHTML}</td>
                 <td>${formatCurrency(sale.value)}</td>
                 <td style="color: var(--accent); font-weight: 600;">+ ${formatCurrency(sale.commission)}</td>
                 <td>
@@ -211,6 +226,8 @@ const SalesModule = {
         this.dom.dateInput.value = sale.saleDate;
         this.dom.fatInput.value = sale.invoiceDate;
         this.dom.value.value = sale.value;
+        if (this.dom.productName) this.dom.productName.value = sale.productName || "";
+        if (this.dom.costValue) this.dom.costValue.value = sale.costPrice || "";
 
         // Remove a venda antiga e salva a edição no submit
         DataStore.remove(STORAGE_KEYS.SALES, id);

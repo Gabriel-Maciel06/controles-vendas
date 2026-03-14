@@ -187,6 +187,12 @@
                                     <input type="text" id="sale-client" required placeholder="Ex: Mercado Silva">
                                 </div>
 
+                                <!-- Campos Exclusivos Perfil Mamãe -->
+                                <div id="mamae-product-group" class="form-group hidden">
+                                    <label for="sale-product-name">Qual o Vinho Vendido?</label>
+                                    <input type="text" id="sale-product-name" placeholder="Ex: Vinho Tinto Cabernet">
+                                </div>
+
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="sale-type">Tipo de Venda</label>
@@ -216,9 +222,14 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="sale-value">Valor Faturado (R$)</label>
+                                    <label for="sale-value">Valor Faturado/Venda (R$)</label>
                                     <input type="number" id="sale-value" step="0.01" min="0" required
                                         placeholder="0.00">
+                                </div>
+
+                                <div id="mamae-cost-group" class="form-group hidden">
+                                    <label for="sale-cost-value">Valor Que Comprei/Custo (R$)</label>
+                                    <input type="number" id="sale-cost-value" step="0.01" min="0" placeholder="0.00">
                                 </div>
 
                                 <button type="submit" class="btn btn-primary"><i class='bx bx-plus'></i> Registrar
