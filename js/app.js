@@ -144,6 +144,16 @@ const AppModule = {
         const btnNotif = document.getElementById('btn-notifications');
         const panelNotif = document.getElementById('notifications-panel');
 
+        // Logout
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => {
+                sessionStorage.removeItem('maciel_auth');
+                sessionStorage.removeItem('maciel_profile');
+                location.reload(); // Recarrega tela inteira para resetar os state caches
+            });
+        }
+
         // Settings Modal
         if (btnSettings && modalSettings) {
             btnSettings.addEventListener('click', () => {
