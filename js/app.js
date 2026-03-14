@@ -113,10 +113,18 @@ const AppModule = {
             document.getElementById('mamae-cost-group')?.classList.remove('hidden');
 
             // Esconder campos irrelevantes para ela (Tipo e Caixas - vamos esconder o container row)
-            const saleTypeGroup = document.getElementById('sale-type').closest('.form-group');
-            const saleBoxesGroup = document.getElementById('sale-boxes').closest('.form-group');
-            if (saleTypeGroup) saleTypeGroup.style.display = 'none';
-            if (saleBoxesGroup) saleBoxesGroup.style.display = 'none';
+            const saleTypeSelect = document.getElementById('sale-type');
+            const saleBoxesInput = document.getElementById('sale-boxes');
+            
+            if (saleTypeSelect) {
+                saleTypeSelect.value = 'Normal';
+                saleTypeSelect.removeAttribute('required');
+                saleTypeSelect.closest('.form-group').style.display = 'none';
+            }
+            if (saleBoxesInput) {
+                saleBoxesInput.value = '0';
+                saleBoxesInput.closest('.form-group').style.display = 'none';
+            }
 
             // Mudar texto de Comissão para Lucro nos KPIs
             const commTitle = document.querySelector('.kpi-card.highlight h3');
