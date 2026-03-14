@@ -90,8 +90,20 @@ const AppModule = {
                 .kpi-card:has(#kpi-introducao-count) {
                     display: none !important;
                 }
+                
+                /* Esconder Data Prev. Faturamento */
+                #sale-faturamento, label[for="sale-faturamento"] {
+                    display: none !important;
+                }
             `;
             document.head.appendChild(style);
+
+            // Mudar Labels e Remover Obrigatórios
+            const boxesLabel = document.querySelector('label[for="sale-boxes"]');
+            if (boxesLabel) boxesLabel.innerText = "Qtd. Vinhos";
+
+            const fatInput = document.getElementById('sale-faturamento');
+            if (fatInput) fatInput.removeAttribute('required');
         }
     },
 
