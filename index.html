@@ -52,6 +52,10 @@
                     <i class='bx bx-check-square'></i>
                     <span>Lembretes</span>
                 </a>
+                <a href="#whatsapp" class="nav-item" data-target="whatsapp">
+                    <i class='bx bx-chat'></i>
+                    <span>Análise WhatsApp</span>
+                </a>
             </nav>
 
             <div class="user-profile">
@@ -184,8 +188,7 @@
                             <form id="sales-form" class="app-form">
                                 <div class="form-group">
                                     <label for="sale-client">Nome do Cliente</label>
-                                    <input type="text" id="sale-client" list="crm-clients-list" required placeholder="Ex: Mercado Silva">
-                                    <datalist id="crm-clients-list"></datalist>
+                                    <input type="text" id="sale-client" required placeholder="Ex: Mercado Silva">
                                 </div>
 
                                 <!-- Campos Exclusivos Perfil Mamãe -->
@@ -351,6 +354,14 @@
                                 <button type="submit" class="btn btn-primary"><i class='bx bx-phone-call'></i> Salvar
                                     Contato</button>
                             </form>
+
+                            <!-- Painel de Sugestões IA -->
+                            <div class="panel-header" style="margin-top:2rem;">
+                                <h2>🤖 Sugestões Inteligentes</h2>
+                            </div>
+                            <div id="ai-suggestions-panel" style="padding:0.5rem 0;">
+                                <p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem;">Carregando análise...</p>
+                            </div>
                         </div>
 
                         <div class="panel list-panel">
@@ -362,9 +373,10 @@
                                     <thead>
                                         <tr>
                                             <th>Cliente</th>
+                                            <th>Status</th>
                                             <th>Último Contato</th>
                                             <th>Anotações</th>
-                                            <th>Recomendação</th>
+                                            <th>Próximo Follow-up</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
@@ -388,6 +400,163 @@
                         </div>
                         <div class="modal-body" id="crm-history-content">
                             <!-- JS content -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CRM Edit Modal -->
+                <div id="crm-edit-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width: 640px;">
+                        <div class="modal-header">
+                            <h2>✏️ Editar Cliente</h2>
+                            <button class="btn-sm" onclick="CRMModule.closeEditModal()"><i class='bx bx-x'></i></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="edit-id">
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+
+                                <div class="form-group">
+                                    <label>Nome do Cliente *</label>
+                                    <input type="text" id="edit-name" placeholder="Ex: Mercado Silva">
+                                </div>
+                                <div class="form-group">
+                                    <label>Empresa / Razão Social</label>
+                                    <input type="text" id="edit-company" placeholder="Ex: Mercado Silva LTDA">
+                                </div>
+                                <div class="form-group">
+                                    <label>Telefone / WhatsApp</label>
+                                    <input type="text" id="edit-phone" placeholder="(11) 90000-0000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nome do Comprador</label>
+                                    <input type="text" id="edit-buyer" placeholder="Ex: João">
+                                </div>
+                                <div class="form-group">
+                                    <label>E-mail</label>
+                                    <input type="email" id="edit-email" placeholder="email@empresa.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>CNPJ</label>
+                                    <input type="text" id="edit-cnpj" placeholder="00.000.000/0001-00">
+                                </div>
+                                <div class="form-group">
+                                    <label>Instagram</label>
+                                    <input type="text" id="edit-instagram" placeholder="@perfil">
+                                </div>
+                                <div class="form-group">
+                                    <label>Segmento</label>
+                                    <input type="text" id="edit-segment" placeholder="Ex: Varejo, Atacado...">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Endereço</label>
+                                    <input type="text" id="edit-address" placeholder="Rua, número, bairro, cidade">
+                                </div>
+                                <div class="form-group">
+                                    <label>Produtos que Trabalha</label>
+                                    <input type="text" id="edit-products" placeholder="Ex: Bobinas, Sacolas">
+                                </div>
+                                <div class="form-group">
+                                    <label>Origem do Contato</label>
+                                    <input type="text" id="edit-source" placeholder="Ex: Instagram, Indicação">
+                                </div>
+                                <div class="form-group">
+                                    <label>Status do Cliente</label>
+                                    <select id="edit-status">
+                                        <option value="Prospect">Prospect</option>
+                                        <option value="Contato">Contato</option>
+                                        <option value="Ativo">Ativo</option>
+                                        <option value="Inativo">Inativo</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Último Contato</label>
+                                    <input type="date" id="edit-lastContact">
+                                </div>
+                                <div class="form-group">
+                                    <label>Próximo Follow-up</label>
+                                    <input type="date" id="edit-nextFollowUp">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Anotações</label>
+                                    <textarea id="edit-notes" rows="3" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); resize:vertical;" placeholder="Observações sobre o cliente..."></textarea>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:0.8rem; margin-top:1.2rem; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                                <button class="btn btn-outline" style="color:#25D366; border-color:#25D366;" onclick="CRMModule.closeEditModal(); WhatsAppModule.openComposer(document.getElementById('edit-id').value)">
+                                    <i class='bx bxl-whatsapp'></i> Enviar WhatsApp
+                                </button>
+                                <div style="display:flex; gap:0.8rem;">
+                                    <button class="btn btn-outline" onclick="CRMModule.closeEditModal()">Cancelar</button>
+                                    <button class="btn btn-primary" id="btn-save-edit" onclick="CRMModule.saveEdit()">
+                                        <i class='bx bx-save'></i> Salvar alterações
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Composer Modal -->
+                <div id="wapp-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width:580px;">
+                        <div class="modal-header" style="border-bottom:1px solid rgba(37,211,102,0.2);">
+                            <h2 style="display:flex;align-items:center;gap:0.5rem;">
+                                <i class='bx bxl-whatsapp' style="color:#25D366;font-size:1.4rem;"></i>
+                                Enviar mensagem
+                            </h2>
+                            <button class="btn-sm" onclick="WhatsAppModule.closeComposer()"><i class='bx bx-x'></i></button>
+                        </div>
+                        <div class="modal-body">
+
+                            <!-- Info do cliente -->
+                            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.8rem;background:rgba(37,211,102,0.06);border-radius:8px;margin-bottom:1.2rem;border:1px solid rgba(37,211,102,0.15);">
+                                <div style="width:40px;height:40px;border-radius:50%;background:rgba(37,211,102,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">👤</div>
+                                <div>
+                                    <div style="font-weight:600;color:var(--text-main);" id="wapp-client-name">—</div>
+                                    <div style="font-size:0.82rem;color:#25D366;" id="wapp-client-phone">—</div>
+                                </div>
+                            </div>
+
+                            <!-- Alerta sem telefone -->
+                            <div id="wapp-no-phone-alert" style="display:none;padding:0.7rem 1rem;background:rgba(239,159,39,0.1);border:1px solid rgba(239,159,39,0.3);border-radius:8px;font-size:0.83rem;color:#EF9F27;margin-bottom:1rem;">
+                                ⚠️ Este cliente não tem telefone cadastrado. Edite o cliente antes de enviar.
+                            </div>
+
+                            <!-- Número (editável) -->
+                            <div class="form-group" style="margin-bottom:1rem;">
+                                <label style="font-size:0.82rem;">Número (com DDD)</label>
+                                <input type="tel" id="wapp-phone-input" placeholder="11999990000" style="padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);width:100%;font-size:0.9rem;">
+                                <input type="hidden" id="wapp-client-id">
+                            </div>
+
+                            <!-- Templates -->
+                            <div style="margin-bottom:0.8rem;">
+                                <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;">Templates rápidos:</div>
+                                <div id="wapp-templates" style="display:flex;flex-wrap:wrap;gap:0.4rem;"></div>
+                            </div>
+
+                            <!-- Área de texto -->
+                            <div class="form-group" style="margin-bottom:0.5rem;">
+                                <label style="font-size:0.82rem;">Mensagem</label>
+                                <textarea id="wapp-message" rows="5"
+                                    style="width:100%;padding:0.7rem 0.9rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);resize:vertical;font-size:0.88rem;line-height:1.5;"
+                                    placeholder="Digite sua mensagem..."></textarea>
+                            </div>
+                            <div style="text-align:right;font-size:0.75rem;color:var(--text-muted);margin-bottom:1.2rem;" id="wapp-char-count">0 caracteres</div>
+
+                            <!-- Botões -->
+                            <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
+                                <button class="btn btn-outline" onclick="WhatsAppModule.closeComposer()">Cancelar</button>
+                                <button class="btn btn-primary" style="background:#25D366;border-color:#25D366;" onclick="WhatsAppModule.send()">
+                                    <i class='bx bxl-whatsapp'></i> Abrir no WhatsApp
+                                </button>
+                            </div>
+
+                            <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.8rem;">
+                                O WhatsApp abrirá em nova aba. O contato será registrado automaticamente no CRM.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -524,6 +693,19 @@
                         </div>
                     </div>
 
+                    <!-- Cards: CRM + Amostras + Lembretes -->
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem;">
+                        <div class="panel" style="padding:1rem;" id="dash-crm-card">
+                            <div style="color:var(--text-muted);font-size:0.85rem;">Carregando CRM...</div>
+                        </div>
+                        <div class="panel" style="padding:1rem;" id="dash-samples-card">
+                            <div style="color:var(--text-muted);font-size:0.85rem;">Carregando amostras...</div>
+                        </div>
+                        <div class="panel" style="padding:1rem;" id="dash-reminders-card">
+                            <div style="color:var(--text-muted);font-size:0.85rem;">Carregando lembretes...</div>
+                        </div>
+                    </div>
+
                     <!-- Dashboard 2.0 Smart Metrics -->
                     <div class="analytics-grid">
                         <div class="card-stat">
@@ -540,25 +722,6 @@
                             <span class="stat-label">Previsão Fechamento</span>
                             <span class="stat-value" id="stat-forecast">R$ 0,00</span>
                             <span class="stat-change stat-neutral" id="stat-forecast-status">Baseado no ritmo</span>
-                        </div>
-                    </div>
-
-                    <!-- Dashboard 2.0 Operational Insights -->
-                    <div class="analytics-grid">
-                        <div class="card-stat">
-                            <span class="stat-label">Clientes no CRM</span>
-                            <span class="stat-value" id="stat-crm-count">0</span>
-                            <span class="stat-change stat-neutral">Base de contatos</span>
-                        </div>
-                        <div class="card-stat">
-                            <span class="stat-label">Amostras Pendentes</span>
-                            <span class="stat-value" id="stat-samples-count">0</span>
-                            <span class="stat-change stat-neutral">Aguardando retorno</span>
-                        </div>
-                        <div class="card-stat">
-                            <span class="stat-label">Lembretes Ativos</span>
-                            <span class="stat-value" id="stat-reminders-count">0</span>
-                            <span class="stat-change stat-neutral">Tarefas pendentes</span>
                         </div>
                     </div>
 
@@ -598,9 +761,66 @@
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-table-body">
-                                        <!-- Rendered via JS -->
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        <!-- Atividades Recentes -->
+                        <div class="panel list-panel">
+                            <div class="panel-header">
+                                <h2>📋 Atividades Recentes</h2>
+                            </div>
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:36px;"></th>
+                                            <th>Atividade</th>
+                                            <th>Data</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dash-activities-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View: WhatsApp Analyzer -->
+                <section id="view-whatsapp" class="view-section hidden">
+                    <div class="dashboard-grid">
+                        <div class="panel form-panel">
+                            <div class="panel-header"><h2>📱 Analisar Conversas</h2></div>
+                            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.6;">
+                                Exporte conversas do WhatsApp (<strong>3 pontinhos → Mais → Exportar conversa → Sem mídia</strong>) e arraste os arquivos <code>.txt</code> aqui.
+                            </p>
+                            <div id="wpp-dropzone" style="border:2px dashed rgba(255,255,255,0.15);border-radius:12px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:1rem;">
+                                <div style="font-size:2.5rem;margin-bottom:0.5rem;">💬</div>
+                                <div style="font-weight:500;color:var(--text-main);margin-bottom:0.3rem;">Arraste os arquivos .txt aqui</div>
+                                <div style="font-size:0.8rem;color:var(--text-muted);">ou clique para selecionar · múltiplos arquivos</div>
+                            </div>
+                            <input type="file" id="wpp-file-input" accept=".txt" multiple style="display:none;">
+                            <div id="wpp-file-list" style="margin-bottom:1rem;"><p style="color:var(--text-muted);font-size:0.85rem;">Nenhum arquivo carregado.</p></div>
+                            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                                <button id="btn-wpp-analyze" class="btn btn-primary" disabled><i class='bx bx-search-alt'></i> Analisar Conversas</button>
+                                <button id="btn-wpp-clear" class="btn btn-outline" style="display:none;"><i class='bx bx-trash'></i> Limpar</button>
+                            </div>
+                        </div>
+                        <div class="panel list-panel">
+                            <div id="wpp-summary-section" style="display:none;margin-bottom:1.5rem;">
+                                <div class="panel-header"><h2>📊 Resumo Geral</h2></div>
+                                <div id="wpp-summary-content"></div>
+                            </div>
+                            <div id="wpp-results-section" style="display:none;">
+                                <div class="panel-header"><h2>🔍 Análise por Conversa</h2></div>
+                                <div id="wpp-results-list"></div>
+                            </div>
+                            <div id="wpp-empty-state" style="text-align:center;padding:3rem 1rem;color:var(--text-muted);">
+                                <div style="font-size:3rem;margin-bottom:1rem;">🤖</div>
+                                <div style="font-weight:500;font-size:1rem;margin-bottom:0.5rem;">IA pronta para analisar</div>
+                                <div style="font-size:0.85rem;line-height:1.6;">Carregue suas conversas do WhatsApp e descubra<br>onde estão as oportunidades de melhoria.</div>
                             </div>
                         </div>
                     </div>
@@ -711,21 +931,18 @@
             }
         });
     </script>
-
-
-                
-            </div>
-        </main>
-    </div>
-
+    
     <!-- Scripts -->
     <script src="js/data.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/sales.js"></script>
+    <script src="js/ai-suggestions.js"></script>
     <script src="js/crm.js"></script>
     <script src="js/samples.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/reminders.js"></script>
+    <script src="js/whatsapp.js"></script>
+    <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

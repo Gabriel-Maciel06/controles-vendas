@@ -992,3 +992,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* WhatsApp Analyzer & AI Suggestions */
+#wpp-dropzone {
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+#wpp-dropzone.dragover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+    transform: scale(1.01);
+}
+
+.ai-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
