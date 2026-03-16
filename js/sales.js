@@ -49,7 +49,8 @@ const SalesModule = {
             kpiGoogle: document.getElementById('kpi-google-count'),
             kpiReativacao: document.getElementById('kpi-reativacao-count'),
             kpiIntroducao: document.getElementById('kpi-introducao-count'),
-            kpiTotalComm: document.getElementById('kpi-total-commission')
+            kpiTotalComm: document.getElementById('kpi-total-commission'),
+            customerDatalist: document.getElementById('crm-clients-list')
         };
     },
 
@@ -123,11 +124,27 @@ const SalesModule = {
         // We filter for CURRENT MONTH for KPIs
         const allSales = DataStore.get(STORAGE_KEYS.SALES);
 
-        // Sort descending by created date
-        allSales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
         this.renderTable(allSales);
         this.updateKPIs(allSales);
+        this.updateCustomerDatalist();
+    },
+
+    updateCustomerDatalist() {
+        if (!this.dom.customerDatalist) return;
+        
+        // Obter nomes do CRM
+        const customers = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
+        const customerNames = customers.map(c => (c.name || c.client || "").trim()).filter(n => n);
+        
+        // Obter nomes do histórico de vendas
+        const sales = DataStore.get(STORAGE_KEYS.SALES) || [];
+        const salesNames = sales.map(s => (s.client || "").trim()).filter(n => n);
+        
+        // Unificar e remover duplicatas
+        const uniqueNames = [...new Set([...customerNames, ...salesNames])].sort();
+        
+        // Gerar opções do datalist
+        this.dom.customerDatalist.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
     },
 
     renderTable(sales) {
@@ -138,8 +155,8 @@ const SalesModule = {
             return;
         }
 
-        // Only render the latest 10 for dashboard
-        const recent = sales.slice(0, 10);
+        // Render the latest 50 for better visibility
+        const recent = sales.slice(0, 50);
 
         const typeMapping = {
             "Google": '<span class="badge badge-primary">Google</span>',
