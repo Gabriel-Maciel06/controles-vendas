@@ -116,6 +116,7 @@ const SalesModule = {
         this.dom.client.focus();
 
         this.loadSales();
+        if (window.DashboardModule) window.DashboardModule.update();
     },
 
     loadSales() {
@@ -213,6 +214,7 @@ const SalesModule = {
         if (!confirm('Excluir esta venda?')) return;
         await DataStore.remove(STORAGE_KEYS.SALES, id);
         this.loadSales();
+        if (window.DashboardModule) window.DashboardModule.update();
         if (typeof CalendarModule !== 'undefined') CalendarModule.loadEvents();
     },
 
@@ -232,6 +234,7 @@ const SalesModule = {
         // Remove a venda antiga e salva a edição no submit
         DataStore.remove(STORAGE_KEYS.SALES, id);
         this.loadSales();
+        if (window.DashboardModule) window.DashboardModule.update();
         this.dom.client.focus();
     },
 

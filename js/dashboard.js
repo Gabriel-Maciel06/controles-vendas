@@ -9,7 +9,11 @@ const DashboardModule = {
         this.cacheDOM();
         this.bindEvents();
         this.loadGoal();
-        // Não carrega os dados aqui, será chamado pelo App.js quando a aba for aberta
+        
+        // Carrega dados iniciais assim que o módulo é pronto
+        setTimeout(() => {
+            this.update();
+        }, 500); 
     },
 
     cacheDOM() {
@@ -203,6 +207,7 @@ const DashboardModule = {
         // Pegar a cor primária do CSS roots
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#3b82f6';
         const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#10b981';
+        const profile = sessionStorage.getItem('maciel_profile');
 
         this.chartInstance = new Chart(ctx, {
             type: 'line',
