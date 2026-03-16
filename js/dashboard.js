@@ -18,6 +18,13 @@ const DashboardModule = {
 
     cacheDOM() {
         this.dom = {
+            goalInput: document.getElementById('goal-input'),
+            btnSaveGoal: document.getElementById('btn-save-goal'),
+            goalRealized: document.getElementById('goal-realized'),
+            goalRemaining: document.getElementById('goal-remaining'),
+            goalProgressBar: document.getElementById('goal-progress-bar'),
+            goalPercentage: document.getElementById('goal-percentage'),
+            rankingBody: document.getElementById('ranking-table-body'),
             canvas: document.getElementById('salesChart'),
             categoryCanvas: document.getElementById('categoryChart'),
             categoryTitle: document.getElementById('category-chart-title'),
@@ -27,7 +34,12 @@ const DashboardModule = {
             avgTicketChange: document.getElementById('stat-avg-ticket-change'),
             growth: document.getElementById('stat-growth'),
             growthTrend: document.getElementById('stat-growth-trend'),
-            forecast: document.getElementById('stat-forecast')
+            forecast: document.getElementById('stat-forecast'),
+
+            // Operational Insights (New)
+            crmCount: document.getElementById('stat-crm-count'),
+            samplesCount: document.getElementById('stat-samples-count'),
+            remindersCount: document.getElementById('stat-reminders-count')
         };
     },
 
@@ -49,6 +61,9 @@ const DashboardModule = {
 
     update() {
         const sales = DataStore.get(STORAGE_KEYS.SALES) || [];
+        const customers = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
+        const samples = DataStore.get(STORAGE_KEYS.SAMPLES) || [];
+        const reminders = DataStore.get(STORAGE_KEYS.REMINDERS) || [];
         
         // Obter mês atual e anterior
         const now = new Date();
@@ -61,9 +76,20 @@ const DashboardModule = {
         // Calcular dados
         this.updateGoalProgress(sales, curMonthPrefix);
         this.updateAnalytics(sales, curMonthPrefix, lastMonthPrefix);
+        this.updateOperationalInsights(customers, samples, reminders);
         this.updateRanking(sales);
         this.renderChart(sales);
         this.renderCategoryChart(sales, curMonthPrefix);
+    },
+
+    updateOperationalInsights(customers, samples, reminders) {
+        if (this.dom.crmCount) this.dom.crmCount.innerText = customers.length;
+        
+        const pendingSamples = samples.filter(s => s.status !== 'Finalizado' && s.status !== 'Devolvido').length;
+        if (this.dom.samplesCount) this.dom.samplesCount.innerText = pendingSamples;
+
+        const activeReminders = reminders.filter(r => !r.completed).length;
+        if (this.dom.remindersCount) this.dom.remindersCount.innerText = activeReminders;
     },
 
     updateAnalytics(sales, curMonthPrefix, lastMonthPrefix) {

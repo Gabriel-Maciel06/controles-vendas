@@ -1,7 +1,11 @@
 /**
- * Main Application Logic - Controle Vendas Maciel
- * Handles Navigation, Authentication, and Initialization
+ * Global Utilities
  */
+window.Utils = {
+    formatCurrency(value) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    }
+};
 
 const AppModule = {
     init() {
