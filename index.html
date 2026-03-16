@@ -794,14 +794,14 @@
                         <div class="panel form-panel">
                             <div class="panel-header"><h2>📱 Analisar Conversas</h2></div>
                             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.2rem;line-height:1.6;">
-                                Exporte conversas do WhatsApp (<strong>3 pontinhos → Mais → Exportar conversa → Sem mídia</strong>) e arraste os arquivos <code>.txt</code> aqui.
+                                Exporte conversas do WhatsApp (<strong>3 pontinhos → Mais → Exportar conversa → Sem mídia</strong>) e arraste os arquivos <code>.txt</code> ou <code>.zip</code> aqui.
                             </p>
                             <div id="wpp-dropzone" style="border:2px dashed rgba(255,255,255,0.15);border-radius:12px;padding:2rem 1rem;text-align:center;cursor:pointer;transition:border-color 0.2s;margin-bottom:1rem;">
                                 <div style="font-size:2.5rem;margin-bottom:0.5rem;">💬</div>
-                                <div style="font-weight:500;color:var(--text-main);margin-bottom:0.3rem;">Arraste os arquivos .txt aqui</div>
-                                <div style="font-size:0.8rem;color:var(--text-muted);">ou clique para selecionar · múltiplos arquivos</div>
+                                <div style="font-weight:500;color:var(--text-main);margin-bottom:0.3rem;">Arraste os arquivos aqui</div>
+                                <div style="font-size:0.8rem;color:var(--text-muted);">aceita <strong>.zip</strong> ou <strong>.txt</strong> · múltiplos arquivos</div>
                             </div>
-                            <input type="file" id="wpp-file-input" accept=".txt" multiple style="display:none;">
+                            <input type="file" id="wpp-file-input" accept=".zip,.txt" multiple style="display:none;">
                             <div id="wpp-file-list" style="margin-bottom:1rem;"><p style="color:var(--text-muted);font-size:0.85rem;">Nenhum arquivo carregado.</p></div>
                             <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
                                 <button id="btn-wpp-analyze" class="btn btn-primary" disabled><i class='bx bx-search-alt'></i> Analisar Conversas</button>
