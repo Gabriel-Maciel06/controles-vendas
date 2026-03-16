@@ -14,14 +14,16 @@ const DashboardModule = {
 
     cacheDOM() {
         this.dom = {
-            goalInput: document.getElementById('goal-input'),
-            btnSaveGoal: document.getElementById('btn-save-goal'),
-            goalRealized: document.getElementById('goal-realized'),
-            goalRemaining: document.getElementById('goal-remaining'),
-            goalProgressBar: document.getElementById('goal-progress-bar'),
-            goalPercentage: document.getElementById('goal-percentage'),
-            rankingBody: document.getElementById('ranking-table-body'),
-            canvas: document.getElementById('salesChart')
+            canvas: document.getElementById('salesChart'),
+            categoryCanvas: document.getElementById('categoryChart'),
+            categoryTitle: document.getElementById('category-chart-title'),
+            
+            // New KPI Stats
+            avgTicket: document.getElementById('stat-avg-ticket'),
+            avgTicketChange: document.getElementById('stat-avg-ticket-change'),
+            growth: document.getElementById('stat-growth'),
+            growthTrend: document.getElementById('stat-growth-trend'),
+            forecast: document.getElementById('stat-forecast')
         };
     },
 
@@ -44,14 +46,50 @@ const DashboardModule = {
     update() {
         const sales = DataStore.get(STORAGE_KEYS.SALES) || [];
         
-        // Obter mês atual e ano atual em formato YYYY-MM
+        // Obter mês atual e anterior
         const now = new Date();
-        const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const curMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        const lastMonthDate = new Date();
+        lastMonthDate.setMonth(now.getMonth() - 1);
+        const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
         
         // Calcular dados
-        this.updateGoalProgress(sales, currentMonthPrefix);
+        this.updateGoalProgress(sales, curMonthPrefix);
+        this.updateAnalytics(sales, curMonthPrefix, lastMonthPrefix);
         this.updateRanking(sales);
         this.renderChart(sales);
+        this.renderCategoryChart(sales, curMonthPrefix);
+    },
+
+    updateAnalytics(sales, curMonthPrefix, lastMonthPrefix) {
+        const curSales = sales.filter(s => s.saleDate && s.saleDate.startsWith(curMonthPrefix));
+        const lastSales = sales.filter(s => s.saleDate && s.saleDate.startsWith(lastMonthPrefix));
+
+        const curTotal = curSales.reduce((sum, s) => sum + (parseFloat(s.value) || 0), 0);
+        const lastTotal = lastSales.reduce((sum, s) => sum + (parseFloat(s.value) || 0), 0);
+
+        // 1. Ticket Médio
+        const avgTicket = curSales.length > 0 ? curTotal / curSales.length : 0;
+        this.dom.avgTicket.innerText = Utils.formatCurrency(avgTicket);
+        
+        // 2. Crescimento Mensal
+        if (lastTotal > 0) {
+            const growth = ((curTotal - lastTotal) / lastTotal) * 100;
+            this.dom.growth.innerText = growth.toFixed(1) + '%';
+            this.dom.growthTrend.innerText = growth >= 0 ? '↑ vs mês anterior' : '↓ vs mês anterior';
+            this.dom.growthTrend.className = 'stat-change ' + (growth >= 0 ? 'stat-up' : 'stat-down');
+        } else {
+            this.dom.growth.innerText = '--';
+            this.dom.growthTrend.innerText = 'Sem dados anteriores';
+        }
+
+        // 3. Previsão de Fechamento (Run Rate)
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const currentDay = now.getDate();
+        const forecast = (curTotal / currentDay) * daysInMonth;
+        this.dom.forecast.innerText = Utils.formatCurrency(forecast);
     },
 
     updateGoalProgress(sales, currentMonthPrefix) {
@@ -243,6 +281,57 @@ const DashboardModule = {
                         ticks: { color: accentColor }
                     }
                 }
+            }
+        });
+    },
+
+    renderCategoryChart(sales, curMonthPrefix) {
+        if (!this.dom.categoryCanvas) return;
+        
+        const profile = sessionStorage.getItem('maciel_profile');
+        const curMonthSales = sales.filter(s => s.saleDate && s.saleDate.startsWith(curMonthPrefix));
+        
+        const dataMap = {};
+        
+        if (profile === 'mamae') {
+            this.dom.categoryTitle.innerText = "Lucro por Vinho (Este Mês)";
+            curMonthSales.forEach(s => {
+                const label = s.productName || "Outros";
+                dataMap[label] = (dataMap[label] || 0) + (parseFloat(s.commission) || 0);
+            });
+        } else {
+            this.dom.categoryTitle.innerText = "Performance por Canal (Este Mês)";
+            curMonthSales.forEach(s => {
+                const label = s.type || "Normal";
+                dataMap[label] = (dataMap[label] || 0) + (parseFloat(s.value) || 0);
+            });
+        }
+
+        const labels = Object.keys(dataMap);
+        const values = Object.values(dataMap);
+
+        if (this.categoryChartInstance) this.categoryChartInstance.destroy();
+
+        const ctx = this.dom.categoryCanvas.getContext('2d');
+        this.categoryChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.length ? labels : ['Sem dados'],
+                datasets: [{
+                    data: values.length ? values : [1],
+                    backgroundColor: [
+                        '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 20 } }
+                },
+                cutout: '70%'
             }
         });
     }

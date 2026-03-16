@@ -192,10 +192,9 @@ const AppModule = {
                         section.classList.remove('hidden');
                         section.classList.add('active');
                         
-                        // Executar update do Dashboard apenas quando ele for mostrado 
-                        // para que a biblioteca do Chart renderize com as dimensões certas
-                        if(targetId === 'dashboard' && typeof DashboardModule !== 'undefined') {
-                            DashboardModule.update();
+                        // DASHBOARD AUTO-UPDATE on open
+                        if (targetId === 'dashboard' && window.DashboardModule) {
+                            window.DashboardModule.update();
                         }
                     } else {
                         section.classList.remove('active');

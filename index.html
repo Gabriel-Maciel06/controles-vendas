@@ -502,12 +502,12 @@
     <!-- View: Dashboard (Resumo) -->
     <section id="view-dashboard" class="view-section hidden">
         <!-- Progress Bar for Monthly Goal -->
-        <div class="panel list-panel" style="margin-bottom: 2rem;">
-            <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
-                <h2>Meta de Vendas do Mês</h2>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <label for="goal-input" style="font-size: 0.9rem; color: var(--text-muted);">Meta (R$):</label>
-                    <input type="number" id="goal-input" placeholder="0" style="padding: 0.4rem; border: 1px solid rgba(255,255,255,0.1); background: var(--bg-card); color: var(--text-main); border-radius: 4px; width: 120px;">
+                    <div class="panel list-panel" style="margin-bottom: 2rem;">
+                        <div class="panel-header" style="flex-wrap: wrap; gap: 1rem;">
+                            <h2>Meta de Vendas do Mês</h2>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label for="goal-input" style="font-size: 0.9rem; color: var(--text-muted);">Meta (R$):</label>
+                                <input type="number" id="goal-input" placeholder="0" style="padding: 0.4rem; border: 1px solid rgba(255,255,255,0.1); background: var(--bg-surface); color: var(--text-main); border-radius: 4px; width: 120px;">
                                 <button id="btn-save-goal" class="btn btn-sm btn-primary">Salvar</button>
                             </div>
                         </div>
@@ -523,14 +523,43 @@
                         </div>
                     </div>
 
+                    <!-- Dashboard 2.0 Smart Metrics -->
+                    <div class="analytics-grid">
+                        <div class="card-stat">
+                            <span class="stat-label">Ticket Médio</span>
+                            <span class="stat-value" id="stat-avg-ticket">R$ 0,00</span>
+                            <span class="stat-change stat-neutral" id="stat-avg-ticket-change">--</span>
+                        </div>
+                        <div class="card-stat">
+                            <span class="stat-label">Crescimento Mensal</span>
+                            <span class="stat-value" id="stat-growth">0%</span>
+                            <span class="stat-change" id="stat-growth-trend">vs mês anterior</span>
+                        </div>
+                        <div class="card-stat">
+                            <span class="stat-label">Previsão Fechamento</span>
+                            <span class="stat-value" id="stat-forecast">R$ 0,00</span>
+                            <span class="stat-change stat-neutral" id="stat-forecast-status">Baseado no ritmo</span>
+                        </div>
+                    </div>
+
                     <div class="dashboard-grid">
-                        <!-- Chart View -->
+                        <!-- Chart: Evolution -->
                         <div class="panel form-panel" style="display: flex; flex-direction: column;">
                             <div class="panel-header">
                                 <h2>Evolução Mensal (R$)</h2>
                             </div>
-                            <div style="flex: 1; min-height: 300px; display: flex; align-items: center; justify-content: center; position: relative; width: 100%;">
+                            <div style="flex: 1; min-height: 250px; position: relative; width: 100%;">
                                 <canvas id="salesChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart: Category Performance -->
+                        <div class="panel form-panel" style="display: flex; flex-direction: column;">
+                            <div class="panel-header">
+                                <h2 id="category-chart-title">Performance por Canal</h2>
+                            </div>
+                            <div style="flex: 1; min-height: 250px; position: relative; width: 100%;">
+                                <canvas id="categoryChart"></canvas>
                             </div>
                         </div>
 
