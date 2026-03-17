@@ -273,7 +273,16 @@ const CRMModule = {
             else if (nextFollow === today)              { followBadge = 'Hoje';     followColor = '#EF9F27'; }
             else                                        { followBadge = 'Em dia';   followColor = '#1D9E75'; }
 
-            const statusColors = { 'Ativo':'#1D9E75','Contato':'#818cf8','Inativo':'#888','Prospect':'#EF9F27' };
+            const statusColors = { 
+                'Lead':'#818cf8', 
+                'Prospect':'#EF9F27', 
+                'Contato':'#EF9F27', 
+                'Ativo':'#1D9E75', 
+                'Proposta':'#3b82f6', 
+                'Fechado':'#1D9E75', 
+                'Perdido':'#E24B4A', 
+                'Inativo':'#888' 
+            };
             const statusColor  = statusColors[alert.status] || '#888';
             const initial      = name.charAt(0).toUpperCase();
 

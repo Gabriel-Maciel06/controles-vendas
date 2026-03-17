@@ -218,6 +218,10 @@ const AppModule = {
                         if (targetId === 'dashboard' && window.DashboardModule) {
                             window.DashboardModule.update();
                         }
+                        // KANBAN RENDER on open
+                        if (targetId === 'kanban' && window.KanbanModule) {
+                            window.KanbanModule.render();
+                        }
                     } else {
                         section.classList.remove('active');
                         section.classList.add('hidden');

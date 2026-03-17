@@ -48,6 +48,10 @@
                     <i class='bx bx-user-circle'></i>
                     <span>CRM / Relacionamento</span>
                 </a>
+                <a href="#kanban" class="nav-item" data-target="kanban">
+                    <i class='bx bx-layout'></i>
+                    <span>Funil de Vendas</span>
+                </a>
                 <a href="#samples" class="nav-item" data-target="samples">
                     <i class='bx bx-box'></i>
                     <span>Gestão de Amostras</span>
@@ -390,10 +394,14 @@
                                     style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;"
                                     onchange="CRMModule.applyFilters()">
                                     <option value="">Todos os status</option>
-                                    <option value="Prospect">Prospect</option>
-                                    <option value="Contato">Contato</option>
-                                    <option value="Ativo">Ativo</option>
-                                    <option value="Inativo">Inativo</option>
+                                    <option value="Lead">🎯 Lead</option>
+                                    <option value="Prospect">🎯 Prospect</option>
+                                    <option value="Contato">📞 Contato</option>
+                                    <option value="Ativo">📞 Ativo</option>
+                                    <option value="Proposta">📋 Proposta</option>
+                                    <option value="Fechado">✅ Fechado</option>
+                                    <option value="Perdido">❌ Perdido</option>
+                                    <option value="Inativo">⏸ Inativo</option>
                                 </select>
 
                                 <!-- Filtro follow-up -->
@@ -432,6 +440,34 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <!-- View: Kanban / Funil de Vendas -->
+                <section id="view-kanban" class="view-section hidden">
+                    <div style="padding:0 0 1rem;">
+
+                        <!-- Header com legenda e botão atualizar -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1.2rem;">
+                            <div>
+                                <h2 style="margin:0;font-size:1.1rem;color:var(--text-main);">🗂 Funil de Vendas</h2>
+                                <p style="margin:0.2rem 0 0;font-size:0.8rem;color:var(--text-muted);">Arraste os cards entre colunas ou use o menu ↪ dentro de cada card</p>
+                            </div>
+                            <button onclick="KanbanModule.render()" class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                                <i class='bx bx-refresh'></i> Atualizar
+                            </button>
+                        </div>
+
+                        <!-- Board Kanban -->
+                        <div id="kanban-board"
+                             style="display:flex;gap:0.8rem;overflow-x:auto;align-items:flex-start;padding-bottom:1rem;">
+                            <!-- Renderizado via JS -->
+                        </div>
+
+                        <!-- Dica mobile -->
+                        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;opacity:0.6;">
+                            💡 No celular use o menu ↪ dentro de cada card para mover entre etapas
+                        </p>
                     </div>
                 </section>
 
@@ -509,10 +545,14 @@
                                 <div class="form-group">
                                     <label>Status do Cliente</label>
                                     <select id="edit-status">
-                                        <option value="Prospect">Prospect</option>
-                                        <option value="Contato">Contato</option>
-                                        <option value="Ativo">Ativo</option>
-                                        <option value="Inativo">Inativo</option>
+                                        <option value="Lead">🎯 Lead</option>
+                                        <option value="Prospect">🎯 Prospect</option>
+                                        <option value="Contato">📞 Contato</option>
+                                        <option value="Ativo">📞 Ativo</option>
+                                        <option value="Proposta">📋 Proposta</option>
+                                        <option value="Fechado">✅ Fechado</option>
+                                        <option value="Perdido">❌ Perdido</option>
+                                        <option value="Inativo">⏸ Inativo</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -988,6 +1028,7 @@
     <script src="js/calendar.js"></script>
     <script src="js/reminders.js"></script>
     <script src="js/whatsapp.js"></script>
+    <script src="js/kanban.js"></script>
     <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>
 </body>
