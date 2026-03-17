@@ -10,6 +10,7 @@ const CRMModule = {
         this.cacheDOM();
         this.bindEvents();
         this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+        this.selectDays(15); // padrão 15 dias
         this.loadAlerts();
         if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
     },
@@ -22,9 +23,11 @@ const CRMModule = {
             buyer:         document.getElementById('crm-buyer'),
             products:      document.getElementById('crm-products'),
             source:        document.getElementById('crm-source'),
-            dateInput:     document.getElementById('crm-date'),
-            notes:         document.getElementById('crm-notes'),
-            alertsBody:    document.getElementById('crm-alerts-body'),
+            dateInput:      document.getElementById('crm-date'),
+            notes:          document.getElementById('crm-notes'),
+            followupDays:   document.getElementById('crm-followup-days'),
+            followupPreview:document.getElementById('crm-followup-preview'),
+            alertsBody:     document.getElementById('crm-alerts-body'),
             search:        document.getElementById('crm-search'),
             filterStatus:  document.getElementById('crm-filter-status'),
             filterFollowup:document.getElementById('crm-filter-followup'),
@@ -39,17 +42,52 @@ const CRMModule = {
             await this.handleFormSubmit();
         });
 
+        // Atualiza preview quando muda a data
+        this.dom.dateInput.addEventListener('change', () => this.updatePreview());
+
         // Fechar modal de edição clicando fora
         document.getElementById('crm-edit-modal')?.addEventListener('click', (e) => {
             if (e.target.id === 'crm-edit-modal') this.closeEditModal();
         });
     },
 
+    // ── Seleciona intervalo de follow-up ──
+    selectDays(days) {
+        if (this.dom.followupDays) this.dom.followupDays.value = days;
+
+        // Atualiza visual dos botões
+        document.querySelectorAll('.crm-days-btn').forEach(btn => {
+            const isSelected = parseInt(btn.dataset.days) === days;
+            btn.className = `crm-days-btn btn ${isSelected ? 'btn-primary' : 'btn-outline'}`;
+            btn.style.flex = '1';
+            btn.style.fontSize = '0.82rem';
+            btn.style.padding = '0.5rem 0.3rem';
+        });
+
+        this.updatePreview();
+    },
+
+    // ── Mostra a data prevista do próximo contato ──
+    updatePreview() {
+        const preview = this.dom.followupPreview;
+        if (!preview) return;
+
+        const days = parseInt(this.dom.followupDays?.value || 15);
+        const base = this.dom.dateInput?.value;
+        if (!base) { preview.textContent = ''; return; }
+
+        const d = new Date(base + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        const fmt = d.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+        preview.textContent = `📅 Próximo contato: ${fmt}`;
+    },
+
     // ── Registrar novo contato ──
     async handleFormSubmit() {
         const contactDate = this.dom.dateInput.value;
+        const days    = parseInt(this.dom.followupDays?.value || 15);
         const dateObj = new Date(contactDate + 'T00:00:00');
-        dateObj.setDate(dateObj.getDate() + 15);
+        dateObj.setDate(dateObj.getDate() + days);
 
         const newContact = {
             name:            this.dom.client.value.trim(),
@@ -67,6 +105,7 @@ const CRMModule = {
 
         // Limpar formulário
         ['client','notes','phone','buyer','products','source'].forEach(f => this.dom[f].value = '');
+        this.selectDays(15); // volta para padrão
         this.dom.client.focus();
         this.loadAlerts();
         if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
