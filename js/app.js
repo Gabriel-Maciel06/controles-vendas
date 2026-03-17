@@ -392,7 +392,7 @@ const AppModule = {
 
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 1100) {
                     sidebar.classList.remove('mobile-active');
                 }
             });
