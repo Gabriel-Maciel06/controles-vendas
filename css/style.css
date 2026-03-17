@@ -1016,3 +1016,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 #crm-alerts-body tr:last-child {
     border-bottom: none;
 }
+
+/* CRM — busca e filtros */
+#crm-search:focus {
+    border-color: var(--primary) !important;
+    background: rgba(99,102,241,0.06) !important;
+    outline: none;
+}
+#crm-filter-status:focus,
+#crm-filter-followup:focus {
+    border-color: var(--primary) !important;
+    outline: none;
+}
+#crm-filter-status option,
+#crm-filter-followup option {
+    background: var(--bg-surface);
+    color: var(--text-main);
+}

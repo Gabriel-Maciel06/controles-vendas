@@ -367,7 +367,49 @@
                         <div class="panel list-panel">
                             <div class="panel-header">
                                 <h2>Alertas de Follow-up (CRM)</h2>
+                                <span id="crm-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
                             </div>
+
+                            <!-- Barra de busca e filtros -->
+                            <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                                <!-- Busca por nome/telefone -->
+                                <div style="flex:1;min-width:160px;position:relative;">
+                                    <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                    <input type="text" id="crm-search"
+                                        placeholder="Buscar cliente ou telefone..."
+                                        style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;"
+                                        oninput="CRMModule.applyFilters()">
+                                </div>
+
+                                <!-- Filtro status -->
+                                <select id="crm-filter-status"
+                                    style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;"
+                                    onchange="CRMModule.applyFilters()">
+                                    <option value="">Todos os status</option>
+                                    <option value="Prospect">Prospect</option>
+                                    <option value="Contato">Contato</option>
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                </select>
+
+                                <!-- Filtro follow-up -->
+                                <select id="crm-filter-followup"
+                                    style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;"
+                                    onchange="CRMModule.applyFilters()">
+                                    <option value="">Todos os follow-ups</option>
+                                    <option value="atrasado">⚠️ Atrasados</option>
+                                    <option value="hoje">🔔 Hoje</option>
+                                    <option value="semana">📅 Esta semana</option>
+                                    <option value="emdia">✅ Em dia</option>
+                                </select>
+
+                                <!-- Botão limpar filtros -->
+                                <button id="crm-btn-clear-filters" onclick="CRMModule.clearFilters()"
+                                    style="display:none;padding:0.45rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(239,68,68,0.08);color:#ef4444;font-size:0.8rem;cursor:pointer;white-space:nowrap;">
+                                    ✕ Limpar
+                                </button>
+                            </div>
+
                             <div class="table-container">
                                 <table class="app-table">
                                     <thead>
