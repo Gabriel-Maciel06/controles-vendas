@@ -190,52 +190,54 @@ const CRMModule = {
         const today = new Date().toISOString().split('T')[0];
 
         alerts.forEach(alert => {
-            const name       = alert.name || alert.client;
+            const name       = alert.name || alert.client || '—';
+            const phone      = alert.phone || '';
             const lastDate   = alert.lastContactDate || alert.contactDate || '';
-            const lastFmt    = lastDate   ? lastDate.split('-').reverse().join('/')   : '-';
+            const lastFmt    = lastDate   ? lastDate.split('-').reverse().join('/')   : '—';
             const nextFollow = alert.nextFollowUp || '';
-            const nextFmt    = nextFollow ? nextFollow.split('-').reverse().join('/') : '-';
+            const nextFmt    = nextFollow ? nextFollow.split('-').reverse().join('/') : '—';
+            const notes      = (alert.notes || '').replace(/^\[WhatsApp\]\s*/i, '');
+            const notesFmt   = notes.length > 60 ? notes.substring(0,60) + '…' : notes;
 
-            let badge = '';
-            if      (nextFollow && nextFollow < today)  badge = '<span class="badge badge-warn">Atrasado</span>';
-            else if (nextFollow === today)               badge = '<span class="badge badge-accent">Hoje</span>';
-            else                                         badge = '<span class="badge badge-muted">Em dia</span>';
+            let followBadge, followColor;
+            if      (nextFollow && nextFollow < today) { followBadge = 'Atrasado'; followColor = '#E24B4A'; }
+            else if (nextFollow === today)              { followBadge = 'Hoje';     followColor = '#EF9F27'; }
+            else                                        { followBadge = 'Em dia';   followColor = '#1D9E75'; }
 
-            // Badge de status do cliente
-            const statusColors = {
-                'Ativo':    'badge-accent',
-                'Contato':  'badge-primary',
-                'Inativo':  'badge-muted',
-                'Prospect': 'badge-warn',
-            };
-            const statusBadge = `<span class="badge ${statusColors[alert.status] || 'badge-muted'}" style="font-size:0.7rem;">${alert.status || 'Contato'}</span>`;
+            const statusColors = { 'Ativo':'#1D9E75','Contato':'#818cf8','Inativo':'#888','Prospect':'#EF9F27' };
+            const statusColor  = statusColors[alert.status] || '#888';
+            const initial      = name.charAt(0).toUpperCase();
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>
-                    <strong>${this.escapeHTML(name)}</strong><br>
-                    <small style="color:var(--text-muted);">${this.escapeHTML(alert.phone || '')}</small>
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;align-items:center;gap:0.65rem;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:rgba(99,102,241,0.18);display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;color:#818cf8;flex-shrink:0;">${initial}</div>
+                        <div>
+                            <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;line-height:1.3;">${this.escapeHTML(name)}</div>
+                            ${phone ? `<div style="font-size:0.73rem;color:var(--text-muted);margin-top:1px;">${this.escapeHTML(phone)}</div>` : ''}
+                        </div>
+                    </div>
                 </td>
-                <td>${statusBadge}</td>
-                <td>${lastFmt}</td>
-                <td><small style="color:var(--text-muted);">${this.escapeHTML((alert.notes||'').substring(0,50))}${(alert.notes||'').length>50?'...':''}</small></td>
-                <td>${nextFmt} ${badge}</td>
-                <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                    <button class="btn btn-sm btn-primary" onclick="CRMModule.openEditModal('${alert.id}')" title="Editar cliente">
-                        <i class='bx bx-edit'></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" style="color:#25D366; border-color:#25D366;" onclick="WhatsAppModule.openComposer('${alert.id}')" title="Enviar WhatsApp">
-                        <i class='bx bxl-whatsapp'></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="CRMModule.quickContact('${this.escapeHTML(name)}')" title="Novo contato">
-                        <i class='bx bx-phone'></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" onclick="CRMModule.viewHistory('${this.escapeHTML(name)}')" title="Ver histórico">
-                        <i class='bx bx-history'></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline" style="color:#ef4444;" onclick="CRMModule.deleteContact('${alert.id}')" title="Excluir">
-                        <i class='bx bx-trash'></i>
-                    </button>
+                <td style="padding:0.75rem 0.5rem;">
+                    <span style="display:inline-block;padding:0.18rem 0.6rem;border-radius:20px;font-size:0.71rem;font-weight:600;background:${statusColor}22;color:${statusColor};">${alert.status || 'Contato'}</span>
+                </td>
+                <td style="padding:0.75rem 0.5rem;font-size:0.81rem;color:var(--text-muted);white-space:nowrap;">${lastFmt}</td>
+                <td style="padding:0.75rem 0.5rem;max-width:180px;">
+                    ${notesFmt ? `<span style="font-size:0.79rem;color:var(--text-muted);line-height:1.4;display:block;">${this.escapeHTML(notesFmt)}</span>` : '<span style="color:rgba(255,255,255,0.15);font-size:0.78rem;">—</span>'}
+                </td>
+                <td style="padding:0.75rem 0.5rem;white-space:nowrap;">
+                    <div style="font-size:0.81rem;color:var(--text-main);font-weight:500;margin-bottom:3px;">${nextFmt}</div>
+                    <span style="display:inline-block;padding:0.13rem 0.5rem;border-radius:20px;font-size:0.67rem;font-weight:600;background:${followColor}22;color:${followColor};">${followBadge}</span>
+                </td>
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;align-items:center;gap:0.28rem;">
+                        <button onclick="CRMModule.openEditModal('${alert.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
+                        <button onclick="WhatsAppModule.openComposer('${alert.id}')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>
+                        <button onclick="document.getElementById('crm-client').value='${this.escapeHTML(name)}';document.getElementById('crm-notes').focus();" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
+                        <button onclick="CRMModule.viewHistory('${this.escapeHTML(name)}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
+                        <button onclick="CRMModule.deleteContact('${alert.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
+                    </div>
                 </td>
             `;
             this.dom.alertsBody.appendChild(tr);

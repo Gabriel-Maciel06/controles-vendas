@@ -989,32 +989,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 @media (max-width: 768px) {
     .analytics-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 2fr;
     }
 }
-
-/* WhatsApp Analyzer & AI Suggestions */
-#wpp-dropzone {
-    border: 2px dashed rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 3rem 2rem;
-    text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.02);
+/* WhatsApp Analyzer dropzone */
+#wpp-dropzone:hover, #wpp-dropzone.dragover {
+    border-color: var(--primary) !important;
+    background: rgba(83,74,183,0.06);
 }
 
-#wpp-dropzone.dragover {
-    border-color: var(--primary);
-    background: rgba(99, 102, 241, 0.05);
-    transform: scale(1.01);
+/* CRM Table — redesign v2 */
+#crm-alerts-body tr {
+    border-bottom: 1px solid rgba(255,255,255,0.045);
+    transition: background 0.15s;
 }
-
-.ai-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+#crm-alerts-body tr:hover {
+    background: rgba(99,102,241,0.04);
 }
-
-.ai-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+#crm-alerts-body tr:last-child {
+    border-bottom: none;
 }
