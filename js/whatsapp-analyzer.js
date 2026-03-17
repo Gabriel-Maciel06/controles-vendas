@@ -61,7 +61,7 @@ const WhatsAppAnalyzer = {
                 const content = e.target.result;
                 const name    = this.extractContactName(file.name, content);
                 if (!this.conversations.find(c => c.fileName === file.name))
-                    this.conversations.push({ fileName: file.name, contactName: name, content, status: 'pendente' });
+                    this.conversations.push({ fileName: file.name, contactName: name, content, status: 'pendente', loadedAt: Date.now() });
                 resolve();
             };
             reader.readAsText(file, 'UTF-8');
@@ -92,7 +92,7 @@ const WhatsAppAnalyzer = {
                 const contactName = this.extractContactName(txtName, content);
                 const fileKey     = `${file.name}::${txtName}`;
                 if (!this.conversations.find(c => c.fileName === fileKey))
-                    this.conversations.push({ fileName: fileKey, contactName, content, status: 'pendente' });
+                    this.conversations.push({ fileName: fileKey, contactName, content, status: 'pendente', loadedAt: Date.now() });
             }
         } catch (err) {
             this.showToast(`❌ Erro ao abrir ${file.name}: ${err.message}`, 'error');
@@ -127,7 +127,12 @@ const WhatsAppAnalyzer = {
         if (!this.conversations.length) { list.innerHTML='<p style="color:var(--text-muted);font-size:0.85rem;">Nenhum arquivo carregado.</p>'; if(btnA) btnA.disabled=true; return; }
         if (btnA) btnA.disabled = false;
         if (btnC) btnC.style.display = 'inline-flex';
-        this.conversations.forEach((conv,i) => {
+
+        // Exibe do mais recentemente importado para o mais antigo
+        const ordered = [...this.conversations].sort((a,b) => (b.loadedAt||0) - (a.loadedAt||0));
+
+        ordered.forEach((conv) => {
+            const i = this.conversations.indexOf(conv); // índice real para removeFile e status
             const msgCount = (conv.content.match(/\n\d{2}\/\d{2}\/\d{4}/g)||[]).length;
             const icons = {pendente:'⏳',analisando:'🔄',concluido:'✅',erro:'❌'};
             const item = document.createElement('div');
@@ -155,16 +160,21 @@ const WhatsAppAnalyzer = {
         this.results=[];
         document.getElementById('wpp-results-section').style.display='block';
         document.getElementById('wpp-results-list').innerHTML='';
-        for (let i=0; i<this.conversations.length; i++) {
-            const conv = this.conversations[i];
-            conv.status='analisando'; this.updateFileStatus(i,'🔄');
+
+        // Analisa na ordem original mas exibe do mais recente para o mais antigo
+        const convOrdered = [...this.conversations].sort((a,b) => (b.loadedAt||0) - (a.loadedAt||0));
+
+        for (let i=0; i<convOrdered.length; i++) {
+            const conv = convOrdered[i];
+            const realIdx = this.conversations.indexOf(conv);
+            conv.status='analisando'; this.updateFileStatus(realIdx,'🔄');
             try {
                 const result = await this.analyzeConversation(conv);
-                conv.status='concluido'; this.updateFileStatus(i,'✅');
+                conv.status='concluido'; this.updateFileStatus(realIdx,'✅');
                 this.results.push({contactName:conv.contactName,...result});
-                this.renderResult(result, conv.contactName, i);
-            } catch(err) { conv.status='erro'; this.updateFileStatus(i,'❌'); }
-            if (i < this.conversations.length-1) await this.sleep(800);
+                this.renderResult(result, conv.contactName, this.results.length - 1);
+            } catch(err) { conv.status='erro'; this.updateFileStatus(realIdx,'❌'); }
+            if (i < convOrdered.length-1) await this.sleep(800);
         }
         btn.disabled=false; btn.innerHTML='<i class="bx bx-search-alt"></i> Analisar Conversas';
         if (this.results.length>1) this.renderSummary();

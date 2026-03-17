@@ -99,7 +99,16 @@ Responda APENAS com JSON (sem markdown):
         for (const client of Object.values(clientMap)) {
             results.push({ client, suggestion: await this.analyze(client, sales) });
         }
-        results.sort((a,b) => (priorityOrder[a.suggestion.priority]??5)-(priorityOrder[b.suggestion.priority]??5));
+        // Ordena: maior urgência primeiro. Empate → mais dias sem contato primeiro
+        results.sort((a,b) => {
+            const pa = priorityOrder[a.suggestion.priority] ?? 5;
+            const pb = priorityOrder[b.suggestion.priority] ?? 5;
+            if (pa !== pb) return pa - pb;
+            // desempate: quem está há mais tempo sem contato aparece antes
+            const da = a.client.lastContactDate || a.client.contactDate || '9999';
+            const db = b.client.lastContactDate || b.client.contactDate || '9999';
+            return da.localeCompare(db); // data menor (mais antiga) = mais urgente
+        });
 
         const bgMap = {urgente:'rgba(220,53,69,0.15)',alta:'rgba(255,152,0,0.12)',media:'rgba(33,150,243,0.10)',normal:'rgba(255,255,255,0.03)',baixa:'rgba(255,255,255,0.02)'};
         results.forEach(({client, suggestion}) => {
