@@ -171,8 +171,16 @@ const WhatsAppAnalyzer = {
             try {
                 const result = await this.analyzeConversation(conv);
                 conv.status='concluido'; this.updateFileStatus(realIdx,'✅');
-                this.results.push({contactName:conv.contactName,...result});
-                this.renderResult(result, conv.contactName, this.results.length - 1);
+                
+                // Se o nome do contato parecer um número, vamos tentar limpar ele
+                let cleanName = conv.contactName;
+                let potentialPhone = '';
+                if (/^[\d+\-\s()]+$/.test(cleanName)) {
+                    potentialPhone = cleanName;
+                }
+
+                this.results.push({contactName:cleanName, phone:potentialPhone, ...result});
+                this.renderResult(result, cleanName, this.results.length - 1);
             } catch(err) { conv.status='erro'; this.updateFileStatus(realIdx,'❌'); }
             if (i < convOrdered.length-1) await this.sleep(800);
         }
@@ -222,6 +230,11 @@ CONVERSA:\n${sample}`;
         const card = document.createElement('div');
         card.style.cssText='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem;margin-bottom:1rem;';
         const li = (arr,icon) => (arr||[]).map(o=>`<li style="margin-bottom:0.3rem;color:var(--text-muted);font-size:0.82rem;">${icon} ${o}</li>`).join('');
+        
+        // Escapa aspas para o onclick de forma segura
+        const safeName = contactName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const safeFollowUp = (result.followUp || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, ' ');
+
         card.innerHTML=`
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
                 <div><div style="font-size:1rem;font-weight:600;color:var(--text-main);">💬 ${contactName}</div><div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">Etapa: ${result.stage||'—'} · Sentimento: ${result.sentiment||'—'}</div></div>
@@ -235,7 +248,7 @@ CONVERSA:\n${sample}`;
             <div style="margin-bottom:0.8rem;"><div style="font-size:0.8rem;font-weight:500;color:var(--text-main);margin-bottom:0.4rem;">Como melhorar</div><ul style="list-style:none;padding:0;margin:0;">${li(result.improvements,'💡')}</ul></div>
             <div style="margin-top:0.9rem;padding:0.6rem 0.9rem;background:rgba(83,74,183,0.1);border-radius:8px;border-left:3px solid #534AB7;"><span style="font-size:0.78rem;font-weight:500;color:#9b94e8;">📌 Próximo passo: </span><span style="font-size:0.82rem;color:var(--text-main);">${result.followUp||'—'}</span></div>
             <div style="margin-top:0.8rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-                <button class="btn btn-sm btn-primary" onclick="WhatsAppAnalyzer.addToCRM('${contactName.replace(/'/g,"\\'")}','${(result.followUp||'').replace(/'/g,"\\'")}')" style="font-size:0.78rem;">+ Adicionar ao CRM</button>
+                <button class="btn btn-sm btn-primary" onclick="WhatsAppAnalyzer.addToCRM('${safeName}', '${safeFollowUp}')" style="font-size:0.78rem;">+ Adicionar ao CRM</button>
                 <button class="btn btn-sm btn-outline" onclick="WhatsAppAnalyzer.copyInsights(${i})" style="font-size:0.78rem;">📋 Copiar insights</button>
             </div>`;
         container.appendChild(card);
@@ -264,7 +277,22 @@ CONVERSA:\n${sample}`;
     async addToCRM(contactName, followUpNote) {
         const today = new Date().toISOString().split('T')[0];
         const next  = new Date(today+'T00:00:00'); next.setDate(next.getDate()+7);
-        await DataStore.add(STORAGE_KEYS.CUSTOMERS, {name:contactName,lastContactDate:today,nextFollowUp:next.toISOString().split('T')[0],notes:`[WhatsApp] ${followUpNote}`,status:'Contato',source:'WhatsApp'});
+        
+        // Se o nome parecer um telefone, vamos salvar no campo telefone também
+        let phone = '';
+        if (/^[\d+\-\s()]+$/.test(contactName)) {
+            phone = contactName;
+        }
+
+        await DataStore.add(STORAGE_KEYS.CUSTOMERS, {
+            name: contactName,
+            phone: phone,
+            lastContactDate: today,
+            nextFollowUp: next.toISOString().split('T')[0],
+            notes: `[WhatsApp] ${followUpNote}`,
+            status: 'Contato',
+            source: 'WhatsApp'
+        });
         this.showToast(`✅ "${contactName}" adicionado ao CRM!`,'success');
         if (typeof DashboardModule!=='undefined') DashboardModule.update();
     },

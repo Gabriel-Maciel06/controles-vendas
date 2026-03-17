@@ -190,6 +190,7 @@ const CRMModule = {
         const today = new Date().toISOString().split('T')[0];
 
         alerts.forEach(alert => {
+            const id         = alert.id;
             const name       = alert.name || alert.client || '—';
             const phone      = alert.phone || '';
             const lastDate   = alert.lastContactDate || alert.contactDate || '';
@@ -207,6 +208,9 @@ const CRMModule = {
             const statusColors = { 'Ativo':'#1D9E75','Contato':'#818cf8','Inativo':'#888','Prospect':'#EF9F27' };
             const statusColor  = statusColors[alert.status] || '#888';
             const initial      = name.charAt(0).toUpperCase();
+
+            // Escapa aspas para uso dentro de strings JS em atributos HTML
+            const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -232,11 +236,11 @@ const CRMModule = {
                 </td>
                 <td style="padding:0.75rem 0.5rem;">
                     <div style="display:flex;align-items:center;gap:0.28rem;">
-                        <button onclick="CRMModule.openEditModal('${alert.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
-                        <button onclick="WhatsAppModule.openComposer('${alert.id}')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>
-                        <button onclick="document.getElementById('crm-client').value='${this.escapeHTML(name)}';document.getElementById('crm-notes').focus();" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
-                        <button onclick="CRMModule.viewHistory('${this.escapeHTML(name)}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
-                        <button onclick="CRMModule.deleteContact('${alert.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
+                        <button onclick="CRMModule.openEditModal('${id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
+                        <button onclick="WhatsAppModule.openComposer('${id}')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>
+                        <button onclick="CRMModule.quickContact('${safeName}')" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
+                        <button onclick="CRMModule.viewHistoryByClientId('${id}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
+                        <button onclick="CRMModule.deleteContact('${id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
                     </div>
                 </td>
             `;
@@ -245,6 +249,13 @@ const CRMModule = {
     },
 
     // ── Modal de histórico ──
+    viewHistoryByClientId(clientId) {
+        const all    = DataStore.get(STORAGE_KEYS.CUSTOMERS);
+        const record = all.find(c => String(c.id) === String(clientId));
+        if (!record) return;
+        this.viewHistory(record.name || record.client);
+    },
+
     viewHistory(clientName) {
         const all     = DataStore.get(STORAGE_KEYS.CUSTOMERS);
         const history = all
