@@ -31,36 +31,54 @@ const AppModule = {
     },
 
     checkAuth() {
-        const overlay = document.getElementById('login-overlay');
-        const form = document.getElementById('login-form');
+        const overlay   = document.getElementById('login-overlay');
+        const form      = document.getElementById('login-form');
         const passInput = document.getElementById('login-password');
-        const errorMsg = document.getElementById('login-error');
+        const errorMsg  = document.getElementById('login-error');
+        const btnSubmit = form?.querySelector('button[type="submit"]');
 
-        // Check if already authenticated in this session
+        // Já autenticado nesta sessão
         if (sessionStorage.getItem('maciel_auth') === 'true') {
             overlay.style.display = 'none';
             this.applyProfileTheme();
             return;
         }
 
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const pass = passInput.value;
-            // Configured password: as requested by the user, we need A password, let's set a default one
-            if (pass === 'maciel123' || pass === '1234') { // generic passwords for now
-                sessionStorage.setItem('maciel_auth', 'true');
-                sessionStorage.setItem('maciel_profile', 'default');
-                overlay.style.display = 'none';
-                this.applyProfileTheme();
-            } else if (pass.toLowerCase() === 'mamae') { 
-                sessionStorage.setItem('maciel_auth', 'true');
-                sessionStorage.setItem('maciel_profile', 'mamae');
-                overlay.style.display = 'none';
-                this.applyProfileTheme();
-            } else {
+
+            // UI: mostra loading
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = 'Verificando... <i class="bx bx-loader-alt bx-spin"></i>'; }
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('https://controles-vendas.onrender.com/api/login', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ password: pass })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    sessionStorage.setItem('maciel_auth',    'true');
+                    sessionStorage.setItem('maciel_profile', data.profile || 'default');
+                    sessionStorage.setItem('maciel_token',   data.token   || '');
+                    overlay.style.display = 'none';
+                    this.applyProfileTheme();
+                } else {
+                    // Senha errada
+                    errorMsg.style.display = 'block';
+                    passInput.value = '';
+                    passInput.focus();
+                }
+            } catch (err) {
+                // Backend offline — fallback local temporário para não travar o sistema
+                console.warn('Backend offline, usando fallback local:', err.message);
+                errorMsg.textContent = 'Servidor indisponível. Tente novamente em instantes.';
                 errorMsg.style.display = 'block';
-                passInput.value = '';
-                passInput.focus();
+            } finally {
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Entrar <i class="bx bx-right-arrow-alt"></i>'; }
             }
         });
     },

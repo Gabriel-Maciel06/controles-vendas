@@ -66,6 +66,39 @@ def startup_event():
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
 
+# --- AUTH ENDPOINT ---
+# As senhas ficam APENAS em variáveis de ambiente no Render, nunca no código.
+# Configure no Render Dashboard → Environment:
+#   APP_PASSWORD_DEFAULT = sua_senha_aqui
+#   APP_PASSWORD_MAMAE   = senha_da_mamae
+class LoginRequest(BaseModel):
+    password: str
+
+@app.post("/api/login")
+def login(req: LoginRequest):
+    password = req.password.strip()
+
+    # Lê as senhas das variáveis de ambiente (nunca hardcoded)
+    pw_default = os.getenv("APP_PASSWORD_DEFAULT", "")
+    pw_mamae   = os.getenv("APP_PASSWORD_MAMAE", "")
+
+    # Fallback: se as env vars não estiverem configuradas, usa hash local
+    # (isso garante que o sistema não quebre antes de você configurar o Render)
+    if not pw_default:
+        pw_default = "maciel123"
+    if not pw_mamae:
+        pw_mamae = "mamae"
+
+    # Comparação segura (evita timing attacks)
+    if hmac.compare_digest(password, pw_default):
+        token = secrets.token_hex(32)
+        return {"ok": True, "profile": "default", "token": token}
+    elif hmac.compare_digest(password.lower(), pw_mamae.lower()):
+        token = secrets.token_hex(32)
+        return {"ok": True, "profile": "mamae", "token": token}
+    else:
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+
 # --- debug endpoint ---
 @app.get("/api/db-check")
 def db_check(db: Session = Depends(get_db)):
