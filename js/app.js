@@ -85,103 +85,78 @@ const AppModule = {
 
     applyProfileTheme() {
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
+
+        // Nome e iniciais por perfil
+        const profileData = {
+            'default':  { name: 'Vendedor',  initials: 'VP', role: 'Comercial' },
+            'mamae':    { name: 'Mamãe',     initials: 'MA', role: 'Gestão'    },
+            'karine':   { name: 'Karine',    initials: 'KA', role: 'Comercial' },
+            'caio':     { name: 'Caio',      initials: 'CA', role: 'Comercial' },
+            'fernanda': { name: 'Fernanda',  initials: 'FE', role: 'Comercial' },
+        };
+        const user     = profileData[profile] || profileData['default'];
+        const avatarEl = document.querySelector('.avatar');
+        const nameEl   = document.querySelector('.user-name');
+        const roleEl   = document.querySelector('.user-role');
+        const logoText = document.querySelector('.logo-text');
+
+        if (avatarEl) avatarEl.textContent = user.initials;
+        if (nameEl)   nameEl.textContent   = user.name;
+        if (roleEl)   roleEl.textContent   = user.role;
+
         if (profile === 'mamae') {
-            document.title = "Controle Vendas Mamãe";
-            document.documentElement.style.setProperty('--primary', '#9d174d'); // Vinho/Bordô escuro
-            document.documentElement.style.setProperty('--accent', '#db2777'); // Vinho rosa/claro para contraste
-            document.documentElement.style.setProperty('--bg-sidebar', '#4c0519'); // Sidebar vinho super escuro
-            
-            const logoText = document.querySelector('.logo-text');
-            if (logoText) {
-                logoText.innerHTML = "Controle<br>Mamãe";
-            }
-            
-            // Injetar CSS para esconder as opções de Google e Reativacao que não pertencem ao perfil
+            document.title = "Controle de Vendas Isapel";
+            document.documentElement.style.setProperty('--primary', '#9d174d');
+            document.documentElement.style.setProperty('--accent',  '#db2777');
+            document.documentElement.style.setProperty('--bg-sidebar', '#4c0519');
+            if (logoText) logoText.innerHTML = "Controle<br>Mamãe";
+
             const style = document.createElement('style');
+            style.id = 'mamae-style';
             style.innerHTML = `
-                /* Esconder opções no select de Venda */
                 #sale-type option[value="Google"],
                 #sale-type option[value="Reativacao"],
-                #sale-type option[value="Introducao"] {
-                    display: none !important;
-                }
-                
-                /* Esconder painéis de KPI do topo */
+                #sale-type option[value="Introducao"] { display: none !important; }
                 .kpi-card:has(#kpi-google-count),
                 .kpi-card:has(#kpi-reativacao-count),
-                .kpi-card:has(#kpi-introducao-count) {
-                    display: none !important;
-                }
-                
-                /* Esconder Data Prev. Faturamento */
-                #sale-faturamento, label[for="sale-faturamento"] {
-                    display: none !important;
-                }
+                .kpi-card:has(#kpi-introducao-count) { display: none !important; }
+                #sale-faturamento, label[for="sale-faturamento"] { display: none !important; }
             `;
-            document.head.appendChild(style);
+            if (!document.getElementById('mamae-style')) document.head.appendChild(style);
 
-            // Mudar Labels e Remover Obrigatórios
             const boxesLabel = document.querySelector('label[for="sale-boxes"]');
             if (boxesLabel) boxesLabel.innerText = "Qtd. Vinhos";
-
             const valueLabel = document.querySelector('label[for="sale-value"]');
             if (valueLabel) valueLabel.innerText = "Valor Venda (R$)";
-
             const fatInput = document.getElementById('sale-faturamento');
             if (fatInput) fatInput.removeAttribute('required');
-
-            // Mostrar campos novos
             document.getElementById('mamae-product-group')?.classList.remove('hidden');
             document.getElementById('mamae-cost-group')?.classList.remove('hidden');
-
-            // Esconder campos irrelevantes para ela (Tipo e Caixas - vamos esconder o container row)
             const saleTypeSelect = document.getElementById('sale-type');
             const saleBoxesInput = document.getElementById('sale-boxes');
-            
-            if (saleTypeSelect) {
-                saleTypeSelect.value = 'Normal';
-                saleTypeSelect.removeAttribute('required');
-                saleTypeSelect.closest('.form-group').style.display = 'none';
-            }
-            if (saleBoxesInput) {
-                saleBoxesInput.value = '0';
-                saleBoxesInput.closest('.form-group').style.display = 'none';
-            }
-
-            // Mudar texto de Comissão para Lucro nos KPIs
+            if (saleTypeSelect) { saleTypeSelect.value = 'Normal'; saleTypeSelect.removeAttribute('required'); saleTypeSelect.closest('.form-group').style.display = 'none'; }
+            if (saleBoxesInput) { saleBoxesInput.value = '0'; saleBoxesInput.closest('.form-group').style.display = 'none'; }
             const commTitle = document.querySelector('.kpi-card.highlight h3');
             if (commTitle) commTitle.innerText = "Lucro Total";
         } else {
-            // RESET PARA PERFIL MACIEL (Default)
-            document.title = "Controle Vendas Maciel";
+            document.title = "Controle de Vendas Isapel";
             document.documentElement.style.removeProperty('--primary');
             document.documentElement.style.removeProperty('--accent');
             document.documentElement.style.removeProperty('--bg-sidebar');
-
-            const logoText = document.querySelector('.logo-text');
-            if (logoText) logoText.innerHTML = "Controle Vendas Maciel";
-
-            // Garantir que campos da mamae fiquem ocultos
+            if (logoText) logoText.innerHTML = "Controle de Vendas Isapel";
+            document.getElementById('mamae-style')?.remove();
             document.getElementById('mamae-product-group')?.classList.add('hidden');
             document.getElementById('mamae-cost-group')?.classList.add('hidden');
-
-            // Garantir que campos originais apareçam
-            const saleTypeGroup = document.getElementById('sale-type')?.closest('.form-group');
+            const saleTypeGroup  = document.getElementById('sale-type')?.closest('.form-group');
             const saleBoxesGroup = document.getElementById('sale-boxes')?.closest('.form-group');
-            if (saleTypeGroup) saleTypeGroup.style.display = 'block';
+            if (saleTypeGroup)  saleTypeGroup.style.display  = 'block';
             if (saleBoxesGroup) saleBoxesGroup.style.display = 'block';
-
-            // Restaurar labels
             const boxesLabel = document.querySelector('label[for="sale-boxes"]');
             if (boxesLabel) boxesLabel.innerText = "Caixas 20056 (Qtd)";
-
             const valueLabel = document.querySelector('label[for="sale-value"]');
             if (valueLabel) valueLabel.innerText = "Valor Faturado (R$)";
-
             const fatInput = document.getElementById('sale-faturamento');
             if (fatInput) fatInput.setAttribute('required', 'true');
-
-            // Restaurar KPI
             const commTitle = document.querySelector('.kpi-card.highlight h3');
             if (commTitle) commTitle.innerText = "Comissão Total";
         }
@@ -289,7 +264,7 @@ const AppModule = {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(DataStore.cache));
             const downloadAnchorNode = document.createElement('a');
             downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `bkp_vendas_maciel_${new Date().toISOString().split('T')[0]}.json`);
+            downloadAnchorNode.setAttribute("download", `bkp_vendas_isapel_${new Date().toISOString().split('T')[0]}.json`);
             document.body.appendChild(downloadAnchorNode); // required for firefox
             downloadAnchorNode.click();
             downloadAnchorNode.remove();

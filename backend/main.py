@@ -1,7 +1,8 @@
 import os
+import traceback
+import hashlib
 import hmac
 import secrets
-import traceback
 from typing import List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -12,13 +13,12 @@ from pydantic import BaseModel
 import models
 from database import engine, get_db
 
-app = FastAPI(title="Controle Vendas Maciel API")
+app = FastAPI(title="Controle de Vendas Isapel API")
 
 # Configure CORS - Simplificado para garantir funcionamento no Render/Vercel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False, # Não necessário para localStorage auth
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -68,48 +68,10 @@ def startup_event():
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
 
-# --- AUTH ENDPOINT ---
-# As senhas ficam APENAS em variáveis de ambiente no Render, nunca no código.
-# Configure no Render Dashboard → Environment:
-#   APP_PASSWORD_DEFAULT = sua_senha_aqui
-#   APP_PASSWORD_MAMAE   = senha_da_mamae
-class LoginRequest(BaseModel):
-    password: str
-
-@app.post("/api/login")
-def login(req: LoginRequest):
-    password = req.password.strip()
-
-    # Lê as senhas das variáveis de ambiente
-    pw_default = (os.getenv("APP_PASSWORD_DEFAULT") or "").strip()
-    pw_mamae   = (os.getenv("APP_PASSWORD_MAMAE") or "").strip()
-
-    # Fallback caso não esteja configurado no Render
-    if not pw_default:
-        pw_default = "maciel123"
-    if not pw_mamae:
-        pw_mamae = "mamae"
-
-    # Log seguro no servidor (sem mostrar as senhas)
-    print(f"[AUTH] Tentando login profile: {'mamae' if hmac.compare_digest(password.lower(), pw_mamae.lower()) else 'default'}")
-
-    # Comparação segura
-    if hmac.compare_digest(password, pw_default):
-        token = secrets.token_hex(32)
-        return {"ok": True, "profile": "default", "token": token}
-    elif hmac.compare_digest(password.lower(), pw_mamae.lower()):
-        token = secrets.token_hex(32)
-        return {"ok": True, "profile": "mamae", "token": token}
-    else:
-        # Se falhou, loga para ajudar a diagnosticar
-        print(f"[AUTH] Falha: digitou '{password}'")
-        raise HTTPException(status_code=401, detail="Senha incorreta")
-
 # --- debug endpoint ---
 @app.get("/api/db-check")
 def db_check(db: Session = Depends(get_db)):
     try:
-        # Tenta uma consulta simples usando text()
         db.execute(text("SELECT 1"))
         db_type = "postgres" if "postgres" in str(engine.url) else "sqlite"
         return {
@@ -120,6 +82,40 @@ def db_check(db: Session = Depends(get_db)):
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+# --- AUTH ENDPOINT ---
+# As senhas ficam APENAS em variáveis de ambiente no Render, nunca no código.
+# Configure no Render Dashboard → Environment:
+#   APP_PASSWORD_DEFAULT  = senha do perfil padrão (você)
+#   APP_PASSWORD_MAMAE    = senha da mamãe
+#   APP_PASSWORD_KARINE   = Karine1234
+#   APP_PASSWORD_CAIO     = Caio1234
+#   APP_PASSWORD_FERNANDA = Fernanda1234
+class LoginRequest(BaseModel):
+    password: str
+
+@app.post("/api/login")
+def login(req: LoginRequest):
+    password = req.password.strip()
+
+    # Lê as senhas das variáveis de ambiente
+    # Fallback garante funcionamento mesmo antes de configurar o Render
+    profiles = [
+        { "env": "APP_PASSWORD_DEFAULT",  "fallback": "maciel123", "profile": "default"  },
+        { "env": "APP_PASSWORD_MAMAE",    "fallback": "mamae",     "profile": "mamae"    },
+        { "env": "APP_PASSWORD_KARINE",   "fallback": "Karine1234",   "profile": "karine"   },
+        { "env": "APP_PASSWORD_CAIO",     "fallback": "Caio1234",     "profile": "caio"     },
+        { "env": "APP_PASSWORD_FERNANDA", "fallback": "Fernanda1234", "profile": "fernanda" },
+    ]
+
+    for p in profiles:
+        pw = os.getenv(p["env"], p["fallback"])
+        if hmac.compare_digest(password.lower(), pw.lower()):
+            token = secrets.token_hex(32)
+            return {"ok": True, "profile": p["profile"], "token": token}
+
+    raise HTTPException(status_code=401, detail="Senha incorreta")
 
 # --- Pydantic Schemas for Validation ---
 class SaleBase(BaseModel):
@@ -205,7 +201,7 @@ class SettingBase(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Bem-vindo a API do Controle Vendas Maciel"}
+    return {"message": "Bem-vindo à API do Controle de Vendas Isapel"}
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
