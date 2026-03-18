@@ -78,18 +78,20 @@ class LoginRequest(BaseModel):
 def login(req: LoginRequest):
     password = req.password.strip()
 
-    # Lê as senhas das variáveis de ambiente (nunca hardcoded)
-    pw_default = os.getenv("APP_PASSWORD_DEFAULT", "")
-    pw_mamae   = os.getenv("APP_PASSWORD_MAMAE", "")
+    # Lê as senhas das variáveis de ambiente
+    pw_default = (os.getenv("APP_PASSWORD_DEFAULT") or "").strip()
+    pw_mamae   = (os.getenv("APP_PASSWORD_MAMAE") or "").strip()
 
-    # Fallback: se as env vars não estiverem configuradas, usa hash local
-    # (isso garante que o sistema não quebre antes de você configurar o Render)
+    # Fallback caso não esteja configurado no Render
     if not pw_default:
         pw_default = "maciel123"
     if not pw_mamae:
         pw_mamae = "mamae"
 
-    # Comparação segura (evita timing attacks)
+    # Log seguro no servidor (sem mostrar as senhas)
+    print(f"[AUTH] Tentando login profile: {'mamae' if hmac.compare_digest(password.lower(), pw_mamae.lower()) else 'default'}")
+
+    # Comparação segura
     if hmac.compare_digest(password, pw_default):
         token = secrets.token_hex(32)
         return {"ok": True, "profile": "default", "token": token}
@@ -97,6 +99,8 @@ def login(req: LoginRequest):
         token = secrets.token_hex(32)
         return {"ok": True, "profile": "mamae", "token": token}
     else:
+        # Se falhou, loga para ajudar a diagnosticar
+        print(f"[AUTH] Falha: digitou '{password}'")
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
 # --- debug endpoint ---
