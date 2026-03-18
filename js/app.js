@@ -66,6 +66,8 @@ const AppModule = {
                     sessionStorage.setItem('maciel_token',   data.token   || '');
                     overlay.style.display = 'none';
                     this.applyProfileTheme();
+                    // Recarrega os dados do perfil correto, limpando cache do perfil anterior
+                    await DataStore.init();
                 } else {
                     // Senha errada
                     errorMsg.style.display = 'block';

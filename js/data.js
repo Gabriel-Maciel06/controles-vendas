@@ -31,6 +31,17 @@ const DataStore = {
 
     async init() {
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
+
+        // Limpa cache antes de carregar — garante que dados do perfil anterior não apareçam
+        this.cache = {
+            crm_sales:     [],
+            crm_customers: [],
+            crm_samples:   [],
+            crm_settings:  {},
+            crm_reminders: []
+        };
+        this.isReady = false;
+
         try {
             const [salesRes, customersRes, samplesRes, settingsRes, remindersRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/sales?profile=${profile}`),
