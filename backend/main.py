@@ -5,7 +5,8 @@ import hmac
 import secrets
 from typing import List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -23,6 +24,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Servindo arquivos estáticos - Garante que JS e CSS sejam carregados
+if os.path.exists("js"):
+    app.mount("/js", StaticFiles(directory="js"), name="js")
+if os.path.exists("css"):
+    app.mount("/css", StaticFiles(directory="css"), name="css")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
@@ -200,7 +207,9 @@ class SettingBase(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Bem-vindo à API do Controle de Vendas Isapel"}
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return {"message": "Bem-vindo à API do Controle de Vendas Isapel (Frontend não encontrado)"}
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
