@@ -36,45 +36,32 @@ def startup_event():
     try:
         models.Base.metadata.create_all(bind=engine)
         print("Banco de dados inicializado com sucesso!")
-        
-        # Auto-migration for new fields
-        print("Executando auto-migration...")
-        with engine.connect() as conn:
-            for col in ['products', 'buyerName', 'source']:
-                try:
-                    conn.execute(text(f'ALTER TABLE customers ADD COLUMN "{col}" VARCHAR;'))
-                    conn.commit()
-                    print(f"Coluna {col} adicionada à tabela customers.")
-                except Exception as e:
-                    conn.rollback()
-                    print(f"Aviso migr. coluna {col} (pode já existir): {e}")
-            # Novas colunas em samples
-            for col in ['trackingCode', 'notes', 'product']: # Added 'product' to samples migration
-                try:
-                    conn.execute(text(f'ALTER TABLE samples ADD COLUMN "{col}" VARCHAR;'))
-                    conn.commit()
-                    print(f"Coluna {col} adicionada à tabela samples.")
-                except Exception as e:
-                    conn.rollback()
-                    pass
-            for table in ['sales', 'customers', 'samples', 'settings', 'reminders']:
-                try:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN profile VARCHAR DEFAULT 'default';"))
-                    conn.commit()
-                    print(f"Coluna profile adicionada à tabela {table}.")
-                except Exception as e:
-                    conn.rollback()
-                    pass
-            for col in ['productName', 'costPrice']:
-                try:
-                    target_type = "FLOAT" if col == 'costPrice' else "VARCHAR"
-                    conn.execute(text(f'ALTER TABLE sales ADD COLUMN "{col}" {target_type};'))
-                    conn.commit()
-                    print(f"Coluna {col} adicionada à tabela sales.")
-                except Exception as e:
-                    conn.rollback()
-                    pass
-                    
+
+        # Auto-migration: cada ALTER roda em transação própria para não travar
+        migrations = [
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "products" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "source" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
+            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
+            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
+            'ALTER TABLE settings  ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
+            'ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
+            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS "productName" VARCHAR;',
+            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS "costPrice" FLOAT;',
+            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR;',
+            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
+        ]
+
+        for sql in migrations:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(sql))
+            except Exception:
+                pass  # coluna já existe, ignorar
+
+        print("Migrations concluídas.")
+
     except Exception as e:
         print(f"Erro ao inicializar banco de dados: {e}")
 
