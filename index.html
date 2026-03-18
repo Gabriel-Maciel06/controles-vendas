@@ -662,56 +662,77 @@
                             </div>
 
                             <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.8rem;">
-                                O WhatsApp abrirá em nova aba. O contato será registrado automaticamente no CRM.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- View: Samples -->
+                                O WhatsApp abrirá em nova aba. O contat                <!-- View: Samples -->
                 <section id="view-samples" class="view-section hidden">
                     <div class="dashboard-grid">
                         <div class="panel form-panel">
                             <div class="panel-header">
-                                <h2>Registrar Envio de Amostra</h2>
+                                <h2>📦 Registrar Envio</h2>
                             </div>
                             <form id="sample-form" class="app-form">
+
                                 <div class="form-group">
                                     <label for="sample-client">Cliente</label>
-                                    <input type="text" id="sample-client" required>
+                                    <input type="text" id="sample-client" required placeholder="Ex: Mercado Silva">
                                 </div>
+
                                 <div class="form-group">
-                                    <label for="sample-product">Produto</label>
-                                    <input type="text" id="sample-product" required>
+                                    <label for="sample-tracking">Código de Rastreio (Correios)</label>
+                                    <input type="text" id="sample-tracking" placeholder="Ex: AA123456789BR"
+                                        style="font-family: monospace; letter-spacing: 0.05em; text-transform: uppercase;">
+                                    <span style="font-size:0.72rem;color:var(--text-muted);margin-top:0.2rem;display:block;">
+                                        Após salvar, clique no código para rastrear direto no site dos Correios
+                                    </span>
                                 </div>
+
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+                                    <div class="form-group">
+                                        <label for="sample-date">Data de Envio</label>
+                                        <input type="date" id="sample-date" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="sample-delivery">Previsão de Entrega</label>
+                                        <input type="date" id="sample-delivery">
+                                        <span style="font-size:0.71rem;color:var(--text-muted);margin-top:0.2rem;display:block;">Padrão: +10 dias</span>
+                                    </div>
+                                </div>
+
                                 <div class="form-group">
-                                    <label for="sample-date">Data de Envio</label>
-                                    <input type="date" id="sample-date" required>
+                                    <label for="sample-notes">Observações</label>
+                                    <input type="text" id="sample-notes" placeholder="Ex: cliente pediu urgente, endereço alternativo...">
                                 </div>
-                                <button type="submit" class="btn btn-primary"><i class='bx bx-send'></i> Registrar
-                                    Amostra</button>
+
+                                <button type="submit" class="btn btn-primary">
+                                    <i class='bx bx-send'></i> Registrar Envio
+                                </button>
                             </form>
                         </div>
 
                         <div class="panel list-panel">
                             <div class="panel-header">
-                                <h2>Acompanhamento de Amostras</h2>
+                                <h2>🚚 Acompanhamento de Envios</h2>
                             </div>
                             <div class="table-container">
                                 <table class="app-table">
                                     <thead>
                                         <tr>
                                             <th>Cliente</th>
-                                            <th>Produto</th>
-                                            <th>Retorno Estimado</th>
+                                            <th>Rastreio</th>
+                                            <th>Previsão de Entrega</th>
                                             <th>Status</th>
-                                            <th>Ações</th>
+                                            <th>Mover</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody id="samples-table-body">
                                         <!-- Rendered via JS -->
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                               </table>
                             </div>
                         </div>
                     </div>

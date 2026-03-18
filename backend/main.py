@@ -19,6 +19,7 @@ app = FastAPI(title="Controle de Vendas Isapel API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=False, # Não necessário para localStorage auth
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -47,6 +48,15 @@ def startup_event():
                 except Exception as e:
                     conn.rollback()
                     print(f"Aviso migr. coluna {col} (pode já existir): {e}")
+            # Novas colunas em samples
+            for col in ['trackingCode', 'notes', 'product']: # Added 'product' to samples migration
+                try:
+                    conn.execute(text(f'ALTER TABLE samples ADD COLUMN "{col}" VARCHAR;'))
+                    conn.commit()
+                    print(f"Coluna {col} adicionada à tabela samples.")
+                except Exception as e:
+                    conn.rollback()
+                    pass
             for table in ['sales', 'customers', 'samples', 'settings', 'reminders']:
                 try:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN profile VARCHAR DEFAULT 'default';"))
@@ -164,9 +174,11 @@ class SampleBase(BaseModel):
     id: str
     profile: str = "default"
     client: str
-    product: str
+    product: str = "Envelope completo"
+    trackingCode: str = None
     sendDate: str
     estimatedReturn: str
+    notes: str = None
     status: str
     createdAt: str
     updatedAt: str = None
