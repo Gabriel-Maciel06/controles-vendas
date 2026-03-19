@@ -384,33 +384,107 @@ const CRMModule = {
             .filter(c => (c.name || c.client) === clientName)
             .sort((a,b) => (b.lastContactDate||b.contactDate||'').localeCompare(a.lastContactDate||a.contactDate||''));
 
-        let html = `<div style="padding:1rem;">
-            <h3 style="margin-bottom:1rem;">📋 Histórico: ${this.escapeHTML(clientName)}</h3>`;
+        const latest = history[0] || {};
+
+        // Cabeçalho com resumo do cliente
+        const phone   = latest.phone     || '';
+        const company = latest.company   || '';
+        const segment = latest.segment   || '';
+        const status  = latest.status    || 'Contato';
+        const statusColors = { 'Lead':'#818cf8','Prospect':'#EF9F27','Contato':'#EF9F27','Ativo':'#1D9E75','Proposta':'#3b82f6','Fechado':'#1D9E75','Perdido':'#E24B4A','Inativo':'#888' };
+        const statusColor = statusColors[status] || '#888';
+
+        let html = `<div style="padding:0.5rem 1rem 1.5rem;">
+
+            <!-- Cabeçalho do cliente -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.07);">
+                <div style="display:flex;align-items:center;gap:0.85rem;">
+                    <div style="width:46px;height:46px;border-radius:50%;background:rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;color:#818cf8;flex-shrink:0;">${this.escapeHTML(clientName.charAt(0).toUpperCase())}</div>
+                    <div>
+                        <div style="font-size:1.05rem;font-weight:700;color:var(--text-main);">${this.escapeHTML(clientName)}</div>
+                        ${company ? `<div style="font-size:0.8rem;color:var(--text-muted);">${this.escapeHTML(company)}</div>` : ''}
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;flex-wrap:wrap;">
+                            <span style="padding:0.13rem 0.55rem;border-radius:20px;font-size:0.7rem;font-weight:600;background:${statusColor}22;color:${statusColor};">${status}</span>
+                            ${segment ? `<span style="font-size:0.7rem;color:var(--text-muted);">${this.escapeHTML(segment)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    ${phone ? `<button onclick="WhatsAppModule.openComposer('${latest.id}')" style="display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.9rem;border-radius:8px;border:none;background:rgba(37,211,102,0.12);color:#25D366;cursor:pointer;font-size:0.82rem;font-weight:600;"><i class='bx bxl-whatsapp'></i> WhatsApp</button>` : ''}
+                    <button onclick="document.getElementById('crm-history-modal').classList.add('hidden'); CRMModule.openEditModal('${latest.id}')" style="display:flex;align-items:center;gap:0.4rem;padding:0.4rem 0.9rem;border-radius:8px;border:none;background:rgba(99,102,241,0.12);color:#818cf8;cursor:pointer;font-size:0.82rem;font-weight:600;"><i class='bx bx-edit'></i> Editar</button>
+                </div>
+            </div>
+
+            <!-- Dados do cliente (linha de resumo) -->
+            <div style="display:flex;flex-wrap:wrap;gap:0.6rem 1.4rem;margin-bottom:1.5rem;font-size:0.81rem;">
+                ${phone     ? `<span style="color:var(--text-muted);">📱 <a href="tel:${this.escapeHTML(phone)}" style="color:#25D366;text-decoration:none;">${this.escapeHTML(phone)}</a></span>` : ''}
+                ${latest.email     ? `<span style="color:var(--text-muted);">✉️ ${this.escapeHTML(latest.email)}</span>` : ''}
+                ${latest.cnpj      ? `<span style="color:var(--text-muted);">🏢 ${this.escapeHTML(latest.cnpj)}</span>` : ''}
+                ${latest.instagram ? `<span style="color:var(--text-muted);">📸 ${this.escapeHTML(latest.instagram)}</span>` : ''}
+                ${latest.address   ? `<span style="color:var(--text-muted);">📍 ${this.escapeHTML(latest.address)}</span>` : ''}
+                ${latest.products  ? `<span style="color:var(--text-muted);">📦 ${this.escapeHTML(latest.products)}</span>` : ''}
+            </div>
+
+            <!-- Timeline de contatos -->
+            <div style="font-size:0.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.8rem;">
+                Histórico de Contatos (${history.length})
+            </div>`;
 
         if (!history.length) {
             html += `<p style="color:var(--text-muted);">Nenhum registro encontrado.</p>`;
         } else {
-            history.forEach(h => {
-                const date = (h.lastContactDate||h.contactDate||'').split('-').reverse().join('/');
-                let details = '';
-                if (h.phone)     details += `<strong>Tel:</strong> ${this.escapeHTML(h.phone)} &nbsp;`;
-                if (h.buyerName) details += `<strong>Comprador:</strong> ${this.escapeHTML(h.buyerName)} &nbsp;`;
-                if (h.products)  details += `<strong>Produtos:</strong> ${this.escapeHTML(h.products)} &nbsp;`;
-                if (h.source)    details += `<strong>Origem:</strong> ${this.escapeHTML(h.source)}`;
+            history.forEach((h, idx) => {
+                const rawDate   = h.lastContactDate || h.contactDate || '';
+                const date      = rawDate ? rawDate.split('-').reverse().join('/') : '—';
+                const notes     = h.notes || '';
+                const isWpp     = notes.startsWith('[WhatsApp]');
+                const cleanNote = notes.replace(/^\[WhatsApp\]\s*/i, '');
+                const isFirst   = idx === 0;
+
+                // Badge de canal
+                const channelBadge = isWpp
+                    ? `<span style="display:inline-flex;align-items:center;gap:0.2rem;padding:0.1rem 0.45rem;border-radius:20px;font-size:0.65rem;font-weight:600;background:rgba(37,211,102,0.12);color:#25D366;"><i class='bx bxl-whatsapp' style="font-size:0.75rem;"></i>WhatsApp</span>`
+                    : `<span style="padding:0.1rem 0.45rem;border-radius:20px;font-size:0.65rem;font-weight:600;background:rgba(99,102,241,0.12);color:#818cf8;">📞 Contato</span>`;
+
+                // Detalhes do contato (se diferentes do último)
+                let details = [];
+                if (h.buyerName) details.push(`<strong>Comprador:</strong> ${this.escapeHTML(h.buyerName)}`);
+                if (h.products && h.products !== latest.products) details.push(`<strong>Produtos:</strong> ${this.escapeHTML(h.products)}`);
+                if (h.source)   details.push(`<strong>Origem:</strong> ${this.escapeHTML(h.source)}`);
+                if (h.nextFollowUp) {
+                    const nf = h.nextFollowUp.split('-').reverse().join('/');
+                    details.push(`<strong>Próx. Follow-up:</strong> ${nf}`);
+                }
 
                 html += `
-                <div style="margin-bottom:1.2rem;background:rgba(255,255,255,0.03);padding:1rem;border-radius:8px;border-left:3px solid var(--primary);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-                        <span style="font-weight:700;color:var(--primary);">${date}</span>
-                        <button class="btn btn-sm btn-primary" onclick="CRMModule.closeHistoryAndEdit('${h.id}')" style="font-size:0.72rem;">✏️ Editar</button>
+                <div style="display:flex;gap:0.9rem;margin-bottom:${idx < history.length-1 ? '1rem' : '0'};">
+                    <!-- Linha da timeline -->
+                    <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+                        <div style="width:10px;height:10px;border-radius:50%;background:${isFirst ? '#818cf8' : 'rgba(255,255,255,0.2)'};border:2px solid ${isFirst ? '#818cf8' : 'rgba(255,255,255,0.1)'};margin-top:0.35rem;flex-shrink:0;"></div>
+                        ${idx < history.length-1 ? `<div style="width:1px;flex:1;background:rgba(255,255,255,0.07);margin-top:4px;"></div>` : ''}
                     </div>
-                    ${details ? `<p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.4rem;">${details}</p>` : ''}
-                    <p style="font-size:0.92rem;color:var(--text-main);">${this.escapeHTML(h.notes||'Sem anotações.')}</p>
+
+                    <!-- Conteúdo da entrada -->
+                    <div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:0.85rem 1rem;margin-bottom:0.15rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.5rem;">
+                            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                                <span style="font-size:0.82rem;font-weight:700;color:${isFirst ? 'var(--text-main)' : 'var(--text-muted)'};">${date}</span>
+                                ${channelBadge}
+                                ${isFirst ? `<span style="font-size:0.65rem;color:var(--primary);font-weight:600;">MAIS RECENTE</span>` : ''}
+                            </div>
+                            <button onclick="document.getElementById('crm-history-modal').classList.add('hidden'); CRMModule.openEditModal('${h.id}')" style="font-size:0.7rem;padding:0.15rem 0.55rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text-muted);cursor:pointer;">✏️ Editar</button>
+                        </div>
+                        ${details.length ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.45rem;line-height:1.6;">${details.join(' &nbsp;·&nbsp; ')}</div>` : ''}
+                        ${cleanNote
+                            ? `<p style="font-size:0.87rem;color:var(--text-main);line-height:1.6;margin:0;white-space:pre-wrap;">${this.escapeHTML(cleanNote)}</p>`
+                            : `<p style="font-size:0.82rem;color:rgba(255,255,255,0.2);margin:0;font-style:italic;">Sem anotações para este contato.</p>`
+                        }
+                    </div>
                 </div>`;
             });
         }
 
-        html += `<button class="btn btn-outline" style="margin-top:0.5rem;" onclick="document.getElementById('crm-history-modal').classList.add('hidden')">Fechar</button></div>`;
+        html += `</div>`;
 
         document.getElementById('crm-history-content').innerHTML = html;
         document.getElementById('crm-history-modal').classList.remove('hidden');

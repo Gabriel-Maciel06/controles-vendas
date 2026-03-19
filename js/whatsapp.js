@@ -182,38 +182,46 @@ const WhatsAppModule = {
         this.registerContact(message, cleanedPhone);
     },
 
-    // ── Atualiza registro existente no CRM com o contato feito ──
+    // ── Cria nova entrada de contato no CRM (mantém histórico por conversa) ──
     async registerContact(message, phoneUsed) {
         const clientId = document.getElementById('wapp-client-id')?.value;
         if (!clientId) return;
 
-        const today   = new Date().toISOString().split('T')[0];
+        const all    = DataStore.get(STORAGE_KEYS.CUSTOMERS);
+        const record = all.find(c => String(c.id) === String(clientId));
+        if (!record) return;
+
+        const today    = new Date().toISOString().split('T')[0];
         const nextDate = new Date(today + 'T00:00:00');
         nextDate.setDate(nextDate.getDate() + 15);
 
-        const updated = {
+        // Herda os dados do cliente, sobrepõe apenas informações do contato atual
+        const newEntry = {
+            name:            record.name || record.client,
+            phone:           record.phone,
+            buyerName:       record.buyerName || '',
+            products:        record.products  || '',
+            source:          record.source    || '',
+            company:         record.company   || '',
+            cnpj:            record.cnpj      || '',
+            instagram:       record.instagram || '',
+            address:         record.address   || '',
+            segment:         record.segment   || '',
+            email:           record.email     || '',
+            status:          record.status    || 'Contato',
             lastContactDate: today,
             nextFollowUp:    nextDate.toISOString().split('T')[0],
-            status:          this._currentClient?.status || 'Contato',
-            notes:           `[WhatsApp] ${message.substring(0, 150)}${message.length > 150 ? '...' : ''}`,
+            notes:           `[WhatsApp] ${message.substring(0, 300)}${message.length > 300 ? '...' : ''}`,
         };
 
-        // Atualiza o telefone se o usuário digitou um diferente no modal
-        if (phoneUsed && this._currentClient) {
-            const originalClean = this.cleanPhone(this._currentClient.phone || '');
-            if (phoneUsed !== originalClean) {
-                // Formata de volta para exibição (ex: 5511999991234 → (11) 99999-1234)
-                updated.phone = phoneUsed; // salva com DDI, o sistema limpa depois
-            }
-        }
-
-        await DataStore.update(STORAGE_KEYS.CUSTOMERS, clientId, updated);
+        await DataStore.add(STORAGE_KEYS.CUSTOMERS, newEntry);
 
         if (typeof CRMModule       !== 'undefined') CRMModule.loadAlerts();
         if (typeof DashboardModule !== 'undefined') DashboardModule.update();
 
         this.closeComposer();
     },
+
 
     // ── Abre WhatsApp direto sem modal (clique no número) ──
     openDirect(phone, name) {
