@@ -325,6 +325,22 @@ const CRMModule = {
             const statusColor  = statusColors[alert.status] || '#888';
             const initial      = name.charAt(0).toUpperCase();
 
+            // Telefone clicável — abre WhatsApp diretamente
+            const phoneDisplay = phone
+                ? `<div style="font-size:0.73rem;color:#25D366;margin-top:2px;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" 
+                       onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}', '${this.escapeAttr(name)}')" 
+                       title="Abrir WhatsApp com ${this.escapeAttr(name)}">${this.escapeHTML(phone)}</div>`
+                : '<div style="font-size:0.72rem;color:rgba(255,255,255,0.2);margin-top:2px;">sem telefone</div>';
+
+            // Botão WhatsApp — opaco se não tiver telefone
+            const wappStyle = phone
+                ? `background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;opacity:1;`
+                : `background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.2);cursor:not-allowed;opacity:0.4;`;
+            const wappHover = phone
+                ? `onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"`
+                : '';
+            const wappTitle = phone ? 'Enviar mensagem WhatsApp' : 'Cadastre um telefone para usar o WhatsApp';
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="padding:0.75rem 0.5rem;">
@@ -332,7 +348,7 @@ const CRMModule = {
                         <div style="width:34px;height:34px;border-radius:50%;background:rgba(99,102,241,0.18);display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;color:#818cf8;flex-shrink:0;">${initial}</div>
                         <div>
                             <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;line-height:1.3;">${this.escapeHTML(name)}</div>
-                            ${phone ? `<div style="font-size:0.73rem;color:var(--text-muted);margin-top:1px;">${this.escapeHTML(phone)}</div>` : ''}
+                            ${phoneDisplay}
                         </div>
                     </div>
                 </td>
@@ -350,9 +366,9 @@ const CRMModule = {
                 <td style="padding:0.75rem 0.5rem;">
                     <div style="display:flex;align-items:center;gap:0.28rem;">
                         <button onclick="CRMModule.openEditModal('${alert.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
-                        <button onclick="WhatsAppModule.openComposer('${alert.id}')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>
-                        <button onclick="document.getElementById('crm-client').value='${this.escapeHTML(name)}';document.getElementById('crm-notes').focus();" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
-                        <button onclick="CRMModule.viewHistory('${this.escapeHTML(name)}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
+                        <button onclick="${phone ? `WhatsAppModule.openComposer('${alert.id}')` : 'void(0)'}" title="${wappTitle}" style="width:28px;height:28px;border-radius:7px;border:none;${wappStyle}display:flex;align-items:center;justify-content:center;font-size:0.95rem;" ${wappHover}><i class='bx bxl-whatsapp'></i></button>
+                        <button onclick="document.getElementById('crm-client').value='${this.escapeAttr(name)}';document.getElementById('crm-notes').focus();" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
+                        <button onclick="CRMModule.viewHistory('${this.escapeAttr(name)}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
                         <button onclick="CRMModule.deleteContact('${alert.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
                     </div>
                 </td>
@@ -409,6 +425,12 @@ const CRMModule = {
         if (!str) return '';
         return String(str).replace(/[&<>'"]/g, t =>
             ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[t]));
+    },
+
+    // Versão para uso em atributos HTML (escapa aspas simples para uso em onclick='')
+    escapeAttr(str) {
+        if (!str) return '';
+        return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
     }
 };
 
