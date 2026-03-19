@@ -25,11 +25,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Resolve Absolute Paths
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+js_dir = os.path.join(BASE_DIR, "js")
+css_dir = os.path.join(BASE_DIR, "css")
+html_path = os.path.join(BASE_DIR, "index.html")
+
 # Servindo arquivos estáticos - Garante que JS e CSS sejam carregados
-if os.path.exists("js"):
-    app.mount("/js", StaticFiles(directory="js"), name="js")
-if os.path.exists("css"):
-    app.mount("/css", StaticFiles(directory="css"), name="css")
+if os.path.exists(js_dir):
+    app.mount("/js", StaticFiles(directory=js_dir), name="js")
+if os.path.exists(css_dir):
+    app.mount("/css", StaticFiles(directory=css_dir), name="css")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
@@ -223,8 +229,8 @@ class SettingBase(BaseModel):
 
 @app.get("/")
 def read_root():
-    if os.path.exists("index.html"):
-        return FileResponse("index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
     return {"message": "Bem-vindo à API do Controle de Vendas Isapel (Frontend não encontrado)"}
 
 # --- SALES ---
