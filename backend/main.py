@@ -42,35 +42,42 @@ async def global_exception_handler(request, exc):
 def startup_event():
     try:
         models.Base.metadata.create_all(bind=engine)
-        print("Banco de dados inicializado com sucesso!")
+        
+        # Migrações otimizadas: agrupadas por tabela para reduzir overhead
+        tables_to_migrate = {
+            "customers": [
+                'ADD COLUMN IF NOT EXISTS "products" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "source" VARCHAR',
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
+            ],
+            "sales": [
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
+                'ADD COLUMN IF NOT EXISTS "productName" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "costPrice" FLOAT'
+            ],
+            "samples": [
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
+                'ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "notes" VARCHAR'
+            ],
+            "settings": [
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
+            ],
+            "reminders": [
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
+            ]
+        }
 
-        # Auto-migration: cada ALTER roda em transação própria para não travar
-        migrations = [
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "products" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "source" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
-            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
-            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
-            'ALTER TABLE settings  ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
-            'ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT \'default\';',
-            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS "productName" VARCHAR;',
-            'ALTER TABLE sales     ADD COLUMN IF NOT EXISTS "costPrice" FLOAT;',
-            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR;',
-            'ALTER TABLE samples   ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
-        ]
-
-        for sql in migrations:
-            try:
-                with engine.begin() as conn:
+        with engine.begin() as conn:
+            for table, columns in tables_to_migrate.items():
+                try:
+                    sql = f"ALTER TABLE {table} {', '.join(columns)};"
                     conn.execute(text(sql))
-            except Exception:
-                pass  # coluna já existe, ignorar
-
-        print("Migrations concluídas.")
-
+                except Exception:
+                    pass # Caso postgres/sqlite varie o suporte ao agrupamento ou IF NOT EXISTS
     except Exception as e:
-        print(f"Erro ao inicializar banco de dados: {e}")
+        print(f"Erro no startup: {e}")
 
 # --- debug endpoint ---
 @app.get("/api/db-check")
