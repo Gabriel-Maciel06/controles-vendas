@@ -68,21 +68,18 @@ const CalendarModule = {
 
         // 2. CRM Follow ups
         const contacts = DataStore.get(STORAGE_KEYS.CUSTOMERS);
-        // Map to get latest only per client
-        const clientLatest = {};
         contacts.forEach(c => {
-            if (!clientLatest[c.client] || new Date(c.contactDate + 'T00:00:00') > new Date(clientLatest[c.client].contactDate + 'T00:00:00')) {
-                clientLatest[c.client] = c;
-            }
-        });
-        Object.values(clientLatest).forEach(c => {
+            // Suporte a ambos os formatos de campo (name = novo, client = legado)
+            const clientName = c.name || c.client || '';
+            const followUp   = c.nextFollowUp;
+            if (!followUp || !clientName) return; // Ignora registros sem data de follow-up
             allEvents.push({
-                date: c.nextFollowUp,
-                client: c.client,
+                date: followUp,
+                client: clientName,
                 type: 'Follow-up Ligação',
                 status: 'CRM',
                 color: 'warning',
-                rawDate: new Date(c.nextFollowUp + 'T00:00:00')
+                rawDate: new Date(followUp + 'T00:00:00')
             });
         });
 
@@ -152,6 +149,7 @@ const CalendarModule = {
         }
 
         filtered.forEach(event => {
+            if (!event.date) return; // Ignora eventos sem data
             const tr = document.createElement('tr');
 
             const dateFormat = event.date.split('-').reverse().join('/');
@@ -240,7 +238,8 @@ const CalendarModule = {
     },
 
     escapeHTML(str) {
-        return str.replace(/[&<>'"]/g,
+        if (str == null) return '';
+        return String(str).replace(/[&<>'"]/g,
             tag => ({
                 '&': '&amp;',
                 '<': '&lt;',
