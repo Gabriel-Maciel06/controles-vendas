@@ -194,15 +194,66 @@ const WhatsAppAnalyzer = {
         this.results=[];
         document.getElementById('wpp-results-section').style.display='block';
         document.getElementById('wpp-results-list').innerHTML='';
-        const demos = [
-            {score:72,scoreLabel:'Bom',scoreColor:'#1D9E75',sentiment:'Positivo',stage:'Negociação',summary:'Conversa com boa progressão. Cliente demonstrou interesse real.',opportunities:['Cliente perguntou prazo de entrega — você não respondeu diretamente','Mencionou "estava pensando" — oportunidade de fechamento perdida'],positives:['Respondeu rápido','Apresentou o produto com clareza'],improvements:['Seja mais direto ao falar de preço','Faça uma pergunta de fechamento'],contacts:[],followUp:'Ligar em até 2 dias — cliente estava quase decidido'},
-            {score:45,scoreLabel:'Regular',scoreColor:'#EF9F27',sentiment:'Neutro',stage:'Prospecção',summary:'Conversa inicial sem evolução. Cliente respondeu pouco.',opportunities:['Cliente citou concorrente — você poderia ter explorado o diferencial'],positives:['Abordagem educada','Enviou catálogo'],improvements:['Use perguntas abertas','Apresente cases de sucesso'],contacts:[],followUp:'Nova abordagem com proposta diferente em 1 semana'}
+
+        const randomPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+        const sentiments = ['Positivo', 'Neutro', 'Negativo', 'Misto'];
+        const stages = ['Prospecção', 'Apresentação', 'Negociação', 'Fechamento', 'Pós-venda'];
+        const summaries = [
+            'Conversa com boa progressão. Cliente demonstrou interesse real.',
+            'Conversa inicial sem evolução. Cliente respondeu pouco.',
+            'O cliente pareceu confuso com os preços, mas a conversa fluiu.',
+            'Faltou um pouco de clareza na proposta, mas há espaço para contornar.',
+            'Cliente altamente engajado e fazendo muitas perguntas técnicas.'
         ];
+        const opps = [
+            ['Cliente perguntou prazo de entrega — você não respondeu diretamente'],
+            ['Mencionou "estava pensando" — oportunidade de fechamento perdida'],
+            ['Cliente citou concorrente — você poderia ter explorado o diferencial'],
+            ['Perguntou sobre desconto e ficou sem resposta conclusiva'],
+            ['Brecha para fazer upsell ou kit ignorada no meio da conversa']
+        ];
+        const pos = [
+            ['Respondeu rápido', 'Apresentou o produto com clareza'],
+            ['Abordagem educada', 'Enviou link/catálogo no momento certo'],
+            ['Manteve o tom muito amigável', 'Explicou bem a logística de frete'],
+            ['Fez boas perguntas de sondagem ao invés de só falar'],
+            ['Demonstrou forte autoridade técnica no produto ofertado']
+        ];
+        const imps = [
+            ['Seja mais direto ao falar de preço', 'Faça uma pergunta de fechamento'],
+            ['Use perguntas abertas para o cliente falar mais', 'Apresente cases de sucesso'],
+            ['Melhore o tempo de resposta', 'Crie mais escassez/urgência natural'],
+            ['Evite mandar áudios ou textos longos demais duma vez'],
+            ['Faça follow-up com proposta ativa em vez de esperar ele']
+        ];
+        const follows = [
+            'Ligar em até 2 dias — cliente estava quase decidido',
+            'Nova abordagem com proposta diferente em 1 semana',
+            'Enviar apenas uma foto tirando a dúvida técnica amanhã',
+            'Sondar num áudio amigável se ele fechou com a concorrência'
+        ];
+
         for (let i=0; i<this.conversations.length; i++) {
             const conv = this.conversations[i];
             conv.status='analisando'; this.updateFileStatus(i,'🔄');
-            await this.sleep(1200);
-            const result = demos[i%demos.length];
+            await this.sleep(800 + Math.random()*800);
+            
+            const score = Math.floor(Math.random() * 60) + 40; // 40 a 99
+            let scoreLabel = score >= 85 ? 'Ótimo' : score >= 70 ? 'Bom' : score >= 50 ? 'Regular' : 'Ruim';
+            let scoreColor = score >= 85 ? '#534AB7' : score >= 70 ? '#1D9E75' : score >= 50 ? '#EF9F27' : '#E24B4A';
+
+            const result = {
+                score, scoreLabel, scoreColor,
+                sentiment: randomPick(sentiments),
+                stage: randomPick(stages),
+                summary: randomPick(summaries),
+                opportunities: randomPick(opps),
+                positives: randomPick(pos),
+                improvements: randomPick(imps),
+                contacts: [],
+                followUp: randomPick(follows)
+            };
+
             conv.status='concluido'; this.updateFileStatus(i,'✅');
             this.results.push({contactName:conv.contactName,...result});
             this.renderResult(result, conv.contactName, i);

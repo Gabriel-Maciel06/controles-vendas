@@ -364,6 +364,10 @@ const CRMModule = {
 
         this.updateCount(filtered.length, this.allAlerts.length);
         this.renderCurrentPage();
+
+        if (typeof AISuggestions !== 'undefined') {
+            AISuggestions.renderSuggestionsPanel(filtered);
+        }
     },
 
     changePage(delta) {
