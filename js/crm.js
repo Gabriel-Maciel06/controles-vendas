@@ -11,6 +11,8 @@ const CRMModule = {
         this.bindEvents();
         this.dom.dateInput.value = new Date().toISOString().split('T')[0];
         this.selectDays(15); // padrão 15 dias
+        this.selectOrigin('');
+        this.selectTemp('Frio');
         this.loadAlerts();
         if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
     },
@@ -22,7 +24,8 @@ const CRMModule = {
             phone:         document.getElementById('crm-phone'),
             buyer:         document.getElementById('crm-buyer'),
             products:      document.getElementById('crm-products'),
-            source:        document.getElementById('crm-source'),
+            originInput:   document.getElementById('crm-origin'),
+            tempInput:     document.getElementById('crm-temperature'),
             dateInput:      document.getElementById('crm-date'),
             notes:          document.getElementById('crm-notes'),
             followupDays:   document.getElementById('crm-followup-days'),
@@ -67,6 +70,54 @@ const CRMModule = {
         this.updatePreview();
     },
 
+    // ── Seleciona Origem ──
+    selectOrigin(origin) {
+        if (this.dom.originInput) this.dom.originInput.value = origin;
+        const colors = {
+            'Google': '#818cf8',  // Roxo
+            'Inativo': '#1D9E75', // Verde
+            'Prospec': '#EF9F27', // Laranja
+            'Maps': '#888888'     // Cinza
+        };
+        const color = colors[origin] || 'var(--primary)';
+        
+        document.querySelectorAll('.btn-origin').forEach(btn => {
+            if (btn.dataset.origin === origin) {
+                btn.style.background = `${color}22`;
+                btn.style.borderColor = color;
+                btn.style.color = color;
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                btn.style.color = 'var(--text-main)';
+            }
+        });
+    },
+
+    // ── Seleciona Temperatura ──
+    selectTemp(temp) {
+        if (this.dom.tempInput) this.dom.tempInput.value = temp;
+        const colors = {
+            'Frio': '#3b82f6',     // Azul
+            'Morno': '#EF9F27',    // Laranja
+            'Quente': '#E24B4A',   // Vermelho
+            'Fechando': '#1D9E75'  // Verde
+        };
+        const color = colors[temp] || 'var(--primary)';
+        
+        document.querySelectorAll('.btn-temp').forEach(btn => {
+            if (btn.dataset.temp === temp) {
+                btn.style.background = `${color}22`;
+                btn.style.borderColor = color;
+                btn.style.color = color;
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.borderColor = 'rgba(255,255,255,0.1)';
+                btn.style.color = 'var(--text-main)';
+            }
+        });
+    },
+
     // ── Mostra a data prevista do próximo contato ──
     updatePreview() {
         const preview = this.dom.followupPreview;
@@ -94,7 +145,8 @@ const CRMModule = {
             phone:           this.dom.phone.value.trim(),
             buyerName:       this.dom.buyer.value.trim(),
             products:        this.dom.products.value.trim(),
-            source:          this.dom.source.value.trim(),
+            origin:          this.dom.originInput.value,
+            temperature:     this.dom.tempInput.value || 'Frio',
             lastContactDate: contactDate,
             notes:           this.dom.notes.value.trim(),
             nextFollowUp:    dateObj.toISOString().split('T')[0],
@@ -104,7 +156,9 @@ const CRMModule = {
         await DataStore.add(STORAGE_KEYS.CUSTOMERS, newContact);
 
         // Limpar formulário
-        ['client','notes','phone','buyer','products','source'].forEach(f => this.dom[f].value = '');
+        ['client','notes','phone','buyer','products'].forEach(f => this.dom[f].value = '');
+        this.selectOrigin('');
+        this.selectTemp('Frio');
         this.selectDays(15); // volta para padrão
         this.dom.client.focus();
         this.loadAlerts();
@@ -147,7 +201,8 @@ const CRMModule = {
         document.getElementById('edit-instagram').value     = record.instagram|| '';
         document.getElementById('edit-segment').value       = record.segment  || '';
         document.getElementById('edit-products').value      = record.products || '';
-        document.getElementById('edit-source').value        = record.source   || '';
+        document.getElementById('edit-origin').value        = record.origin   || '';
+        document.getElementById('edit-temperature').value   = record.temperature || '';
         document.getElementById('edit-status').value        = record.status   || 'Contato';
         document.getElementById('edit-lastContact').value   = record.lastContactDate || record.contactDate || '';
         document.getElementById('edit-nextFollowUp').value  = record.nextFollowUp    || '';
@@ -184,7 +239,8 @@ const CRMModule = {
             instagram:       document.getElementById('edit-instagram').value.trim(),
             segment:         document.getElementById('edit-segment').value.trim(),
             products:        document.getElementById('edit-products').value.trim(),
-            source:          document.getElementById('edit-source').value.trim(),
+            origin:          document.getElementById('edit-origin').value,
+            temperature:     document.getElementById('edit-temperature').value,
             status:          document.getElementById('edit-status').value,
             lastContactDate: lastContact,
             nextFollowUp:    nextFollowUp,

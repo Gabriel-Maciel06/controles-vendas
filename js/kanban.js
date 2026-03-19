@@ -7,11 +7,10 @@
 const KanbanModule = {
 
     COLUMNS: [
-        { id: 'Lead',     label: 'Lead',     emoji: '🎯', color: '#818cf8', bg: 'rgba(99,102,241,0.08)'  },
-        { id: 'Contato',  label: 'Contato',  emoji: '📞', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)'  },
-        { id: 'Proposta', label: 'Proposta', emoji: '📋', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)'  },
-        { id: 'Fechado',  label: 'Fechado',  emoji: '✅', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)'  },
-        { id: 'Perdido',  label: 'Perdido',  emoji: '❌', color: '#E24B4A', bg: 'rgba(226,75,74,0.08)'   },
+        { id: 'Frio',     label: 'Frio',     emoji: '🧊', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)'  },
+        { id: 'Morno',    label: 'Morno',    emoji: '🌡', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)'  },
+        { id: 'Quente',   label: 'Quente',   emoji: '🔥', color: '#E24B4A', bg: 'rgba(226,75,74,0.08)'   },
+        { id: 'Fechando', label: 'Fechando', emoji: '✅', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)'  },
     ],
 
     dragId: null,   // id do card sendo arrastado
@@ -33,9 +32,8 @@ const KanbanModule = {
         const counts = {};
         this.COLUMNS.forEach(c => counts[c.id] = 0);
         customers.forEach(c => {
-            const col = this.mapStatus(c.status);
+            const col = this.getCardColumn(c);
             if (counts[col] !== undefined) counts[col]++;
-            else counts['Lead']++;
         });
 
         board.innerHTML = this.COLUMNS.map(col => `
@@ -56,13 +54,15 @@ const KanbanModule = {
                 <div class="kb-cards" id="kb-cards-${col.id}"
                      style="min-height:200px;padding:0.5rem;background:${col.bg};border:1px solid ${col.color}33;border-top:none;border-radius:0 0 10px 10px;display:flex;flex-direction:column;gap:0.45rem;transition:background 0.15s;">
                     ${customers
-                        .filter(c => this.mapStatus(c.status) === col.id)
+                        .filter(c => this.getCardColumn(c) === col.id)
                         .map(c => this.renderCard(c, col, today))
                         .join('')}
                     <div class="kb-drop-hint" style="display:none;border:2px dashed ${col.color}55;border-radius:8px;height:60px;"></div>
                 </div>
             </div>
         `).join('');
+
+        this.renderLixeira(customers);
     },
 
     // ── Renderiza um card ──
@@ -80,13 +80,25 @@ const KanbanModule = {
                           : isToday ? 'color:#EF9F27;font-weight:600;'
                           : 'color:var(--text-muted);';
 
+        const originColors = {
+            'Google': '#818cf8',
+            'Inativo': '#1D9E75',
+            'Prospec': '#EF9F27',
+            'Maps': '#888888',
+        };
+        const originBorder = c.origin && originColors[c.origin] 
+            ? `border-left: 4px solid ${originColors[c.origin]};` 
+            : 'border-left: 4px solid transparent;'; 
+
+        const isMaps = c.origin === 'Maps';
+
         return `
         <div class="kb-card"
              id="kb-card-${c.id}"
              draggable="true"
              ondragstart="KanbanModule.onDragStart(event,'${c.id}','${col.id}')"
              ondragend="KanbanModule.onDragEnd(event)"
-             style="background:var(--bg-surface,rgba(255,255,255,0.06));border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:0.7rem 0.75rem;cursor:grab;transition:opacity 0.15s,box-shadow 0.15s;user-select:none;">
+             style="background:var(--bg-surface,rgba(255,255,255,0.06));border:1px solid rgba(255,255,255,0.08);${originBorder}border-radius:8px;padding:0.7rem 0.75rem;cursor:grab;transition:opacity 0.15s,box-shadow 0.15s;user-select:none;">
 
             <!-- Nome + avatar -->
             <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.4rem;">
@@ -116,6 +128,13 @@ const KanbanModule = {
                         onmouseover="this.style.background='rgba(37,211,102,0.25)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'">
                         <i class='bx bxl-whatsapp'></i>
                     </button>
+                    ${isMaps ? `
+                    <button onclick="KanbanModule.moveToLixeira('${c.id}')" title="Descartar (Lixeira)"
+                        style="width:24px;height:24px;border-radius:6px;border:none;background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                    ` : ''}
                 </div>
             </div>
 
@@ -132,19 +151,63 @@ const KanbanModule = {
         </div>`;
     },
 
-    // ── Mapeia status legado → coluna ──
-    mapStatus(status) {
+    // ── Mapeia status legado → coluna ou temperatura ──
+    getCardColumn(c) {
+        if (c.temperature === 'Lixeira' || c.status === 'Lixeira') return 'Lixeira';
+        if (c.temperature && ['Frio', 'Morno', 'Quente', 'Fechando'].includes(c.temperature)) {
+            return c.temperature;
+        }
+
         const map = {
-            'Lead':     'Lead',
-            'Prospect': 'Lead',
-            'Contato':  'Contato',
-            'Ativo':    'Contato',
-            'Proposta': 'Proposta',
-            'Fechado':  'Fechado',
-            'Perdido':  'Perdido',
-            'Inativo':  'Perdido',
+            'Lead':     'Frio',
+            'Prospect': 'Frio',
+            'Contato':  'Frio',
+            'Inativo':  'Frio',
+            'Perdido':  'Frio',
+            'Ativo':    'Morno',
+            'Proposta': 'Quente',
+            'Fechado':  'Fechando',
         };
-        return map[status] || 'Lead';
+        return map[c.status] || 'Frio';
+    },
+
+    toggleLixeira() {
+        const c = document.getElementById('lixeira-container');
+        if(c) c.style.display = (c.style.display === 'none') ? 'block' : 'none';
+    },
+
+    async moveToLixeira(id) {
+        if(!confirm('Descartar este contato Maps para a lixeira?')) return;
+        await this.moveCard(id, 'Lixeira');
+    },
+
+    async restoreFromLixeira(id) {
+        await this.moveCard(id, 'Frio');
+    },
+
+    renderLixeira(customers) {
+        const lixeiraCards = customers.filter(c => this.getCardColumn(c) === 'Lixeira');
+        const countSpan = document.getElementById('lixeira-count');
+        const cardsDiv = document.getElementById('lixeira-cards');
+        if(countSpan) countSpan.innerText = lixeiraCards.length;
+        if(cardsDiv) {
+            cardsDiv.innerHTML = lixeiraCards.map(c => {
+                const name = c.name || c.client || '—';
+                return `
+                <div style="background:var(--bg-surface);border:1px solid rgba(255,255,255,0.1);border-left:4px solid #888;border-radius:8px;padding:0.7rem;min-width:200px;display:flex;flex-direction:column;gap:0.4rem;">
+                    <div style="font-weight:600;font-size:0.85rem;color:var(--text-main);">${this.esc(name)}</div>
+                    ${c.phone ? `<div style="font-size:0.75rem;color:var(--text-muted);">${this.esc(c.phone)}</div>` : ''}
+                    <div style="margin-top:0.4rem;">
+                        <button onclick="KanbanModule.restoreFromLixeira('${c.id}')"
+                            style="width:100%;padding:0.3rem;font-size:0.75rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-main);cursor:pointer;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                            ↩ Restaurar
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
     },
 
     // ── Pega cliente mais recente por nome ──
@@ -160,11 +223,11 @@ const KanbanModule = {
     },
 
     // ── Move card para nova coluna ──
-    async moveCard(id, newStatus) {
+    async moveCard(id, newTemp) {
         const card = document.getElementById(`kb-card-${id}`);
         if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
 
-        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { status: newStatus });
+        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { temperature: newTemp });
 
         this.render();
         if (typeof DashboardModule !== 'undefined') DashboardModule.update();

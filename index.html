@@ -352,8 +352,24 @@
                                     <input type="text" id="crm-products" placeholder="Ex: Bobinas, Sacolas">
                                 </div>
                                 <div class="form-group">
-                                    <label for="crm-source">Onde foi prospectado?</label>
-                                    <input type="text" id="crm-source" placeholder="Ex: Instagram, Indicação, Presencial">
+                                    <label>Origem do Contato</label>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;" id="crm-origin-group">
+                                        <button type="button" class="btn btn-outline btn-origin" data-origin="Google" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectOrigin('Google')">🟣 Google</button>
+                                        <button type="button" class="btn btn-outline btn-origin" data-origin="Inativo" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectOrigin('Inativo')">🟢 Inativo</button>
+                                        <button type="button" class="btn btn-outline btn-origin" data-origin="Prospec" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectOrigin('Prospec')">🟠 Prospec</button>
+                                        <button type="button" class="btn btn-outline btn-origin" data-origin="Maps" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectOrigin('Maps')">⚫ Maps</button>
+                                    </div>
+                                    <input type="hidden" id="crm-origin" value="">
+                                </div>
+                                <div class="form-group">
+                                    <label>Temperatura Atual</label>
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;" id="crm-temp-group">
+                                        <button type="button" class="btn btn-outline btn-temp" data-temp="Frio" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectTemp('Frio')">🧊 Frio</button>
+                                        <button type="button" class="btn btn-outline btn-temp" data-temp="Morno" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectTemp('Morno')">🌡 Morno</button>
+                                        <button type="button" class="btn btn-outline btn-temp" data-temp="Quente" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectTemp('Quente')">🔥 Quente</button>
+                                        <button type="button" class="btn btn-outline btn-temp" data-temp="Fechando" style="flex:1; padding:0.4rem; font-size:0.82rem;" onclick="CRMModule.selectTemp('Fechando')">✅ Fechando</button>
+                                    </div>
+                                    <input type="hidden" id="crm-temperature" value="Frio">
                                 </div>
                                 <div class="form-group">
                                     <label for="crm-notes">Anotações / Feedback</label>
@@ -489,6 +505,19 @@
                         <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;opacity:0.6;">
                             💡 No celular use o menu ↪ dentro de cada card para mover entre etapas
                         </p>
+
+                        <!-- Lixeira Section -->
+                        <div style="margin-top:2rem;text-align:center;">
+                            <button id="btn-toggle-lixeira" class="btn btn-outline" style="font-size:0.8rem;padding:0.4rem 1rem;border-color:rgba(255,255,255,0.1);color:var(--text-muted);" onclick="KanbanModule.toggleLixeira()">
+                                🗑 Lixeira (<span id="lixeira-count">0</span>)
+                            </button>
+                        </div>
+                        <div id="lixeira-container" style="display:none;margin-top:1rem;background:rgba(0,0,0,0.2);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;padding:1rem;">
+                            <h3 style="font-size:0.95rem;color:var(--text-muted);margin-bottom:1rem;text-align:center;">Contatos Maps Descartados</h3>
+                            <div id="lixeira-cards" style="display:flex;gap:0.8rem;overflow-x:auto;padding-bottom:0.5rem;">
+                                <!-- Lixeira cards rendered via JS -->
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -561,10 +590,26 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Origem do Contato</label>
-                                    <input type="text" id="edit-source" placeholder="Ex: Instagram, Indicação">
+                                    <select id="edit-origin">
+                                        <option value="">Nenhuma / Outra</option>
+                                        <option value="Google">🟣 Google</option>
+                                        <option value="Inativo">🟢 Inativo</option>
+                                        <option value="Prospec">🟠 Prospec</option>
+                                        <option value="Maps">⚫ Maps</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Status do Cliente</label>
+                                    <label>Temperatura</label>
+                                    <select id="edit-temperature">
+                                        <option value="">Não definida</option>
+                                        <option value="Frio">🧊 Frio</option>
+                                        <option value="Morno">🌡 Morno</option>
+                                        <option value="Quente">🔥 Quente</option>
+                                        <option value="Fechando">✅ Fechando</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status Histórico</label>
                                     <select id="edit-status">
                                         <option value="Lead">🎯 Lead</option>
                                         <option value="Prospect">🎯 Prospect</option>

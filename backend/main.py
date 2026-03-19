@@ -56,7 +56,11 @@ def startup_event():
                 'ADD COLUMN IF NOT EXISTS "products" VARCHAR',
                 'ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR',
                 'ADD COLUMN IF NOT EXISTS "source" VARCHAR',
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
+                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
+                'ADD COLUMN IF NOT EXISTS "origin" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "temperature" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "region" VARCHAR',
+                'ADD COLUMN IF NOT EXISTS "city" VARCHAR'
             ],
             "sales": [
                 "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
@@ -180,6 +184,10 @@ class CustomerBase(BaseModel):
     products: str = None
     buyerName: str = None
     source: str = None
+    origin: str = None
+    temperature: str = None
+    region: str = None
+    city: str = None
     createdAt: str
     updatedAt: str = None
 

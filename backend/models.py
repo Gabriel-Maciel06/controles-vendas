@@ -38,6 +38,10 @@ class Customer(Base):
     products = Column(String, nullable=True)
     buyerName = Column(String, nullable=True)
     source = Column(String, nullable=True)
+    origin = Column(String, nullable=True)
+    temperature = Column(String, nullable=True)
+    region = Column(String, nullable=True)
+    city = Column(String, nullable=True)
     createdAt = Column(String)
     updatedAt = Column(String, nullable=True)
 
