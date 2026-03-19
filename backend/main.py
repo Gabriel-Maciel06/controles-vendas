@@ -42,6 +42,7 @@ async def global_exception_handler(request, exc):
 def startup_event():
     try:
         models.Base.metadata.create_all(bind=engine)
+        print("Banco de dados inicializado com sucesso!")
         
         # Migrações otimizadas: agrupadas por tabela para reduzir overhead
         tables_to_migrate = {
@@ -69,13 +70,21 @@ def startup_event():
             ]
         }
 
-        with engine.begin() as conn:
-            for table, columns in tables_to_migrate.items():
-                try:
+        is_postgres = "postgres" in str(engine.url)
+
+        for table, columns in tables_to_migrate.items():
+            try:
+                with engine.begin() as conn:
+                    # Configura lock_timeout curto para evitar travar o deploy no Render
+                    # devido à falta de lock EXCLUSIVE enquanto o app antigo recebe tráfego.
+                    if is_postgres:
+                        conn.execute(text("SET LOCAL lock_timeout = '2s';"))
                     sql = f"ALTER TABLE {table} {', '.join(columns)};"
                     conn.execute(text(sql))
-                except Exception:
-                    pass # Caso postgres/sqlite varie o suporte ao agrupamento ou IF NOT EXISTS
+            except Exception:
+                pass # Caso postgres/sqlite varie o suporte ao agrupamento, IF NOT EXISTS ou timeout expirou.
+                
+        print("Migrations concluídas.")
     except Exception as e:
         print(f"Erro no startup: {e}")
 
