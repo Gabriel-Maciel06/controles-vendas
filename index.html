@@ -476,6 +476,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div id="crm-pagination"></div>
                         </div>
                     </div>
                 </section>
@@ -526,7 +527,7 @@
                     <div class="modal-content" style="max-width: 600px;">
                         <div class="modal-header">
                             <h2>Histórico de Relacionamento</h2>
-                            <button class="btn-sm"
+                            <button class="icon-btn"
                                 onclick="document.getElementById('crm-history-modal').classList.add('hidden')"><i
                                     class='bx bx-x'></i></button>
                         </div>
@@ -541,7 +542,7 @@
                     <div class="modal-content" style="max-width: 640px;">
                         <div class="modal-header">
                             <h2>✏️ Editar Cliente</h2>
-                            <button class="btn-sm" onclick="CRMModule.closeEditModal()"><i class='bx bx-x'></i></button>
+                            <button class="icon-btn" onclick="CRMModule.closeEditModal()"><i class='bx bx-x'></i></button>
                         </div>
                         <div class="modal-body">
                             <input type="hidden" id="edit-id">
@@ -878,6 +879,45 @@
                         </div>
                         <div class="panel" style="padding:1rem;" id="dash-reminders-card">
                             <div style="color:var(--text-muted);font-size:0.85rem;">Carregando lembretes...</div>
+                        </div>
+                    </div>
+
+                    <!-- Atividades de Prospecção -->
+                    <div class="panel list-panel" style="margin-bottom: 2rem;">
+                        <div class="panel-header">
+                            <h2>Atividade de Prospecção</h2>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; padding:1rem;">
+                            <!-- Clientes Adicionados -->
+                            <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">Novos Clientes (Mês)</div>
+                                <div style="font-size:1.8rem;font-weight:bold;color:var(--text-main);" id="dash-new-clients">0</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.3rem;" id="dash-new-clients-breakdown">
+                                </div>
+                            </div>
+                            
+                            <!-- Ligações Feitas -->
+                            <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:1rem;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                    <div style="font-size:0.85rem;color:var(--text-muted);">Contatos Feitos (Mês)</div>
+                                    <input type="number" id="dash-contact-goal" placeholder="Meta: 30" style="width:70px;padding:0.2rem;background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--text-main);font-size:0.75rem;border-radius:4px;">
+                                </div>
+                                <div style="font-size:1.8rem;font-weight:bold;color:#3b82f6;" id="dash-contacts-made">0</div>
+                                <div style="margin-top:0.5rem;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+                                    <div id="dash-contacts-progress" style="height:100%;width:0%;background:#3b82f6;transition:width 0.3s;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Pipeline -->
+                            <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:1rem;">
+                                <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">Pipeline Atual</div>
+                                <div style="display:flex;flex-direction:column;gap:0.3rem;" id="dash-pipeline-stats">
+                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span style="color:#1D9E75;">✅ Fechando</span> <strong id="pipe-fechando">0</strong></div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span style="color:#E24B4A;">🔥 Quente</span> <strong id="pipe-quente">0</strong></div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span style="color:#EF9F27;">🌡 Morno</span> <strong id="pipe-morno">0</strong></div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span style="color:#3b82f6;">🧊 Frio</span> <strong id="pipe-frio">0</strong></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

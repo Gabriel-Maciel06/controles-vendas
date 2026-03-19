@@ -5,6 +5,9 @@
 
 const CRMModule = {
     allAlerts: [], // guarda todos os clientes para filtrar localmente
+    filteredAlerts: [],
+    currentPage: 1,
+    itemsPerPage: 20,
 
     init() {
         this.cacheDOM();
@@ -280,14 +283,15 @@ const CRMModule = {
             if (!latest[name] || date > (latest[name].lastContactDate || '')) latest[name] = c;
         });
 
-        this.allAlerts = Object.values(latest)
-            .sort((a,b) => (a.nextFollowUp||'').localeCompare(b.nextFollowUp||''));
+        this.allAlerts = Object.values(latest);
 
-        this.applyFilters();
+        this.applyFilters(false); // Retain pagination on reload
     },
 
     // ── Aplica busca + filtros sobre allAlerts ──
-    applyFilters() {
+    applyFilters(resetPage = true) {
+        if (resetPage !== false) this.currentPage = 1;
+
         const query      = (this.dom.search?.value || '').toLowerCase().trim();
         const status     = this.dom.filterStatus?.value  || '';
         const followup   = this.dom.filterFollowup?.value || '';
@@ -315,12 +319,81 @@ const CRMModule = {
             return true;
         });
 
+        // Calculate score for priority sorting
+        filtered.forEach(c => {
+            let score = 0;
+            const temp = c.temperature || 'Frio';
+            if (temp === 'Fechando') score += 400; 
+            else if (temp === 'Quente') score += 300;
+            else if (temp === 'Morno') score += 200;
+            else if (temp === 'Frio') score += 100;
+
+            const next = c.nextFollowUp || '';
+            if (next && next < today) score += 30; // Atrasado
+            else if (next === today) score += 20; // Hoje
+            else if (next >= today && next <= weekEndStr) score += 10; // Semana
+            else score += 0; // Em dia
+
+            const origin = c.origin || '';
+            if (origin === 'Google') score += 3;
+            else if (origin === 'Inativo') score += 2;
+            else if (origin === 'Prospec') score += 1;
+            else score += 0; // Maps ou outro
+
+            c._priorityScore = score;
+        });
+
+        filtered.sort((a, b) => b._priorityScore - a._priorityScore);
+
+        this.filteredAlerts = filtered;
+
         // Mostrar/esconder botão limpar
         const hasFilter = query || status || followup;
         if (this.dom.btnClear) this.dom.btnClear.style.display = hasFilter ? 'block' : 'none';
 
         this.updateCount(filtered.length, this.allAlerts.length);
-        this.renderTable(filtered);
+        this.renderCurrentPage();
+    },
+
+    changePage(delta) {
+        this.currentPage += delta;
+        this.renderCurrentPage();
+    },
+
+    renderCurrentPage() {
+        const total = this.filteredAlerts.length;
+        const totalPages = Math.ceil(total / this.itemsPerPage) || 1;
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+        
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        const sliced = this.filteredAlerts.slice(start, end);
+
+        this.renderTable(sliced);
+        this.renderPagination(total, start, Math.min(end, total));
+    },
+
+    renderPagination(total, start, end) {
+        const container = document.getElementById('crm-pagination');
+        if (!container) return;
+
+        if (total === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const prevDisabled = this.currentPage === 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
+        const nextDisabled = end >= total ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
+
+        container.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;font-size:0.8rem;color:var(--text-muted);">
+                <div>Mostrando ${start + 1}–${end} de ${total} clientes</div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-outline" onclick="CRMModule.changePage(-1)" ${prevDisabled}>&larr; Anterior</button>
+                    <button class="btn btn-outline" onclick="CRMModule.changePage(1)" ${nextDisabled}>Próximo &rarr;</button>
+                </div>
+            </div>
+        `;
     },
 
     // ── Limpa todos os filtros ──

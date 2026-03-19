@@ -38,6 +38,15 @@ const DashboardModule = {
             samplesCard:     document.getElementById('dash-samples-card'),
             remindersCard:   document.getElementById('dash-reminders-card'),
             activitiesBody:  document.getElementById('dash-activities-body'),
+            newClients:      document.getElementById('dash-new-clients'),
+            newClientsBrk:   document.getElementById('dash-new-clients-breakdown'),
+            contactGoal:     document.getElementById('dash-contact-goal'),
+            contactsMade:    document.getElementById('dash-contacts-made'),
+            contactsProg:    document.getElementById('dash-contacts-progress'),
+            pipeFechando:    document.getElementById('pipe-fechando'),
+            pipeQuente:      document.getElementById('pipe-quente'),
+            pipeMorno:       document.getElementById('pipe-morno'),
+            pipeFrio:        document.getElementById('pipe-frio'),
         };
     },
 
@@ -48,11 +57,19 @@ const DashboardModule = {
             alert('Meta do mês salva com sucesso!');
             this.update();
         });
+
+        this.dom.contactGoal?.addEventListener('change', (e) => {
+            localStorage.setItem('crm_contact_goal', e.target.value);
+            this.update();
+        });
     },
 
     loadGoal() {
         const saved = localStorage.getItem('crm_monthly_goal');
         if (saved && this.dom.goalInput) this.dom.goalInput.value = saved;
+        
+        const savedContact = localStorage.getItem('crm_contact_goal');
+        if (savedContact && this.dom.contactGoal) this.dom.contactGoal.value = savedContact;
     },
 
     update() {
@@ -75,6 +92,55 @@ const DashboardModule = {
         this.updateRanking(sales);
         this.renderChart(sales);
         this.renderCategoryChart(sales, curPrefix);
+        this.updateProspeccao(customers, curPrefix);
+    },
+
+    updateProspeccao(customers, curPrefix) {
+        if (!this.dom.newClients) return;
+        
+        let newCount = 0;
+        let breakdown = { 'Google': 0, 'Inativo': 0, 'Prospec': 0, 'Maps': 0 };
+        let contactedCount = 0;
+        let pipe = { 'Fechando': 0, 'Quente': 0, 'Morno': 0, 'Frio': 0 };
+
+        customers.forEach(c => {
+            const temp = c.temperature || 'Frio';
+            if (pipe[temp] !== undefined) pipe[temp]++;
+            
+            // Assume the user creation relates to lastContactDate if no hard creation date logic
+            if (c.createdAt && c.createdAt.startsWith(curPrefix)) {
+                newCount++;
+                const o = c.origin || 'Outros';
+                if (breakdown[o] !== undefined) breakdown[o]++;
+            } else if (!c.createdAt && c.lastContactDate && c.lastContactDate.startsWith(curPrefix)) {
+                newCount++;
+                const o = c.origin || 'Outros';
+                if (breakdown[o] !== undefined) breakdown[o]++;
+            }
+
+            if (c.lastContactDate && c.lastContactDate.startsWith(curPrefix)) {
+                contactedCount++;
+            }
+        });
+
+        this.dom.newClients.innerText = newCount;
+        this.dom.newClientsBrk.innerHTML = `
+            <span style="background:rgba(129,140,248,0.2);color:#818cf8;padding:2px 6px;border-radius:4px;">🟣 Goo: ${breakdown['Google']}</span>
+            <span style="background:rgba(29,158,117,0.2);color:#1D9E75;padding:2px 6px;border-radius:4px;">🟢 Ina: ${breakdown['Inativo']}</span>
+            <span style="background:rgba(239,159,39,0.2);color:#EF9F27;padding:2px 6px;border-radius:4px;">🟠 Pro: ${breakdown['Prospec']}</span>
+            <span style="background:rgba(136,136,136,0.2);color:#888;padding:2px 6px;border-radius:4px;">⚫ Map: ${breakdown['Maps']}</span>
+        `;
+
+        this.dom.contactsMade.innerText = contactedCount;
+        const goalStr = this.dom.contactGoal?.value || localStorage.getItem('crm_contact_goal') || '30';
+        const goal = parseInt(goalStr, 10) || 30;
+        const pct = Math.min((contactedCount / goal) * 100, 100);
+        if (this.dom.contactsProg) this.dom.contactsProg.style.width = pct + '%';
+
+        this.dom.pipeFechando.innerText = pipe['Fechando'];
+        this.dom.pipeQuente.innerText = pipe['Quente'];
+        this.dom.pipeMorno.innerText = pipe['Morno'];
+        this.dom.pipeFrio.innerText = pipe['Frio'];
     },
 
     updateGoalProgress(sales, curPrefix) {
