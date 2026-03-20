@@ -35,8 +35,6 @@ const CRMModule = {
             followupPreview:document.getElementById('crm-followup-preview'),
             alertsBody:     document.getElementById('crm-alerts-body'),
             search:        document.getElementById('crm-search'),
-            filterStatus:  document.getElementById('crm-filter-status'),
-            filterFollowup:document.getElementById('crm-filter-followup'),
             btnClear:      document.getElementById('crm-btn-clear-filters'),
             count:         document.getElementById('crm-count'),
         };
@@ -361,8 +359,14 @@ ${text.substring(0, 4000)}`;
         if (resetPage !== false) this.currentPage = 1;
 
         const query      = (this.dom.search?.value || '').toLowerCase().trim();
-        const status     = this.dom.filterStatus?.value  || '';
-        const followup   = this.dom.filterFollowup?.value || '';
+        const tempObj    = document.getElementById('crm-filter-temperature');
+        const originObj  = document.getElementById('crm-filter-origin');
+        const sortObj    = document.getElementById('crm-filter-sort');
+
+        const temperature = tempObj ? tempObj.value : '';
+        const originFilter= originObj ? originObj.value : '';
+        const sortMode    = sortObj ? sortObj.value : 'priority';
+
         const today      = new Date().toISOString().split('T')[0];
         const weekEnd    = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
         const weekEndStr = weekEnd.toISOString().split('T')[0];
@@ -370,24 +374,26 @@ ${text.substring(0, 4000)}`;
         let filtered = this.allAlerts.filter(c => {
             const name  = (c.name || c.client || '').toLowerCase();
             const phone = (c.phone || '').toLowerCase();
-            const next  = c.nextFollowUp || '';
 
             // Busca por nome ou telefone
             if (query && !name.includes(query) && !phone.includes(query)) return false;
 
-            // Filtro de status
-            if (status && (c.status || 'Contato') !== status) return false;
+            // Filtro de origin (Inativo, Ativo, Prospec, Maps...)
+            // Cuidado: alguns clientes legados podem ter 'origin' vazio. 
+            // O source costuma guardar Inativo também se origin falhar... vamos testar os 2
+            if (originFilter) {
+                const cOrigin = c.origin || '';
+                const cSource = c.source || '';
+                if (cOrigin !== originFilter && cSource !== originFilter) return false;
+            }
 
-            // Filtro de follow-up
-            if (followup === 'atrasado' && !(next && next < today))          return false;
-            if (followup === 'hoje'     && next !== today)                    return false;
-            if (followup === 'semana'   && !(next >= today && next <= weekEndStr)) return false;
-            if (followup === 'emdia'    && !(next >= today))                  return false;
+            // Filtro de temperatura
+            if (temperature && (c.temperature || 'Frio') !== temperature) return false;
 
             return true;
         });
 
-        // Calculate score for priority sorting
+        // Calculo de prioridade
         filtered.forEach(c => {
             let score = 0;
             const temp = c.temperature || 'Frio';
@@ -406,17 +412,29 @@ ${text.substring(0, 4000)}`;
             if (origin === 'Google') score += 3;
             else if (origin === 'Inativo') score += 2;
             else if (origin === 'Prospec') score += 1;
-            else score += 0; // Maps ou outro
+            else score += 0; 
 
             c._priorityScore = score;
         });
 
-        filtered.sort((a, b) => b._priorityScore - a._priorityScore);
+        filtered.sort((a, b) => {
+            if (sortMode === 'recent') {
+                const da = a.lastContactDate || a.createdAt || '1970-01-01';
+                const db = b.lastContactDate || b.createdAt || '1970-01-01';
+                return db.localeCompare(da);
+            } else if (sortMode === 'oldest') {
+                const da = a.lastContactDate || a.createdAt || '1970-01-01';
+                const db = b.lastContactDate || b.createdAt || '1970-01-01';
+                return da.localeCompare(db);
+            } else {
+                return b._priorityScore - a._priorityScore;
+            }
+        });
 
         this.filteredAlerts = filtered;
 
         // Mostrar/esconder botão limpar
-        const hasFilter = query || status || followup;
+        const hasFilter = query || temperature || originFilter || sortMode !== 'priority';
         if (this.dom.btnClear) this.dom.btnClear.style.display = hasFilter ? 'block' : 'none';
 
         this.updateCount(filtered.length, this.allAlerts.length);
@@ -464,11 +482,17 @@ ${text.substring(0, 4000)}`;
         `;
     },
 
-    // ── Limpa todos os filtros ──
     clearFilters() {
         if (this.dom.search)        this.dom.search.value        = '';
-        if (this.dom.filterStatus)  this.dom.filterStatus.value  = '';
-        if (this.dom.filterFollowup)this.dom.filterFollowup.value = '';
+        
+        const tempObj    = document.getElementById('crm-filter-temperature');
+        const originObj  = document.getElementById('crm-filter-origin');
+        const sortObj    = document.getElementById('crm-filter-sort');
+
+        if (tempObj) tempObj.value = '';
+        if (originObj) originObj.value = '';
+        if (sortObj) sortObj.value = 'priority';
+
         if (this.dom.btnClear)      this.dom.btnClear.style.display = 'none';
         this.applyFilters();
     },
