@@ -38,7 +38,8 @@ const ImportModule = {
     },
 
     async processFile() {
-        if (App.currentUser() !== "default") {
+        const currentProfile = sessionStorage.getItem('maciel_profile') || 'default';
+        if (currentProfile !== "default") {
             return alert("Apenas o perfil Maciel (default) pode fazer importação da base Facilita.");
         }
 
