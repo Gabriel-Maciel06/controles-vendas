@@ -18,6 +18,8 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom CSS -->
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -63,6 +65,10 @@
                 <a href="#whatsapp" class="nav-item" data-target="whatsapp">
                     <i class='bx bx-chat'></i>
                     <span>Análise WhatsApp</span>
+                </a>
+                <a href="#import" class="nav-item hidden" id="nav-import" data-target="import">
+                    <i class='bx bx-import'></i>
+                    <span>Importar Base</span>
                 </a>
             </nav>
 
@@ -1075,6 +1081,50 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- View: Import Base -->
+                <section id="view-import" class="view-section">
+                    <div style="background:var(--bg-surface); padding:2rem; border-radius:12px; border:1px solid rgba(255,255,255,0.05); max-width: 800px;">
+                        <h2 style="margin-bottom:1rem;color:var(--text-main);"><i class='bx bx-import'></i> Importar Base Facilita (Excel)</h2>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;">
+                            Selecione a planilha Excel (.xlsx) contendo a <strong>BASE FACILITA</strong> para processar, enriquecer e importar os clientes para as carteiras de cada vendedor.
+                        </p>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>1. Selecionar Arquivo Excel (.xlsx)</label>
+                            <input type="file" id="facilita-file" accept=".xlsx" style="background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2); width: 100%; color: var(--text-main);">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 2rem;">
+                            <label>2. Vendedores a Importar</label>
+                            <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-top:0.5rem;">
+                                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                    <input type="checkbox" class="import-seller-cb" value="MACIEL" checked> Maciel
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                    <input type="checkbox" class="import-seller-cb" value="CAIO" checked> Caio
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                    <input type="checkbox" class="import-seller-cb" value="KARINE" checked> Karine
+                                </label>
+                                <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                    <input type="checkbox" class="import-seller-cb" value="FERNANDA" checked> Fernanda
+                                </label>
+                            </div>
+                        </div>
+
+                        <button id="btn-process-facilita" class="btn btn-primary" onclick="ImportModule.processFile()" style="width:100%; font-size:1.05rem; padding:0.8rem;">
+                            <i class='bx bx-cloud-upload'></i> Processar e Importar para o Sistema
+                        </button>
+
+                        <div id="import-progress-container" style="display:none; margin-top:2rem; padding:1.5rem; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                            <h3 style="font-size:1rem; margin-bottom:1rem; color:var(--text-main);">Progresso da Importação</h3>
+                            <div id="import-log" style="font-family:monospace; font-size:0.85rem; color:var(--text-muted); line-height:1.6; max-height:200px; overflow-y:auto; word-break:break-all;">
+                                <!-- Logs -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -1195,5 +1245,6 @@
     <script src="js/kanban.js"></script>
     <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/import.js"></script>
 </body>
 </html>

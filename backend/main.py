@@ -233,6 +233,10 @@ class SettingBase(BaseModel):
     class Config:
         orm_mode = True
 
+class ImportFacilitaReq(BaseModel):
+    customers: List[CustomerBase]
+    profile: str = "default"
+
 # --- API Endpoints ---
 
 @app.get("/")
@@ -310,6 +314,38 @@ def delete_customer(customer_id: str, db: Session = Depends(get_db)):
     db.delete(db_customer)
     db.commit()
     return {"ok": True}
+
+@app.post("/api/import/facilita")
+def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
+    if req.profile != "default":
+        raise HTTPException(status_code=403, detail="Apenas o perfil default pode importar a base Facilita")
+
+    created = 0
+    ignored = 0
+    errors = 0
+
+    for c_data in req.customers:
+        try:
+            db_cust = db.query(models.Customer).filter(models.Customer.id == c_data.id).first()
+            if db_cust:
+                ignored += 1
+                continue
+            
+            new_cust = models.Customer(**c_data.dict())
+            db.add(new_cust)
+            created += 1
+        except Exception as e:
+            errors += 1
+            print(f"Erro ao importar {c_data.id}: {e}")
+            db.rollback()
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e), "criados": 0, "ignorados": 0, "erros": len(req.customers)}
+
+    return {"criados": created, "ignorados": ignored, "erros": errors}
 
 # --- SAMPLES ---
 @app.get("/api/samples", response_model=List[SampleBase])

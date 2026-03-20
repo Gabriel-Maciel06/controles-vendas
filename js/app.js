@@ -106,6 +106,12 @@ const AppModule = {
         if (nameEl)   nameEl.textContent   = user.name;
         if (roleEl)   roleEl.textContent   = user.role;
 
+        const importNav = document.getElementById('nav-import');
+        if (importNav) {
+            if (profile === 'default') importNav.classList.remove('hidden');
+            else importNav.classList.add('hidden');
+        }
+
         if (profile === 'mamae') {
             document.title = "Controle de Vendas Isapel";
             document.documentElement.style.setProperty('--primary', '#9d174d');
