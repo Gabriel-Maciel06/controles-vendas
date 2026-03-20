@@ -5,8 +5,7 @@ import hmac
 import secrets
 from typing import List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -25,18 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Resolve Absolute Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-js_dir = os.path.join(BASE_DIR, "js")
-css_dir = os.path.join(BASE_DIR, "css")
-html_path = os.path.join(BASE_DIR, "index.html")
-
-# Servindo arquivos estáticos - Garante que JS e CSS sejam carregados
-if os.path.exists(js_dir):
-    app.mount("/js", StaticFiles(directory=js_dir), name="js")
-if os.path.exists(css_dir):
-    app.mount("/css", StaticFiles(directory=css_dir), name="css")
-
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     return JSONResponse(
@@ -50,49 +37,35 @@ def startup_event():
         models.Base.metadata.create_all(bind=engine)
         print("Banco de dados inicializado com sucesso!")
         
-        # Migrações otimizadas: agrupadas por tabela para reduzir overhead
-        tables_to_migrate = {
-            "customers": [
-                'ADD COLUMN IF NOT EXISTS "products" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "source" VARCHAR',
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
-                'ADD COLUMN IF NOT EXISTS "origin" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "temperature" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "region" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "city" VARCHAR'
-            ],
-            "sales": [
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
-                'ADD COLUMN IF NOT EXISTS "productName" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "costPrice" FLOAT'
-            ],
-            "samples": [
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'",
-                'ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR',
-                'ADD COLUMN IF NOT EXISTS "notes" VARCHAR'
-            ],
-            "settings": [
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
-            ],
-            "reminders": [
-                "ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default'"
-            ]
-        }
+        migrations = [
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "products" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "source" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "origin" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "temperature" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "region" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "city" VARCHAR;',
+            "ALTER TABLE customers ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+            "ALTER TABLE sales ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "productName" VARCHAR;',
+            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "costPrice" FLOAT;',
+            "ALTER TABLE samples ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR;',
+            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
+            "ALTER TABLE settings ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+            "ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+        ]
 
         is_postgres = "postgres" in str(engine.url)
 
-        for table, columns in tables_to_migrate.items():
+        for sql in migrations:
             try:
                 with engine.begin() as conn:
-                    # Configura lock_timeout curto para evitar travar o deploy no Render
-                    # devido à falta de lock EXCLUSIVE enquanto o app antigo recebe tráfego.
                     if is_postgres:
                         conn.execute(text("SET LOCAL lock_timeout = '2s';"))
-                    sql = f"ALTER TABLE {table} {', '.join(columns)};"
                     conn.execute(text(sql))
             except Exception:
-                pass # Caso postgres/sqlite varie o suporte ao agrupamento, IF NOT EXISTS ou timeout expirou.
+                pass  # Coluna já existe, ignorar
                 
         print("Migrations concluídas.")
     except Exception as e:
@@ -241,9 +214,7 @@ class ImportFacilitaReq(BaseModel):
 
 @app.get("/")
 def read_root():
-    if os.path.exists(html_path):
-        return FileResponse(html_path)
-    return {"message": "Bem-vindo à API do Controle de Vendas Isapel (Frontend não encontrado)"}
+    return {"message": "Bem-vindo à API do Controle de Vendas Isapel"}
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
@@ -333,17 +304,12 @@ def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
             
             new_cust = models.Customer(**c_data.dict())
             db.add(new_cust)
+            db.commit()
             created += 1
         except Exception as e:
             errors += 1
-            print(f"Erro ao importar {c_data.id}: {e}")
             db.rollback()
-
-    try:
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e), "criados": 0, "ignorados": 0, "erros": len(req.customers)}
+            print(f"Erro ao importar {c_data.id}: {e}")
 
     return {"criados": created, "ignorados": ignored, "erros": errors}
 

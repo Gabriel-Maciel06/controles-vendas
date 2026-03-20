@@ -4,7 +4,13 @@ import json
 import os
 from datetime import datetime, timedelta
 
-FILE_PATH = r"C:\Users\barth\OneDrive\Desktop\FacilitaPasta\FACILITA VENDAS ATUALIZADO 09-03-2026.xlsx"
+import sys
+
+if len(sys.argv) < 2:
+    print("Uso: python import_facilita.py <caminho_do_arquivo.xlsx>")
+    sys.exit(1)
+
+FILE_PATH = sys.argv[1]
 API_URL = "https://controles-vendas.onrender.com/api/import/facilita"
 
 SELLERS_MAP = {

@@ -195,7 +195,8 @@ const ImportModule = {
                         lastContactDate: dtStr,
                         nextFollowUp: nextFollow,
                         notes: notas,
-                        createdAt: new Date().toISOString()
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
                     };
                 });
 
