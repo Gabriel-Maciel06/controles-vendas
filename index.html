@@ -131,6 +131,14 @@
                             </div>
                         </section>
                         <section class="settings-section">
+                            <h3>Inteligência Artificial</h3>
+                            <div class="form-group">
+                                <label>Chave de API (Claude)</label>
+                                <input type="password" id="setting-claude-key" placeholder="sk-ant-api...">
+                                <span style="font-size:0.75rem;color:var(--text-muted);display:block;margin-top:0.3rem;">Cole sua API Key da Anthropic para habilitar as análises reais e dinâmicas.</</span>
+                            </div>
+                        </section>
+                        <section class="settings-section">
                             <h3>Gestão de Dados</h3>
                             <button id="btn-export-data" class="btn btn-primary"><i class='bx bx-download'></i> Exportar
                                 Backup</button>
@@ -424,13 +432,7 @@
                                     Contato</button>
                             </form>
 
-                            <!-- Painel de Sugestões IA -->
-                            <div class="panel-header" style="margin-top:2rem;">
-                                <h2>🤖 Sugestões Inteligentes</h2>
-                            </div>
-                            <div id="ai-suggestions-panel" style="padding:0.5rem 0;">
-                                <p style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem;">Carregando análise...</p>
-                            </div>
+                            </form>
                         </div>
 
                         <div class="panel list-panel">
@@ -654,9 +656,18 @@
                                     <label>Próximo Follow-up</label>
                                     <input type="date" id="edit-nextFollowUp">
                                 </div>
+                                <div class="form-group" style="grid-column: 1 / -1; margin-top: 0.5rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.08);">
+                                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span><i class='bx bx-bot'></i> Análise de WhatsApp via IA</span>
+                                    </label>
+                                    <textarea id="edit-ai-chat" rows="2" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(83,74,183,0.3); background:rgba(83,74,183,0.05); color:var(--text-main); resize:vertical; margin-bottom: 0.5rem; font-size:0.82rem;" placeholder="Cole aqui as últimas mensagens do WhatsApp trocadas com este cliente..."></textarea>
+                                    <button class="btn btn-sm btn-outline" type="button" onclick="CRMModule.analyzeSingleConversation()" id="btn-analyze-single" style="color:#a59bf4; border-color:rgba(165,155,244,0.4);border-radius:6px;">
+                                        ✨ Gerar Resumo Inteligente
+                                    </button>
+                                </div>
                                 <div class="form-group" style="grid-column: 1 / -1;">
-                                    <label>Anotações</label>
-                                    <textarea id="edit-notes" rows="3" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); resize:vertical;" placeholder="Observações sobre o cliente..."></textarea>
+                                    <label>Anotações do Cliente</label>
+                                    <textarea id="edit-notes" rows="4" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); resize:vertical;" placeholder="Observações sobre o cliente ou histórico de negociações..."></textarea>
                                 </div>
                             </div>
 

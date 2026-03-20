@@ -229,6 +229,63 @@ const CRMModule = {
         document.getElementById('crm-edit-modal').classList.add('hidden');
     },
 
+    async analyzeSingleConversation() {
+        const text = document.getElementById('edit-ai-chat').value.trim();
+        if (!text) return alert('Por favor, cole um trecho da conversa do WhatsApp no campo adequando.');
+
+        const btn = document.getElementById('btn-analyze-single');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Lendo e compreendendo a conversa...';
+
+        try {
+            const apiKey = localStorage.getItem('claude_api_key');
+            let summary = '';
+
+            if (!apiKey) {
+                // Modo simulado / Sem chave
+                await new Promise(r => setTimeout(r, 1200));
+                summary = `[IA — SIMULAÇÃO OFFLINE]\nPreencha a API Key do Claude nas configurações para análise real.\n\nSugestão Genérica: O cliente apresenta boa abertura. Retome o assunto do preço listado no histórico.`;
+            } else {
+                const prompt = `Como um analista de vendas sênior corporativo, faça um resumo clínico de no máximo 3 linhas baseado exclusivamente neste bate papo de WhatsApp colado abaixo. 
+Diga 1. Sentimento 2. Etapa atual 3. Oportunidade ou erro a contornar. Seja extremamente direto.
+
+CONVERSA:
+${text.substring(0, 4000)}`;
+
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'x-api-key': apiKey, 
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({ 
+                        model: 'claude-3-haiku-20240307', 
+                        max_tokens: 250, 
+                        messages: [{ role: 'user', content: prompt }] 
+                    })
+                });
+                
+                if (!res.ok) throw new Error('API Claude falhou: ' + res.status);
+                const data = await res.json();
+                summary = `[🤖 Análise da IA em ${new Date().toLocaleDateString('pt-BR')}]\n${data.content[0].text}`;
+            }
+
+            const notesEl = document.getElementById('edit-notes');
+            const spacer = notesEl.value ? '\n\n' : '';
+            notesEl.value = summary + spacer + notesEl.value; // prepend ao topo
+            document.getElementById('edit-ai-chat').value = '';
+
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao processar análise da IA: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '✨ Gerar Resumo Inteligente';
+        }
+    },
+
     // ── Salvar edição ──
     async saveEdit() {
         const id = document.getElementById('edit-id').value;
@@ -364,10 +421,6 @@ const CRMModule = {
 
         this.updateCount(filtered.length, this.allAlerts.length);
         this.renderCurrentPage();
-
-        if (typeof AISuggestions !== 'undefined') {
-            AISuggestions.renderSuggestionsPanel(filtered);
-        }
     },
 
     changePage(delta) {
@@ -486,6 +539,7 @@ const CRMModule = {
             const wappTitle = phone ? 'Enviar mensagem WhatsApp' : 'Cadastre um telefone para usar o WhatsApp';
 
             const tr = document.createElement('tr');
+            tr.id = `crm-row-${alert.id}`;
             tr.innerHTML = `
                 <td style="padding:0.75rem 0.5rem;">
                     <div style="display:flex;align-items:center;gap:0.65rem;">
@@ -502,6 +556,7 @@ const CRMModule = {
                 <td style="padding:0.75rem 0.5rem;font-size:0.81rem;color:var(--text-muted);white-space:nowrap;">${lastFmt}</td>
                 <td style="padding:0.75rem 0.5rem;max-width:180px;">
                     ${notesFmt ? `<span style="font-size:0.79rem;color:var(--text-muted);line-height:1.4;display:block;">${this.escapeHTML(notesFmt)}</span>` : '<span style="color:rgba(255,255,255,0.15);font-size:0.78rem;">—</span>'}
+                    <div class="ai-badge-container"></div>
                 </td>
                 <td style="padding:0.75rem 0.5rem;white-space:nowrap;">
                     <div style="font-size:0.81rem;color:var(--text-main);font-weight:500;margin-bottom:3px;">${nextFmt}</div>
@@ -519,6 +574,29 @@ const CRMModule = {
             `;
             this.dom.alertsBody.appendChild(tr);
         });
+
+        this.enrichWithAI(alerts);
+    },
+
+    async enrichWithAI(alerts) {
+        if (typeof AISuggestions === 'undefined') return;
+        const sales = DataStore.get(STORAGE_KEYS.SALES) || [];
+        for (const alert of alerts) {
+            const row = document.getElementById(`crm-row-${alert.id}`);
+            if (!row) continue;
+            const aiCell = row.querySelector('.ai-badge-container');
+            if (!aiCell) continue;
+
+            const analysis = await AISuggestions.analyze(alert, sales);
+            if (analysis.priority === 'urgente' || analysis.priority === 'alta') {
+                const bg = analysis.priority === 'urgente' ? 'rgba(220,53,69,0.1)' : 'rgba(255,152,0,0.1)';
+                const color = analysis.priority === 'urgente' ? '#ef4444' : '#f97316';
+                const badgeStr = `<div style="margin-top:0.4rem;display:inline-flex;align-items:center;gap:0.3rem;background:${bg};color:${color};font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:20px;font-weight:600;cursor:help;border:1px solid ${color}44;" title="${this.escapeAttr(analysis.suggestion)}">
+                                      ${analysis.emoji} Sugestão IA: ${analysis.title}
+                                  </div>`;
+                aiCell.innerHTML += badgeStr;
+            }
+        }
     },
 
     // ── Modal de histórico ──

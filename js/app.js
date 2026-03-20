@@ -233,6 +233,7 @@ const AppModule = {
                 document.getElementById('setting-google').value = config.google || 100;
                 document.getElementById('setting-reativacao').value = config.reativacao || 100;
                 document.getElementById('setting-introducao').value = config.introducao || 25;
+                document.getElementById('setting-claude-key').value = localStorage.getItem('claude_api_key') || '';
                 modalSettings.classList.remove('hidden');
             });
 
@@ -244,6 +245,11 @@ const AppModule = {
                     introducao: parseFloat(document.getElementById('setting-introducao').value) || 0
                 };
                 DataStore.set(STORAGE_KEYS.SETTINGS, newSettings);
+                
+                const claudeKey = document.getElementById('setting-claude-key')?.value.trim();
+                if (claudeKey) localStorage.setItem('claude_api_key', claudeKey);
+                else localStorage.removeItem('claude_api_key');
+
                 modalSettings.classList.add('hidden');
 
                 // Force Recalculation if SalesModule is active

@@ -114,74 +114,14 @@ Responda APENAS com JSON (sem markdown):
     },
 
     async analyze(client, salesHistory) {
-        if (this.USE_CLAUDE_API && this.CLAUDE_API_KEY) return this.analyzeClientClaude(client, salesHistory);
+        const key = localStorage.getItem('claude_api_key');
+        if (key) {
+            this.CLAUDE_API_KEY = key;
+            this.USE_CLAUDE_API = true;
+            return this.analyzeClientClaude(client, salesHistory);
+        }
+        this.USE_CLAUDE_API = false;
         return this.analyzeClientLocal(client, salesHistory);
-    },
-
-    async renderSuggestionsPanel(filteredList = null) {
-        const panel = document.getElementById('ai-suggestions-panel');
-        if (!panel) return;
-        
-        let customers = filteredList;
-        if (!customers) {
-            customers = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
-        }
-        
-        const sales     = DataStore.get(STORAGE_KEYS.SALES)     || [];
-        if (!customers.length) { panel.innerHTML = `<p style="color:var(--text-muted);text-align:center;padding:1rem;">Nenhum cliente a analisar no momento.</p>`; return; }
-
-        const clientMap = {};
-        customers.forEach(c => {
-            const name = c.name||c.client;
-            const date = c.lastContactDate||c.contactDate||'';
-            if (!clientMap[name] || date > (clientMap[name].lastContactDate||'')) clientMap[name] = c;
-        });
-
-        panel.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
-            <span style="font-size:1.2rem;">🤖</span>
-            <span style="font-weight:500;color:var(--text-main);">IA — Top 5 Prioridades</span>
-            <span style="font-size:0.75rem;color:var(--text-muted);margin-left:auto;">${this.USE_CLAUDE_API?'Claude API':'Análise local'}</span>
-        </div><div id="ai-cards-container" style="display:flex;flex-direction:column;gap:0.75rem;max-height:450px;overflow-y:auto;padding-right:4px;"></div>`;
-
-        const container = document.getElementById('ai-cards-container');
-        const priorityOrder = {urgente:0,alta:1,media:2,normal:3,baixa:4};
-        const results = [];
-        for (const client of Object.values(clientMap)) {
-            results.push({ client, suggestion: await this.analyze(client, sales) });
-        }
-        // Ordena: maior urgência primeiro. Empate → mais dias sem contato primeiro
-        results.sort((a,b) => {
-            const pa = priorityOrder[a.suggestion.priority] ?? 5;
-            const pb = priorityOrder[b.suggestion.priority] ?? 5;
-            if (pa !== pb) return pa - pb;
-            // desempate: quem está há mais tempo sem contato aparece antes
-            const da = a.client.lastContactDate || a.client.contactDate || '9999';
-            const db = b.client.lastContactDate || b.client.contactDate || '9999';
-            return da.localeCompare(db); // data menor (mais antiga) = mais urgente
-        });
-
-        const top5 = results.slice(0, 5);
-
-        const bgMap = {urgente:'rgba(220,53,69,0.15)',alta:'rgba(255,152,0,0.12)',media:'rgba(33,150,243,0.10)',normal:'rgba(255,255,255,0.03)',baixa:'rgba(255,255,255,0.02)'};
-        top5.forEach(({client, suggestion}) => {
-            const name = client.name||client.client;
-            const card = document.createElement('div');
-            card.style.cssText = `background:${bgMap[suggestion.priority]||'rgba(255,255,255,0.03)'};border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:flex-start;gap:0.75rem;`;
-            card.innerHTML = `
-                <div style="font-size:1.4rem;line-height:1;margin-top:2px;">${suggestion.emoji}</div>
-                <div style="flex:1;min-width:0;">
-                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;flex-wrap:wrap;">
-                        <strong style="color:var(--text-main);font-size:0.9rem;">${this.escapeHTML(name)}</strong>
-                        <span class="badge ${suggestion.badge}" style="font-size:0.7rem;">${suggestion.title}</span>
-                    </div>
-                    <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 0.4rem;line-height:1.4;">${suggestion.suggestion}</p>
-                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-primary" onclick="CRMModule.quickContact('${this.escapeHTML(name)}')" style="font-size:0.75rem;padding:0.2rem 0.6rem;">📞 ${suggestion.action}</button>
-                        <button class="btn btn-sm btn-outline" onclick="CRMModule.viewHistory('${this.escapeHTML(name)}')" style="font-size:0.75rem;padding:0.2rem 0.6rem;">Histórico</button>
-                    </div>
-                </div>`;
-            container.appendChild(card);
-        });
     },
 
     escapeHTML(str) {

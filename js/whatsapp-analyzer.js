@@ -268,7 +268,7 @@ const WhatsAppAnalyzer = {
         const prompt = `Analise esta conversa de WhatsApp entre vendedor e cliente. Responda APENAS com JSON válido (sem markdown):
 {"score":<0-100>,"scoreLabel":"<Ruim|Regular|Bom|Ótimo>","scoreColor":"<#E24B4A|#EF9F27|#1D9E75|#534AB7>","sentiment":"<Positivo|Neutro|Negativo|Misto>","stage":"<Prospecção|Apresentação|Negociação|Fechamento|Pós-venda|Perdido>","summary":"resumo 1-2 frases","opportunities":["oportunidade perdida"],"positives":["ponto positivo"],"improvements":["melhoria"],"contacts":["contato para prospectar"],"followUp":"o que fazer agora"}
 CONVERSA:\n${sample}`;
-        const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':this.CLAUDE_API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:this.CLAUDE_MODEL,max_tokens:800,messages:[{role:'user',content:prompt}]})});
+        const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':this.CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:this.CLAUDE_MODEL,max_tokens:800,messages:[{role:'user',content:prompt}]})});
         if (!res.ok) throw new Error('API '+res.status);
         const data = await res.json();
         return JSON.parse(data.content[0]?.text.replace(/```json|```/g,'').trim());
