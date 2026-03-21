@@ -246,6 +246,31 @@ def get_sales(profile: str = "default", db: Session = Depends(get_db)):
 def create_sale(sale: SaleBase, db: Session = Depends(get_db)):
     db_sale = models.Sale(**sale.dict())
     db.add(db_sale)
+
+    # Auto-cria cliente ativo ou atualiza se já existir (pelo nome)
+    db_cust = db.query(models.Customer).filter(
+        models.Customer.name == sale.client,
+        models.Customer.profile == sale.profile
+    ).first()
+    
+    if db_cust:
+        db_cust.status = "Ativo"
+        db_cust.temperature = "Quente"
+        db_cust.updatedAt = sale.createdAt
+    else:
+        new_cust = models.Customer(
+            id=f"cli_auto_{sale.id}",
+            profile=sale.profile,
+            name=sale.client,
+            status="Ativo",
+            temperature="Quente",
+            origin="Vendas",
+            source="Venda",
+            createdAt=sale.createdAt,
+            updatedAt=sale.createdAt
+        )
+        db.add(new_cust)
+
     db.commit()
     db.refresh(db_sale)
     return db_sale
@@ -320,7 +345,10 @@ def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
         try:
             db_cust = db.query(models.Customer).filter(models.Customer.id == c_data.id).first()
             if db_cust:
-                ignored += 1
+                for key, value in c_data.dict(exclude_unset=True).items():
+                    setattr(db_cust, key, value)
+                db.commit()
+                ignored += 1  # Conta como atualizados
                 continue
             
             new_cust = models.Customer(**c_data.dict())

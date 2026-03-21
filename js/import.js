@@ -170,7 +170,10 @@ const ImportModule = {
                 this.log(`<br><b>== Iniciando Envio: ${vendedor} (${totalVendedor} clientes) ==</b>`, "#f3f4f6");
 
                 const payloadCustomers = clientesVendedor.map(c => {
-                    const origin = c.SITUACAO === "ATIVO" ? "Prospec" : "Inativo";
+                    const isAtivo = c.SITUACAO === "ATIVO";
+                    const origin = isAtivo ? "Prospec" : "Inativo";
+                    const temp = isAtivo ? "Quente" : "Frio";
+                    const stat = isAtivo ? "Ativo" : "Frio";
                     const dtStr = limitDateStr(c.DATA_MAIS_RECENTE);
                     
                     let nextFollow = "";
@@ -188,8 +191,8 @@ const ImportModule = {
                         name: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
                         source: c.SITUACAO || "ATIVO",
                         origin: origin,
-                        temperature: "Frio",
-                        status: "Frio",
+                        temperature: temp,
+                        status: stat,
                         region: c.REGIAO,
                         city: c.CIDADE,
                         lastContactDate: dtStr,

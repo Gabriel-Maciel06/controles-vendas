@@ -133,7 +133,10 @@ def main():
         payload_customers = []
         for c in clientes_vendedor:
             situacao = c["SITUACAO"]
-            origin = "Prospec" if situacao == "ATIVO" else "Inativo"
+            is_ativo = situacao == "ATIVO"
+            origin = "Prospec" if is_ativo else "Inativo"
+            temp = "Quente" if is_ativo else "Frio"
+            stat = "Ativo" if is_ativo else "Frio"
             
             data_rec_str = c["DATA_MAIS_RECENTE"].strftime("%Y-%m-%d") if c["DATA_MAIS_RECENTE"] else ""
             data_br = c["DATA_MAIS_RECENTE"].strftime("%d/%m/%Y") if c["DATA_MAIS_RECENTE"] else "Desconhecida"
@@ -150,8 +153,8 @@ def main():
                 "name": c["CLIENTE"][:100] if c["CLIENTE"] and c["CLIENTE"] != 'None' else "Sem Nome",
                 "source": situacao,
                 "origin": origin,
-                "temperature": "Frio",
-                "status": "Frio",
+                "temperature": temp,
+                "status": stat,
                 "region": c["REGIAO"] if c["REGIAO"] and c["REGIAO"] != 'None' else "",
                 "city": c["CIDADE"] if c["CIDADE"] and c["CIDADE"] != 'None' else "",
                 "lastContactDate": data_rec_str,
