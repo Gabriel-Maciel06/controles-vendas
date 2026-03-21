@@ -255,7 +255,7 @@ def create_sale(sale: SaleBase, db: Session = Depends(get_db)):
     
     if db_cust:
         db_cust.status = "Ativo"
-        db_cust.temperature = "Quente"
+        db_cust.temperature = "Pós venda"
         db_cust.updatedAt = sale.createdAt
     else:
         new_cust = models.Customer(
@@ -263,7 +263,7 @@ def create_sale(sale: SaleBase, db: Session = Depends(get_db)):
             profile=sale.profile,
             name=sale.client,
             status="Ativo",
-            temperature="Quente",
+            temperature="Pós venda",
             origin="Vendas",
             source="Venda",
             createdAt=sale.createdAt,

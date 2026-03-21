@@ -172,8 +172,8 @@ const ImportModule = {
                 const payloadCustomers = clientesVendedor.map(c => {
                     const isAtivo = c.SITUACAO === "ATIVO";
                     const origin = isAtivo ? "Prospec" : "Inativo";
-                    const temp = isAtivo ? "Quente" : "Frio";
-                    const stat = isAtivo ? "Ativo" : "Frio";
+                    const temp = isAtivo ? "Pós venda" : "Primeiro contato";
+                    const stat = isAtivo ? "Pós venda" : "Primeiro contato";
                     const dtStr = limitDateStr(c.DATA_MAIS_RECENTE);
                     
                     let nextFollow = "";

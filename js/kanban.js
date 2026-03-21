@@ -7,10 +7,13 @@
 const KanbanModule = {
 
     COLUMNS: [
-        { id: 'Frio',     label: 'Frio',     emoji: '🧊', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)'  },
-        { id: 'Morno',    label: 'Morno',    emoji: '🌡', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)'  },
-        { id: 'Quente',   label: 'Quente',   emoji: '🔥', color: '#E24B4A', bg: 'rgba(226,75,74,0.08)'   },
-        { id: 'Fechando', label: 'Fechando', emoji: '✅', color: '#1D9E75', bg: 'rgba(29,158,117,0.08)'  },
+        { id: 'Primeiro contato', label: 'Primeiro contato', emoji: '🤝', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+        { id: 'Qualificação',     label: 'Qualificação',     emoji: '🔍', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)'  },
+        { id: 'Primeira Oferta',  label: 'Primeira Oferta',  emoji: '💡', color: '#EF9F27', bg: 'rgba(239,159,39,0.08)'  },
+        { id: 'Maturação',        label: 'Maturação',        emoji: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)'  },
+        { id: 'Fechamento',       label: 'Fechamento',       emoji: '✅', color: '#10B981', bg: 'rgba(16,185,129,0.08)'  },
+        { id: 'Pós venda',        label: 'Pós venda',        emoji: '🔄', color: '#0ea5e9', bg: 'rgba(14,165,233,0.08)'  },
+        { id: 'Perdido',          label: 'Perdido',          emoji: '❌', color: '#6b7280', bg: 'rgba(107,114,128,0.08)' },
     ],
 
     dragId: null,   // id do card sendo arrastado
@@ -62,7 +65,9 @@ const KanbanModule = {
             </div>
         `).join('');
 
-        this.renderLixeira(customers);
+        // Limpa lixeira container se existir e estiver ativo
+        const lixeiraContainer = document.getElementById('lixeira-container');
+        if (lixeiraContainer) lixeiraContainer.style.display = 'none';
     },
 
     // ── Renderiza um card ──
@@ -153,22 +158,29 @@ const KanbanModule = {
 
     // ── Mapeia status legado → coluna ou temperatura ──
     getCardColumn(c) {
-        if (c.temperature === 'Lixeira' || c.status === 'Lixeira') return 'Lixeira';
-        if (c.temperature && ['Frio', 'Morno', 'Quente', 'Fechando'].includes(c.temperature)) {
-            return c.temperature;
-        }
+        if (c.temperature === 'Lixeira') return 'Perdido';
+        if (c.status === 'Lixeira') return 'Perdido';
+
+        const novasEtapas = ['Primeiro contato', 'Qualificação', 'Primeira Oferta', 'Maturação', 'Fechamento', 'Pós venda', 'Perdido'];
+        if (novasEtapas.includes(c.temperature)) return c.temperature;
 
         const map = {
-            'Lead':     'Frio',
-            'Prospect': 'Frio',
-            'Contato':  'Frio',
-            'Inativo':  'Frio',
-            'Perdido':  'Frio',
-            'Ativo':    'Morno',
-            'Proposta': 'Quente',
-            'Fechado':  'Fechando',
+            'Lead':     'Primeiro contato',
+            'Prospect': 'Primeiro contato',
+            'Contato':  'Primeiro contato',
+            'Inativo':  'Primeiro contato',
+            'Perdido':  'Perdido',
+            'Frio':     'Primeiro contato',
+            'Ativo':    'Pós venda',
+            'Morno':    'Qualificação',
+            'Proposta': 'Primeira Oferta',
+            'Quente':   'Maturação',
+            'Fechando': 'Fechamento',
+            'Fechado':  'Fechamento',
         };
-        return map[c.status] || 'Frio';
+
+        if (c.temperature && map[c.temperature]) return map[c.temperature];
+        return map[c.status] || 'Primeiro contato';
     },
 
     toggleLixeira() {
@@ -177,37 +189,16 @@ const KanbanModule = {
     },
 
     async moveToLixeira(id) {
-        if(!confirm('Descartar este contato Maps para a lixeira?')) return;
-        await this.moveCard(id, 'Lixeira');
+        if(!confirm('Deseja mover este contato para Perdido?')) return;
+        await this.moveCard(id, 'Perdido');
     },
 
     async restoreFromLixeira(id) {
-        await this.moveCard(id, 'Frio');
+        await this.moveCard(id, 'Primeiro contato');
     },
 
     renderLixeira(customers) {
-        const lixeiraCards = customers.filter(c => this.getCardColumn(c) === 'Lixeira');
-        const countSpan = document.getElementById('lixeira-count');
-        const cardsDiv = document.getElementById('lixeira-cards');
-        if(countSpan) countSpan.innerText = lixeiraCards.length;
-        if(cardsDiv) {
-            cardsDiv.innerHTML = lixeiraCards.map(c => {
-                const name = c.name || c.client || '—';
-                return `
-                <div style="background:var(--bg-surface);border:1px solid rgba(255,255,255,0.1);border-left:4px solid #888;border-radius:8px;padding:0.7rem;min-width:200px;display:flex;flex-direction:column;gap:0.4rem;">
-                    <div style="font-weight:600;font-size:0.85rem;color:var(--text-main);">${this.esc(name)}</div>
-                    ${c.phone ? `<div style="font-size:0.75rem;color:var(--text-muted);">${this.esc(c.phone)}</div>` : ''}
-                    <div style="margin-top:0.4rem;">
-                        <button onclick="KanbanModule.restoreFromLixeira('${c.id}')"
-                            style="width:100%;padding:0.3rem;font-size:0.75rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--text-main);cursor:pointer;"
-                            onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                            ↩ Restaurar
-                        </button>
-                    </div>
-                </div>
-                `;
-            }).join('');
-        }
+        // Obsoleto mas mantido para evitar crash caso seja chamado no HTML
     },
 
     // ── Pega cliente mais recente por nome ──
@@ -228,6 +219,33 @@ const KanbanModule = {
         if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
 
         await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { temperature: newTemp });
+
+        // Automação: se moveu para Pós venda, criar lembrete de recontato
+        if (newTemp === 'Pós venda') {
+            const customer = (DataStore.get(STORAGE_KEYS.CUSTOMERS) || []).find(c => c.id === id);
+            if (customer) {
+                const limitDate = new Date();
+                limitDate.setDate(limitDate.getDate() + 7); // Daqui a 7 dias
+                const dateStr = limitDate.toISOString().split('T')[0];
+
+                const reminder = {
+                    id: 'rmd_' + Date.now(),
+                    profile: customer.profile || 'default',
+                    title: `Recontato: 2º pedido/Introdução - ${customer.name || 'Cliente'}`,
+                    dateLimit: dateStr,
+                    timeLimit: "09:00",
+                    priority: "alta",
+                    status: "pendente",
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await DataStore.add(STORAGE_KEYS.REMINDERS, reminder);
+                if (typeof App !== 'undefined' && App.showToast) {
+                    App.showToast("Lembrete de Recontato automático criado para daqui 7 dias!");
+                }
+            }
+        }
 
         this.render();
         if (typeof DashboardModule !== 'undefined') DashboardModule.update();

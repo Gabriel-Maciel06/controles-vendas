@@ -74,10 +74,12 @@ const DashboardModule = {
             contactGoal:     document.getElementById('dash-contact-goal'),
             contactsMade:    document.getElementById('dash-contacts-made'),
             contactsProg:    document.getElementById('dash-contacts-progress'),
-            pipeFechando:    document.getElementById('pipe-fechando'),
-            pipeQuente:      document.getElementById('pipe-quente'),
-            pipeMorno:       document.getElementById('pipe-morno'),
-            pipeFrio:        document.getElementById('pipe-frio'),
+            pipePosVenda:    document.getElementById('pipe-posvenda'),
+            pipeFechamento:  document.getElementById('pipe-fechamento'),
+            pipeMaturacao:   document.getElementById('pipe-maturacao'),
+            pipeOferta:      document.getElementById('pipe-oferta'),
+            pipeQualificacao:document.getElementById('pipe-qualificacao'),
+            pipeContato:     document.getElementById('pipe-contato'),
         };
     },
 
@@ -132,7 +134,7 @@ const DashboardModule = {
         let newCount = 0;
         let breakdown = { 'Google': 0, 'Inativo': 0, 'Prospec': 0, 'Maps': 0 };
         let contactedCount = 0;
-        let pipe = { 'Fechando': 0, 'Quente': 0, 'Morno': 0, 'Frio': 0 };
+        let pipe = { 'Pós venda': 0, 'Fechamento': 0, 'Maturação': 0, 'Primeira Oferta': 0, 'Qualificação': 0, 'Primeiro contato': 0 };
 
         customers.forEach(c => {
             const temp = c.temperature || 'Frio';
@@ -168,10 +170,12 @@ const DashboardModule = {
         const pct = Math.min((contactedCount / goal) * 100, 100);
         if (this.dom.contactsProg) this.dom.contactsProg.style.width = pct + '%';
 
-        this.dom.pipeFechando.innerText = pipe['Fechando'];
-        this.dom.pipeQuente.innerText = pipe['Quente'];
-        this.dom.pipeMorno.innerText = pipe['Morno'];
-        this.dom.pipeFrio.innerText = pipe['Frio'];
+        if(this.dom.pipePosVenda)     this.dom.pipePosVenda.innerText     = pipe['Pós venda'];
+        if(this.dom.pipeFechamento)   this.dom.pipeFechamento.innerText   = pipe['Fechamento'];
+        if(this.dom.pipeMaturacao)    this.dom.pipeMaturacao.innerText    = pipe['Maturação'];
+        if(this.dom.pipeOferta)       this.dom.pipeOferta.innerText       = pipe['Primeira Oferta'];
+        if(this.dom.pipeQualificacao) this.dom.pipeQualificacao.innerText = pipe['Qualificação'];
+        if(this.dom.pipeContato)      this.dom.pipeContato.innerText      = pipe['Primeiro contato'];
 
         // Trigger Prospec Map update specifically if available
         if (window.ProspecModule && ProspecModule.prospects) {

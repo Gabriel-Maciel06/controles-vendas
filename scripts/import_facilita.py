@@ -135,8 +135,8 @@ def main():
             situacao = c["SITUACAO"]
             is_ativo = situacao == "ATIVO"
             origin = "Prospec" if is_ativo else "Inativo"
-            temp = "Quente" if is_ativo else "Frio"
-            stat = "Ativo" if is_ativo else "Frio"
+            temp = "Pós venda" if is_ativo else "Primeiro contato"
+            stat = "Pós venda" if is_ativo else "Primeiro contato"
             
             data_rec_str = c["DATA_MAIS_RECENTE"].strftime("%Y-%m-%d") if c["DATA_MAIS_RECENTE"] else ""
             data_br = c["DATA_MAIS_RECENTE"].strftime("%d/%m/%Y") if c["DATA_MAIS_RECENTE"] else "Desconhecida"
