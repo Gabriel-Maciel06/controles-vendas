@@ -80,3 +80,22 @@ class Reminder(Base):
     status = Column(String)
     createdAt = Column(String)
     updatedAt = Column(String, nullable=True)
+
+class Prospect(Base):
+    __tablename__ = "prospects"
+
+    id = Column(String, primary_key=True, index=True)
+    profile = Column(String, default="default")
+    razaoSocial = Column(String)
+    cnpj = Column(String, nullable=True)
+    phone = Column(String)
+    city = Column(String)
+    region = Column(String)
+    porte = Column(String)
+    instagram = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    status = Column(String, default="Novo")
+    crmCustomerId = Column(String, nullable=True)
+    sentToCrmAt = Column(String, nullable=True)
+    createdAt = Column(String)
+    updatedAt = Column(String, nullable=True)

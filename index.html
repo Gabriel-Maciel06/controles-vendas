@@ -20,6 +20,10 @@
     <!-- Custom CSS -->
     <!-- SheetJS for Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -61,6 +65,10 @@
                 <a href="#reminders" class="nav-item" data-target="reminders">
                     <i class='bx bx-check-square'></i>
                     <span>Lembretes</span>
+                </a>
+                <a href="#prospec" class="nav-item" data-target="prospec">
+                    <i class='bx bx-search-alt'></i>
+                    <span>Prospecção</span>
                 </a>
                 <a href="#whatsapp" class="nav-item" data-target="whatsapp">
                     <i class='bx bx-chat'></i>
@@ -968,6 +976,20 @@
                         </div>
                     </div>
 
+                    <!-- Start Prospec Map & KPIs -->
+                    <div class="panel list-panel" style="margin-bottom: 2rem;">
+                        <div class="panel-header">
+                            <h2>Eficiência de Prospecção (Maps)</h2>
+                        </div>
+                        <div id="dash-prospec-kpis" style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; padding: 0 1rem 1rem 1rem;">
+                            <!-- JS evaluates this -->
+                        </div>
+                        <div id="dash-prospec-map" style="padding:1rem;">
+                            <!-- JS evaluates this SVG -->
+                        </div>
+                    </div>
+                    <!-- End Prospec Map & KPIs -->
+
                     <!-- Dashboard 2.0 Smart Metrics -->
                     <div class="analytics-grid">
                         <div class="card-stat">
@@ -1131,6 +1153,107 @@
                         </div>
                     </div>
                 </section>
+                </section>
+
+                <!-- View: Prospecção -->
+                <section id="view-prospec" class="view-section hidden">
+                    <div class="dashboard-grid">
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>📌 Cadastrar Estabelecimento (Maps)</h2>
+                            </div>
+                            <form id="prospec-form" class="app-form">
+                                <div class="form-group">
+                                    <label>Razão Social *</label>
+                                    <input type="text" id="prospec-razaosocial" required placeholder="Nome do estabelecimento">
+                                </div>
+                                <div class="form-group">
+                                    <label>CNPJ</label>
+                                    <input type="text" id="prospec-cnpj" placeholder="XX.XXX.XXX/XXXX-XX">
+                                </div>
+                                <div class="form-group">
+                                    <label>Telefone *</label>
+                                    <input type="text" id="prospec-phone" required placeholder="(11) 90000-0000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cidade *</label>
+                                    <input type="text" id="prospec-city" required placeholder="Digite a cidade">
+                                </div>
+                                <div class="form-group">
+                                    <label>Região Correspondente</label>
+                                    <input type="text" id="prospec-region" readonly placeholder="Preenchido automaticamente" style="background: rgba(255,255,255,0.02)">
+                                </div>
+                                <div class="form-group">
+                                    <label>Porte *</label>
+                                    <select id="prospec-porte" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="Pequeno">Pequeno</option>
+                                        <option value="Médio">Médio</option>
+                                        <option value="Grande">Grande</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Instagram / Site</label>
+                                    <input type="text" id="prospec-instagram" placeholder="@perfil ou www.site.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>Observações</label>
+                                    <textarea id="prospec-notes" rows="3" placeholder="Anotações livres sobre o estabelecimento..." style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); resize:vertical;"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><i class="bx bx-plus"></i> Cadastrar Prospecção</button>
+                            </form>
+                        </div>
+
+                        <div class="panel list-panel">
+                            <div class="panel-header" style="flex-wrap:wrap; gap:1rem;">
+                                <h2>🔍 Fila de Prospecções</h2>
+                                <div style="display:flex; gap:1rem; font-size:0.8rem; color:var(--text-muted);">
+                                    <span>Total: <strong id="prospec-total-count" style="color:var(--text-main)">0</strong></span>
+                                    <span>Novas: <strong id="prospec-new-count" style="color:#a59bf4">0</strong></span>
+                                    <span>Enviadas: <strong id="prospec-sent-count" style="color:#1D9E75">0</strong></span>
+                                </div>
+                            </div>
+                            
+                            <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                                <div style="flex:1;min-width:160px;position:relative;">
+                                    <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                    <input type="text" id="prospec-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;">
+                                </div>
+                                <select id="prospec-filter-city" style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;">
+                                    <option value="">Todas as Cidades</option>
+                                </select>
+                                <select id="prospec-filter-porte" style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;">
+                                    <option value="">Qualquer Porte</option>
+                                    <option value="Pequeno">Pequeno</option>
+                                    <option value="Médio">Médio</option>
+                                    <option value="Grande">Grande</option>
+                                </select>
+                                <select id="prospec-filter-status" style="padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;cursor:pointer;outline:none;">
+                                    <option value="">Qualquer Status</option>
+                                    <option value="Novo">🟢 Novo</option>
+                                    <option value="Enviado">✅ Enviado CRM</option>
+                                </select>
+                            </div>
+
+                            <div class="table-container">
+                                <table class="app-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Estabelecimento</th>
+                                            <th>Contato</th>
+                                            <th>Status</th>
+                                            <th style="text-align:right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prospec-table-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -1239,6 +1362,7 @@
     </script>
     
     <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="js/data.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/sales.js"></script>
@@ -1249,6 +1373,7 @@
     <script src="js/reminders.js"></script>
     <script src="js/whatsapp.js"></script>
     <script src="js/kanban.js"></script>
+    <script src="js/prospec.js"></script>
     <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>
     <script src="js/import.js"></script>

@@ -2,6 +2,37 @@
  * Dashboard (Resumo) Module — v3.0
  */
 
+const MAP_COORD_CACHE = {
+    "São Paulo": [-23.5505, -46.6333],
+    "Campinas": [-22.9099, -47.0626],
+    "Sorocaba": [-23.5015, -47.4581],
+    "Jundiaí": [-23.1857, -46.8978],
+    "Ribeirão Preto": [-21.1704, -47.8103],
+    "Bauru": [-22.3145, -49.0605],
+    "Santos": [-23.9618, -46.3322],
+    "São José dos Campos": [-23.2237, -45.9009],
+    "Osasco": [-23.5329, -46.7917],
+    "Guarulhos": [-23.4628, -46.5333],
+    "Praia Grande": [-24.0058, -46.4028],
+    "Mogi das Cruzes": [-23.5200, -46.1852]
+};
+
+async function getCityCoords(city) {
+    if (MAP_COORD_CACHE[city]) return MAP_COORD_CACHE[city];
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ', SP, Brazil')}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+            MAP_COORD_CACHE[city] = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            return MAP_COORD_CACHE[city];
+        }
+    } catch(e) {
+        console.error("Geocoding failed for:", city, e);
+    }
+    // Fallback: slight random offset from SP center
+    return [-23.55 + (Math.random() - 0.5)*2, -46.63 + (Math.random() - 0.5)*2];
+}
+
 const DashboardModule = {
     chartInstance: null,
     categoryChartInstance: null,
@@ -141,6 +172,99 @@ const DashboardModule = {
         this.dom.pipeQuente.innerText = pipe['Quente'];
         this.dom.pipeMorno.innerText = pipe['Morno'];
         this.dom.pipeFrio.innerText = pipe['Frio'];
+
+        // Trigger Prospec Map update specifically if available
+        if (window.ProspecModule && ProspecModule.prospects) {
+            this.updateProspecMap(ProspecModule.prospects);
+        }
+    },
+
+    updateProspecMap(prospects) {
+        // We will render map and KPIs if containers are introduced
+        const kpisContainer = document.getElementById('dash-prospec-kpis');
+        if (kpisContainer) {
+            const total = prospects.length;
+            const novas = prospects.filter(p => p.status === 'Novo').length;
+            const enviadas = prospects.filter(p => p.status === 'Enviado').length;
+            const cidades = [...new Set(prospects.map(p => p.city).filter(c => c))].length;
+            const weekMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const estaSemana = prospects.filter(p => new Date(p.createdAt).getTime() > weekMs).length;
+
+            kpisContainer.innerHTML = `
+                <div class="kpi-card" style="padding: 1rem;">
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--text-main);">${total}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);"><i class='bx bx-search'></i> Prospecções</div>
+                    <div style="font-size:0.7rem;color:var(--accent);margin-top:0.2rem;">${novas} novas cadastradas</div>
+                </div>
+                <div class="kpi-card" style="padding: 1rem; border-left: 3px solid #1D9E75;">
+                    <div style="font-size:1.4rem;font-weight:700;color:#1D9E75;">${enviadas}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);"><i class='bx bx-check-circle'></i> Enviadas CRM</div>
+                    <div style="font-size:0.7rem;color:#1D9E75;margin-top:0.2rem;">Convertidas frio</div>
+                </div>
+                <div class="kpi-card" style="padding: 1rem;">
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--text-main);">${cidades}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);"><i class='bx bx-buildings'></i> Cidades</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">Áreas prospectadas</div>
+                </div>
+                <div class="kpi-card" style="padding: 1rem;">
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--text-main);">${estaSemana}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);"><i class='bx bx-calendar'></i> Esta semana</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">Trabalho recente</div>
+                </div>
+            `;
+        }
+
+        const mapContainer = document.getElementById('dash-prospec-map');
+        if (mapContainer && prospects.length > 0) {
+            // Conta prospects por cidade
+            const cityCounts = {};
+            prospects.forEach(p => {
+                if(p.city) {
+                    cityCounts[p.city] = cityCounts[p.city] || { total: 0, novas: 0, enviadas: 0 };
+                    cityCounts[p.city].total++;
+                    if(p.status === 'Novo') cityCounts[p.city].novas++;
+                    if(p.status === 'Enviado') cityCounts[p.city].enviadas++;
+                }
+            });
+
+            if (!this.prospecMap) {
+                mapContainer.style.height = "350px";
+                mapContainer.style.borderRadius = "12px";
+                mapContainer.style.zIndex = "1";
+                
+                this.prospecMap = L.map('dash-prospec-map').setView([-23.5505, -46.6333], 7);
+                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                }).addTo(this.prospecMap);
+                
+                this.prospecMapMarkers = L.layerGroup().addTo(this.prospecMap);
+            }
+
+            this.prospecMapMarkers.clearLayers();
+
+            const drawMarkers = async () => {
+                for(const [city, data] of Object.entries(cityCounts)) {
+                    const coords = await getCityCoords(city);
+                    const radius = Math.min(6 + data.total * 2, 20);
+                    
+                    const circle = L.circleMarker(coords, {
+                        radius: radius,
+                        fillColor: "rgba(29, 158, 117, 0.8)",
+                        color: "rgba(29, 158, 117, 1)",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.6
+                    }).addTo(this.prospecMapMarkers);
+                    
+                    circle.bindTooltip(`<div style="font-family: 'DM Sans', sans-serif;"><b>${city}</b><br>${data.total} prospecções<br>${data.novas} novas | ${data.enviadas} enviadas</div>`, {
+                        direction: 'top'
+                    });
+                }
+            };
+            
+            drawMarkers();
+        }
     },
 
     updateGoalProgress(sales, curPrefix) {

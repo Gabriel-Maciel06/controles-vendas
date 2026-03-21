@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import secrets
 from typing import List, Dict, Any
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -202,6 +203,26 @@ class SettingBase(BaseModel):
     google: float = 100
     reativacao: float = 100
     introducao: float = 25
+
+    class Config:
+        orm_mode = True
+
+class ProspectBase(BaseModel):
+    id: str
+    profile: str = "default"
+    razaoSocial: str
+    cnpj: str = None
+    phone: str
+    city: str
+    region: str
+    porte: str
+    instagram: str = None
+    notes: str = None
+    status: str = "Novo"
+    crmCustomerId: str = None
+    sentToCrmAt: str = None
+    createdAt: str
+    updatedAt: str = None
 
     class Config:
         orm_mode = True
