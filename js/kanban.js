@@ -18,6 +18,34 @@ const KanbanModule = {
 
     dragId: null,   // id do card sendo arrastado
     dragCol: null,  // coluna de origem
+    activeOriginFilter: 'all',
+
+    ORIGIN_FILTER_OPTIONS: {
+        'all':          { label: 'Todos',    emoji: '🗂',  color: 'var(--primary)' },
+        'Google':       { label: 'Google',   emoji: '🔵',  color: '#818cf8' },
+        'Inativo-ativo':{ label: 'Ativos',   emoji: '✅',  color: '#1D9E75' },
+        'Inativo-frio': { label: 'Inativos', emoji: '⏸',  color: '#71717a' },
+        'Maps':         { label: 'Maps',     emoji: '📍',  color: '#9ca3af' },
+    },
+
+    setOriginFilter(key) {
+        this.activeOriginFilter = key;
+        this.render();
+    },
+
+    renderOriginFilter() {
+        return Object.entries(this.ORIGIN_FILTER_OPTIONS).map(([key, opt]) => {
+            const isActive = this.activeOriginFilter === key;
+            return `<button onclick="KanbanModule.setOriginFilter('${key}')"
+                style="padding:0.28rem 0.8rem;border-radius:20px;
+                       border:1px solid ${isActive ? opt.color : 'rgba(255,255,255,0.1)'};
+                       background:${isActive ? opt.color + '22' : 'transparent'};
+                       color:${isActive ? opt.color : 'var(--text-muted)'};
+                       font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;">
+                ${opt.emoji} ${opt.label}
+            </button>`;
+        }).join('');
+    },
 
     init() {
         this.render();
@@ -27,6 +55,16 @@ const KanbanModule = {
     render() {
         const board = document.getElementById('kanban-board');
         if (!board) return;
+
+        // Render filtro de origem
+        const filterEl = document.getElementById('kanban-origin-filter');
+        if (filterEl) {
+            filterEl.innerHTML = `
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;flex-shrink:0;">Ver funil de:</span>
+                    ${this.renderOriginFilter()}
+                </div>`;
+        }
 
         const customers = this.getLatestCustomers();
         const today     = new Date().toISOString().split('T')[0];
@@ -201,7 +239,7 @@ const KanbanModule = {
         // Obsoleto mas mantido para evitar crash caso seja chamado no HTML
     },
 
-    // ── Pega cliente mais recente por nome ──
+    // ── Pega cliente mais recente por nome (com filtro de origem) ──
     getLatestCustomers() {
         const all = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
         const latest = {};
@@ -210,7 +248,23 @@ const KanbanModule = {
             const date = c.lastContactDate || c.contactDate || '';
             if (!latest[name] || date > (latest[name].lastContactDate || '')) latest[name] = c;
         });
-        return Object.values(latest);
+        let customers = Object.values(latest);
+
+        if (this.activeOriginFilter !== 'all') {
+            if (this.activeOriginFilter === 'Inativo-ativo') {
+                customers = customers.filter(c =>
+                    c.origin === 'Inativo' && c.temperature !== 'Frio' && c.temperature !== 'Primeiro contato'
+                );
+            } else if (this.activeOriginFilter === 'Inativo-frio') {
+                customers = customers.filter(c =>
+                    c.origin === 'Inativo' && (!c.temperature || c.temperature === 'Frio' || c.temperature === 'Primeiro contato')
+                );
+            } else {
+                customers = customers.filter(c => c.origin === this.activeOriginFilter);
+            }
+        }
+
+        return customers;
     },
 
     // ── Move card para nova coluna ──

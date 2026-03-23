@@ -567,6 +567,9 @@
                             </button>
                         </div>
 
+                        <!-- Filtro por origem -->
+                        <div id="kanban-origin-filter"></div>
+
                         <!-- Board Kanban -->
                         <div id="kanban-board"
                              style="display:flex;gap:0.8rem;overflow-x:auto;align-items:flex-start;padding-bottom:1rem;">
@@ -1194,14 +1197,8 @@
                                 <input type="text" id="crm-google-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
                             </div>
                         </div>
-                        <div class="table-container">
-                            <table class="app-table">
-                                <thead><tr>
-                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
-                                </tr></thead>
-                                <tbody id="crm-google-body"></tbody>
-                            </table>
-                        </div>
+                        <!-- Google: usa div de cards em vez de tabela -->
+                        <div id="crm-google-body" style="padding:0.5rem 1rem 1rem;display:flex;flex-direction:column;gap:0.65rem;"></div>
                         <div id="crm-google-pagination"></div>
                     </div>
                 </section>
@@ -1247,7 +1244,7 @@
                         <div class="table-container">
                             <table class="app-table">
                                 <thead><tr>
-                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                    <th>Cliente / Cidade</th><th>Dias sem comprar</th><th>Ticket Médio</th><th>Próx. Follow-up</th><th>Ações</th>
                                 </tr></thead>
                                 <tbody id="crm-inativo-body"></tbody>
                             </table>
@@ -1272,7 +1269,7 @@
                         <div class="table-container">
                             <table class="app-table">
                                 <thead><tr>
-                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                    <th>Cliente</th><th>Cidade</th><th>Temperatura</th><th>Follow-up</th><th>Ações</th>
                                 </tr></thead>
                                 <tbody id="crm-maps-body"></tbody>
                             </table>
@@ -1493,12 +1490,12 @@
     <script src="js/dashboard.js"></script>
     <script src="js/sales.js"></script>
     <script src="js/ai-suggestions.js"></script>
-    <script src="js/crm.js"></script>
+    <script src="js/crm.js?v=2.1"></script>
     <script src="js/samples.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/reminders.js"></script>
     <script src="js/whatsapp.js"></script>
-    <script src="js/kanban.js"></script>
+    <script src="js/kanban.js?v=2.1"></script>
     <script src="js/prospec.js"></script>
     <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>

@@ -512,9 +512,206 @@ ${text.substring(0, 4000)}`;
         const end = start + this.itemsPerPage;
         const sliced = this.filteredAlerts.slice(start, end);
 
-        this.renderTable(sliced);
+        this.renderViewSpecific(this.activeView, sliced);
         this.renderPagination(total, start, Math.min(end, total));
     },
+
+    // ── Despachador de render por view ──
+    renderViewSpecific(viewId, customers) {
+        switch(viewId) {
+            case 'crm-google':  return this.renderGoogleCards(customers);
+            case 'crm-ativo':   return this.renderAtivoTable(customers);
+            case 'crm-inativo': return this.renderInativoTable(customers);
+            case 'crm-maps':    return this.renderMapsGrouped(customers);
+            default:            return this.renderTable(customers);
+        }
+    },
+
+    // ── Google: cards com badge NOVO ──
+    renderGoogleCards(customers) {
+        const body = this.dom.alertsBody;
+        if (!body) return;
+
+        // Google usa div de cards, não tbody — limpar com innerHTML
+        body.innerHTML = '';
+
+        if (!customers.length) {
+            body.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">Nenhum lead Google registrado.</div>`;
+            return;
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        // Ordenar mais recentes primeiro
+        const sorted = [...customers].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+
+        sorted.forEach(c => {
+            const name     = c.name || c.client || '—';
+            const phone    = c.phone || '';
+            const isNew    = (c.createdAt||'').startsWith(today);
+            const created  = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+            const notes    = (c.notes||'').replace(/^\[WhatsApp\]\s*/i,'').substring(0,80);
+            const tempColors = { 'Frio':'#3b82f6','Morno':'#EF9F27','Quente':'#E24B4A','Fechando':'#1D9E75','Primeiro contato':'#888' };
+            const tempColor  = tempColors[c.temperature] || '#888';
+
+            const card = document.createElement('div');
+            card.style.cssText = `background:var(--bg-surface);border:1px solid rgba(255,255,255,0.08);border-left:4px solid #818cf8;border-radius:10px;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:0.5rem;transition:border-color 0.15s;`;
+            card.onmouseover = () => card.style.borderColor = 'rgba(129,140,248,0.5)';
+            card.onmouseout  = () => card.style.borderColor = 'rgba(255,255,255,0.08)';
+            card.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:rgba(129,140,248,0.18);display:flex;align-items:center;justify-content:center;font-size:0.88rem;font-weight:700;color:#818cf8;flex-shrink:0;">${this.escapeHTML(name.charAt(0).toUpperCase())}</div>
+                        <div>
+                            <div style="font-weight:700;font-size:0.9rem;color:var(--text-main);">${this.escapeHTML(name)}</div>
+                            ${phone ? `<div style="font-size:0.75rem;color:#25D366;cursor:pointer;" onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}','${this.escapeAttr(name)}')">${this.escapeHTML(phone)}</div>` : '<div style="font-size:0.73rem;color:rgba(255,255,255,0.2);">sem telefone</div>'}
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                        ${isNew ? `<span style="background:#E24B4A22;color:#E24B4A;font-size:0.65rem;font-weight:700;padding:0.15rem 0.6rem;border-radius:20px;border:1px solid #E24B4A44;">🔴 NOVO</span>` : ''}
+                        <span style="background:${tempColor}22;color:${tempColor};font-size:0.7rem;font-weight:600;padding:0.15rem 0.6rem;border-radius:20px;">${c.temperature||'—'}</span>
+                    </div>
+                </div>
+                ${notes ? `<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.45;border-left:2px solid rgba(129,140,248,0.3);padding-left:0.65rem;">${this.escapeHTML(notes)}${(c.notes||'').length>80?'…':''}</div>` : ''}
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">
+                    <span style="font-size:0.72rem;color:var(--text-muted);">📅 ${created}</span>
+                    <div style="display:flex;gap:0.4rem;">
+                        ${phone ? `<button onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}','${this.escapeAttr(name)}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(37,211,102,0.12);color:#25D366;cursor:pointer;font-size:0.8rem;font-weight:600;"><i class='bx bxl-whatsapp'></i> Ligar Agora</button>` : ''}
+                        <button onclick="CRMModule.openEditModal('${c.id}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(99,102,241,0.12);color:#818cf8;cursor:pointer;font-size:0.8rem;font-weight:600;"><i class='bx bx-edit'></i> Editar</button>
+                        <button onclick="CRMModule.viewHistory('${this.escapeAttr(name)}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;font-size:0.8rem;"><i class='bx bx-history'></i></button>
+                        <button onclick="CRMModule.deleteContact('${c.id}')" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;justify-content:center;"><i class='bx bx-trash'></i></button>
+                    </div>
+                </div>`;
+            body.appendChild(card);
+        });
+        this.enrichWithAI(sorted);
+    },
+
+    // ── Ativo: tabela padrão ──
+    renderAtivoTable(customers) {
+        this.renderTable(customers);
+    },
+
+    // ── Inativo: dias sem comprar + ticket médio ──
+    renderInativoTable(customers) {
+        const body = this.dom.alertsBody;
+        if (!body) return;
+        body.innerHTML = '';
+
+        if (!customers.length) {
+            body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente inativo registrado.</td></tr>`;
+            return;
+        }
+
+        const today = new Date();
+
+        const extractTicket = (notes) => {
+            const m = (notes||'').match(/Ticket[\s\w]*[:\-]?\s*R?\$?\s?([\d.,]+)/i);
+            return m ? parseFloat(m[1].replace(/\./g,'').replace(',','.')) : 0;
+        };
+        const calcDays = (lastDate) => {
+            if (!lastDate) return 999;
+            return Math.ceil((today - new Date(lastDate + 'T00:00:00')) / 86400000);
+        };
+
+        // Ordenar por ticket médio (maior primeiro)
+        const sorted = [...customers].sort((a,b) => extractTicket(b.notes) - extractTicket(a.notes));
+
+        sorted.forEach(c => {
+            const name    = c.name || c.client || '—';
+            const days    = calcDays(c.lastContactDate || c.contactDate);
+            const ticket  = extractTicket(c.notes);
+            const city    = c.address ? c.address.split(',').pop().trim() : (c.city || '—');
+            const next    = c.nextFollowUp || '';
+            const nextFmt = next ? next.split('-').reverse().join('/') : '—';
+
+            const daysBadge = days > 60
+                ? `<span style="color:#E24B4A;font-weight:700;font-size:0.82rem;">🔴 ${days}d</span>`
+                : days > 30
+                ? `<span style="color:#EF9F27;font-weight:600;font-size:0.82rem;">🟡 ${days}d</span>`
+                : `<span style="color:#1D9E75;font-weight:600;font-size:0.82rem;">🟢 ${days}d</span>`;
+
+            const ticketFmt = ticket > 0
+                ? `<span style="font-size:0.82rem;color:var(--text-main);font-weight:600;">${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(ticket)}</span>`
+                : `<span style="color:rgba(255,255,255,0.2);font-size:0.78rem;">—</span>`;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;">${this.escapeHTML(name)}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">${this.escapeHTML(city)}</div>
+                </td>
+                <td style="padding:0.75rem 0.5rem;white-space:nowrap;">${daysBadge}</td>
+                <td style="padding:0.75rem 0.5rem;">${ticketFmt}</td>
+                <td style="padding:0.75rem 0.5rem;font-size:0.81rem;color:var(--text-muted);white-space:nowrap;">${nextFmt}</td>
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;gap:0.3rem;">
+                        <button onclick="CRMModule.openEditModal('${c.id}')" title="Reativar / Editar" style="display:flex;align-items:center;gap:0.3rem;padding:0.3rem 0.7rem;border-radius:7px;border:none;background:rgba(29,158,117,0.12);color:#1D9E75;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class='bx bx-refresh'></i> Reativar</button>
+                        ${c.phone ? `<button onclick="WhatsAppModule.openComposer('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class='bx bxl-whatsapp'></i></button>` : ''}
+                        <button onclick="CRMModule.deleteContact('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>`;
+            body.appendChild(tr);
+        });
+    },
+
+    // ── Maps: agrupado por região ──
+    renderMapsGrouped(customers) {
+        const body = this.dom.alertsBody;
+        if (!body) return;
+        body.innerHTML = '';
+
+        if (!customers.length) {
+            body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum contato Maps registrado.</td></tr>`;
+            return;
+        }
+
+        // Agrupar por region ou cidade extraída do endereço
+        const groups = {};
+        customers.forEach(c => {
+            const region = c.region || (c.address ? c.address.split(',').pop().trim() : null) || 'Sem região';
+            if (!groups[region]) groups[region] = [];
+            groups[region].push(c);
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+
+        Object.entries(groups).sort(([a],[b]) => a.localeCompare(b)).forEach(([region, list]) => {
+            // Header da região
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `<td colspan="5" style="background:rgba(255,255,255,0.03);padding:0.45rem 1rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">📍 ${this.escapeHTML(region)} <span style="color:var(--primary);margin-left:0.3rem;">(${list.length})</span></td>`;
+            body.appendChild(headerRow);
+
+            list.forEach(c => {
+                const name    = c.name || c.client || '—';
+                const phone   = c.phone || '';
+                const city    = c.city || (c.address ? c.address.split(',').pop().trim() : '—');
+                const next    = c.nextFollowUp || '';
+                const nextFmt = next ? next.split('-').reverse().join('/') : '—';
+                const isLate  = next && next < today;
+                const tempColors = { 'Frio':'#3b82f6','Morno':'#EF9F27','Quente':'#E24B4A','Fechando':'#1D9E75','Primeiro contato':'#888' };
+                const tempColor  = tempColors[c.temperature] || '#888';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:0.65rem 0.5rem;">
+                        <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;">${this.escapeHTML(name)}</div>
+                        ${phone ? `<div style="font-size:0.73rem;color:#25D366;cursor:pointer;" onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}','${this.escapeAttr(name)}')">${this.escapeHTML(phone)}</div>` : '<div style="font-size:0.72rem;color:rgba(255,255,255,0.2);">sem telefone</div>'}
+                    </td>
+                    <td style="padding:0.65rem 0.5rem;font-size:0.82rem;color:var(--text-muted);">${this.escapeHTML(city)}</td>
+                    <td style="padding:0.65rem 0.5rem;"><span style="background:${tempColor}22;color:${tempColor};font-size:0.7rem;font-weight:600;padding:0.15rem 0.55rem;border-radius:20px;">${c.temperature||'—'}</span></td>
+                    <td style="padding:0.65rem 0.5rem;font-size:0.8rem;color:${isLate ? '#E24B4A' : 'var(--text-muted)'};white-space:nowrap;">${isLate ? '⚠️ ' : ''}${nextFmt}</td>
+                    <td style="padding:0.65rem 0.5rem;">
+                        <div style="display:flex;gap:0.25rem;">
+                            <button onclick="CRMModule.openEditModal('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;"><i class='bx bx-edit'></i></button>
+                            ${phone ? `<button onclick="WhatsAppModule.openComposer('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class='bx bxl-whatsapp'></i></button>` : ''}
+                            <button onclick="CRMModule.deleteContact('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;"><i class='bx bx-trash'></i></button>
+                        </div>
+                    </td>`;
+                body.appendChild(tr);
+            });
+        });
+    },
+
 
     renderPagination(total, start, end) {
         const container = this.dom.pagination;
