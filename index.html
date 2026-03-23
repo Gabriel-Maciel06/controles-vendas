@@ -38,46 +38,71 @@
             </div>
 
             <nav class="nav-menu">
+
+                <!-- VISÃO GERAL -->
+                <div class="nav-group-label">VISÃO GERAL</div>
                 <a href="#dashboard" class="nav-item" data-target="dashboard">
                     <i class='bx bx-pie-chart-alt-2'></i>
                     <span>Resumo</span>
-                </a>
-                <a href="#sales" class="nav-item active" data-target="sales">
-                    <i class='bx bx-grid-alt'></i>
-                    <span>Painel de Vendas</span>
                 </a>
                 <a href="#calendar" class="nav-item" data-target="calendar">
                     <i class='bx bx-calendar'></i>
                     <span>Calendário</span>
                 </a>
-                <a href="#crm" class="nav-item" data-target="crm">
-                    <i class='bx bx-user-circle'></i>
-                    <span>CRM / Relacionamento</span>
+                <a href="#sales" class="nav-item active" data-target="sales">
+                    <i class='bx bx-grid-alt'></i>
+                    <span>Painel de Vendas</span>
                 </a>
+
+                <!-- CLIENTES -->
+                <div class="nav-group-label">CLIENTES</div>
+                <a href="#crm-google" class="nav-item" data-target="crm-google">
+                    <i class='bx bx-globe'></i>
+                    <span>Google</span>
+                </a>
+                <a href="#crm-ativo" class="nav-item" data-target="crm-ativo">
+                    <i class='bx bx-check-circle'></i>
+                    <span>Ativos</span>
+                </a>
+                <a href="#crm-inativo" class="nav-item" data-target="crm-inativo">
+                    <i class='bx bx-pause-circle'></i>
+                    <span>Inativos</span>
+                </a>
+                <a href="#crm-prospec" class="nav-item" data-target="crm-prospec">
+                    <i class='bx bx-search-alt'></i>
+                    <span>Prospecção</span>
+                </a>
+                <a href="#crm-maps" class="nav-item" data-target="crm-maps">
+                    <i class='bx bx-map-pin'></i>
+                    <span>Maps</span>
+                </a>
+
+                <!-- FUNIL -->
+                <div class="nav-group-label">FUNIL</div>
                 <a href="#kanban" class="nav-item" data-target="kanban">
                     <i class='bx bx-layout'></i>
                     <span>Funil de Vendas</span>
                 </a>
+
+                <!-- FERRAMENTAS -->
+                <div class="nav-group-label">FERRAMENTAS</div>
                 <a href="#samples" class="nav-item" data-target="samples">
                     <i class='bx bx-box'></i>
-                    <span>Gestão de Amostras</span>
+                    <span>Amostras</span>
                 </a>
                 <a href="#reminders" class="nav-item" data-target="reminders">
                     <i class='bx bx-check-square'></i>
                     <span>Lembretes</span>
                 </a>
-                <a href="#prospec" class="nav-item" data-target="prospec">
-                    <i class='bx bx-search-alt'></i>
-                    <span>Prospecção</span>
-                </a>
                 <a href="#whatsapp" class="nav-item" data-target="whatsapp">
                     <i class='bx bx-chat'></i>
-                    <span>Análise WhatsApp</span>
+                    <span>WhatsApp</span>
                 </a>
                 <a href="#import" class="nav-item hidden" id="nav-import" data-target="import">
                     <i class='bx bx-import'></i>
                     <span>Importar Base</span>
                 </a>
+
             </nav>
 
             <div class="user-profile">
@@ -1155,10 +1180,109 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- View: CRM Google -->
+                <section id="view-crm-google" class="view-section hidden" data-origin="Google">
+                    <div class="panel list-panel">
+                        <div class="panel-header">
+                            <h2>🔵 Leads Google</h2>
+                            <span id="crm-google-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+                        </div>
+                        <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                            <div style="flex:1;min-width:160px;position:relative;">
+                                <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                <input type="text" id="crm-google-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="app-table">
+                                <thead><tr>
+                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="crm-google-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="crm-google-pagination"></div>
+                    </div>
+                </section>
+
+                <!-- View: CRM Ativos -->
+                <section id="view-crm-ativo" class="view-section hidden" data-origin="Ativo">
+                    <div class="panel list-panel">
+                        <div class="panel-header">
+                            <h2>✅ Clientes Ativos</h2>
+                            <span id="crm-ativo-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+                        </div>
+                        <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                            <div style="flex:1;min-width:160px;position:relative;">
+                                <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                <input type="text" id="crm-ativo-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="app-table">
+                                <thead><tr>
+                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="crm-ativo-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="crm-ativo-pagination"></div>
+                    </div>
+                </section>
+
+                <!-- View: CRM Inativos -->
+                <section id="view-crm-inativo" class="view-section hidden" data-origin="Inativo">
+                    <div class="panel list-panel">
+                        <div class="panel-header">
+                            <h2>⏸ Clientes Inativos</h2>
+                            <span id="crm-inativo-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+                        </div>
+                        <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                            <div style="flex:1;min-width:160px;position:relative;">
+                                <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                <input type="text" id="crm-inativo-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="app-table">
+                                <thead><tr>
+                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="crm-inativo-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="crm-inativo-pagination"></div>
+                    </div>
+                </section>
+
+                <!-- View: CRM Maps -->
+                <section id="view-crm-maps" class="view-section hidden" data-origin="Maps">
+                    <div class="panel list-panel">
+                        <div class="panel-header">
+                            <h2>📍 Contatos Maps</h2>
+                            <span id="crm-maps-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+                        </div>
+                        <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
+                            <div style="flex:1;min-width:160px;position:relative;">
+                                <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                <input type="text" id="crm-maps-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="app-table">
+                                <thead><tr>
+                                    <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                </tr></thead>
+                                <tbody id="crm-maps-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="crm-maps-pagination"></div>
+                    </div>
                 </section>
 
                 <!-- View: Prospecção -->
-                <section id="view-prospec" class="view-section hidden">
+                <section id="view-crm-prospec" class="view-section hidden">
                     <div class="dashboard-grid">
                         <div class="panel form-panel">
                             <div class="panel-header">

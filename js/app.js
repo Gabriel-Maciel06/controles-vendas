@@ -205,6 +205,15 @@ const AppModule = {
                         if (targetId === 'kanban' && window.KanbanModule) {
                             window.KanbanModule.render();
                         }
+                        // CRM VIEWS — filtered by origin
+                        const crmViews = ['crm', 'crm-google', 'crm-ativo', 'crm-inativo', 'crm-maps'];
+                        if (crmViews.includes(targetId) && window.CRMModule) {
+                            window.CRMModule.init(targetId);
+                        }
+                        // PROSPEC VIEW
+                        if (targetId === 'crm-prospec' && window.ProspecModule) {
+                            window.ProspecModule.init();
+                        }
                     } else {
                         section.classList.remove('active');
                         section.classList.add('hidden');

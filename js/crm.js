@@ -8,46 +8,99 @@ const CRMModule = {
     filteredAlerts: [],
     currentPage: 1,
     itemsPerPage: 20,
+    activeView: 'crm', // view atual ativa
 
-    init() {
+    // Filtros de origin por view
+    ORIGIN_FILTERS: {
+        'crm-google':  c => (c.origin || '') === 'Google',
+        'crm-ativo':   c => (c.origin || '') === 'Inativo' && (c.temperature || '') !== 'Primeiro contato',
+        'crm-inativo': c => (c.origin || '') === 'Inativo' && (!c.temperature || c.temperature === 'Primeiro contato' || c.temperature === 'Frio'),
+        'crm-maps':    c => (c.origin || '') === 'Maps',
+        'crm':         () => true,
+    },
+
+    init(viewId = 'crm') {
+        this.activeView = viewId;
         this.cacheDOM();
-        this.bindEvents();
-        this.dom.dateInput.value = new Date().toISOString().split('T')[0];
-        this.selectDays(15); // padrão 15 dias
-        this.selectOrigin('');
-        this.selectTemp('Frio');
+        if (this.dom.form) {
+            this.bindEvents();
+            if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+            this.selectDays(15);
+            this.selectOrigin('');
+            this.selectTemp('Primeiro contato');
+        }
         this.loadAlerts();
         if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
     },
 
     cacheDOM() {
+        // IDs de busca por view
+        const searchIdMap = {
+            'crm-google':  'crm-google-search',
+            'crm-ativo':   'crm-ativo-search',
+            'crm-inativo': 'crm-inativo-search',
+            'crm-maps':    'crm-maps-search',
+            'crm':         'crm-search',
+        };
+        // IDs de tbody por view
+        const bodyIdMap = {
+            'crm-google':  'crm-google-body',
+            'crm-ativo':   'crm-ativo-body',
+            'crm-inativo': 'crm-inativo-body',
+            'crm-maps':    'crm-maps-body',
+            'crm':         'crm-alerts-body',
+        };
+        // IDs de contador por view
+        const countIdMap = {
+            'crm-google':  'crm-google-count',
+            'crm-ativo':   'crm-ativo-count',
+            'crm-inativo': 'crm-inativo-count',
+            'crm-maps':    'crm-maps-count',
+            'crm':         'crm-count',
+        };
+        // IDs de paginação por view
+        const paginationIdMap = {
+            'crm-google':  'crm-google-pagination',
+            'crm-ativo':   'crm-ativo-pagination',
+            'crm-inativo': 'crm-inativo-pagination',
+            'crm-maps':    'crm-maps-pagination',
+            'crm':         'crm-pagination',
+        };
+
+        const searchId     = searchIdMap[this.activeView]     || 'crm-search';
+        const bodyId       = bodyIdMap[this.activeView]       || 'crm-alerts-body';
+        const countId      = countIdMap[this.activeView]      || 'crm-count';
+        const paginationId = paginationIdMap[this.activeView] || 'crm-pagination';
+
         this.dom = {
-            form:          document.getElementById('crm-form'),
-            client:        document.getElementById('crm-client'),
-            phone:         document.getElementById('crm-phone'),
-            buyer:         document.getElementById('crm-buyer'),
-            products:      document.getElementById('crm-products'),
-            originInput:   document.getElementById('crm-origin'),
-            tempInput:     document.getElementById('crm-temperature'),
+            form:           document.getElementById('crm-form'),
+            client:         document.getElementById('crm-client'),
+            phone:          document.getElementById('crm-phone'),
+            buyer:          document.getElementById('crm-buyer'),
+            products:       document.getElementById('crm-products'),
+            originInput:    document.getElementById('crm-origin'),
+            tempInput:      document.getElementById('crm-temperature'),
             dateInput:      document.getElementById('crm-date'),
             notes:          document.getElementById('crm-notes'),
             followupDays:   document.getElementById('crm-followup-days'),
             followupPreview:document.getElementById('crm-followup-preview'),
-            alertsBody:     document.getElementById('crm-alerts-body'),
-            search:        document.getElementById('crm-search'),
-            btnClear:      document.getElementById('crm-btn-clear-filters'),
-            count:         document.getElementById('crm-count'),
+            alertsBody:     document.getElementById(bodyId),
+            search:         document.getElementById(searchId),
+            btnClear:       document.getElementById('crm-btn-clear-filters'),
+            count:          document.getElementById(countId),
+            pagination:     document.getElementById(paginationId),
         };
     },
 
     bindEvents() {
+        if (!this.dom.form) return;
         this.dom.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.handleFormSubmit();
         });
 
         // Atualiza preview quando muda a data
-        this.dom.dateInput.addEventListener('change', () => this.updatePreview());
+        if (this.dom.dateInput) this.dom.dateInput.addEventListener('change', () => this.updatePreview());
 
         // Fechar modal de edição clicando fora
         document.getElementById('crm-edit-modal')?.addEventListener('click', (e) => {
@@ -371,7 +424,11 @@ ${text.substring(0, 4000)}`;
         const weekEnd    = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
         const weekEndStr = weekEnd.toISOString().split('T')[0];
 
-        let filtered = this.allAlerts.filter(c => {
+        // Aplica filtro fixo de view (ORIGIN_FILTERS)
+        const viewFilter = this.ORIGIN_FILTERS[this.activeView] || (() => true);
+        let filtered = this.allAlerts.filter(viewFilter);
+
+        filtered = filtered.filter(c => {
             const name  = (c.name || c.client || '').toLowerCase();
             const phone = (c.phone || '').toLowerCase();
 
@@ -460,7 +517,7 @@ ${text.substring(0, 4000)}`;
     },
 
     renderPagination(total, start, end) {
-        const container = document.getElementById('crm-pagination');
+        const container = this.dom.pagination;
         if (!container) return;
 
         if (total === 0) {

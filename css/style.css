@@ -162,14 +162,19 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
 }
 
 /* Separador de grupo */
-.nav-menu::before {
-    content: 'MENU';
+.nav-group-label {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--text-muted);
-    padding: 0 0.5rem 0.6rem;
-    display: block;
+    padding: 0.8rem 0.5rem 0.3rem;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+.nav-group-label:not(:first-child) {
+    border-top: 1px solid var(--border);
+    margin-top: 0.3rem;
 }
 
 .nav-item {
