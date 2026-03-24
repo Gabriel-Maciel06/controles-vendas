@@ -94,6 +94,20 @@ const CRMModule = {
     },
 
     cacheDOM() {
+        if (!this.activeView) return;
+
+        // Tenta encontrar o mount da view ativa
+        const mount = document.querySelector(`#view-${this.activeView} .crm-form-mount`);
+        
+        // Função auxiliar para buscar com prioridade no mount atual
+        const getEl = (id) => {
+            if (mount) {
+                const el = mount.querySelector(`#${id}`);
+                if (el) return el;
+            }
+            return document.getElementById(id);
+        };
+
         // IDs de busca por view
         const searchIdMap = {
             'crm-google':  'crm-google-search',
@@ -133,23 +147,25 @@ const CRMModule = {
         const paginationId = paginationIdMap[this.activeView] || 'crm-pagination';
 
         this.dom = {
-            form:           document.getElementById('crm-form'),
-            client:         document.getElementById('crm-client'),
-            phone:          document.getElementById('crm-phone'),
-            buyer:          document.getElementById('crm-buyer'),
-            products:       document.getElementById('crm-products'),
-            originInput:    document.getElementById('crm-origin'),
-            tempInput:      document.getElementById('crm-temp'), // Alinhado com template
-            dateInput:      document.getElementById('crm-date'),
-            notes:          document.getElementById('crm-notes'),
-            followupDays:   document.getElementById('crm-followup-days'),
-            followupPreview:document.getElementById('crm-followup-preview'),
+            form:           getEl('crm-form'),
+            client:         getEl('crm-client'),
+            phone:          getEl('crm-phone'),
+            buyer:          getEl('crm-buyer'),
+            products:       getEl('crm-products'),
+            originInput:    getEl('crm-origin'),
+            tempInput:      getEl('crm-temp'),
+            dateInput:      getEl('crm-date'),
+            notes:          getEl('crm-notes'),
+            followupDays:   getEl('crm-followup-days'),
+            followupPreview:getEl('crm-followup-preview'),
             alertsBody:     document.getElementById(bodyId),
             search:         document.getElementById(searchId),
             btnClear:       document.getElementById('crm-btn-clear-filters'),
             count:          document.getElementById(countId),
             pagination:     document.getElementById(paginationId),
         };
+
+        console.log("CRM Cache DOM atualizado para:", this.activeView, this.dom.form ? "Form OK" : "Form MISSING");
     },
 
     bindEvents() {
@@ -201,8 +217,11 @@ const CRMModule = {
         };
         const color = colors[origin] || 'var(--primary)';
         
-        const container = this.dom.form || document;
-        container.querySelectorAll('.btn-origin').forEach(btn => {
+        // Tenta encontrar os botões dentro do formulário atual
+        const form = this.dom?.form || document.getElementById('crm-form');
+        const searchArea = form || document;
+
+        searchArea.querySelectorAll('.btn-origin').forEach(btn => {
             if (btn.dataset.origin === origin) {
                 btn.style.background = `${color}22`;
                 btn.style.borderColor = color;
@@ -226,8 +245,11 @@ const CRMModule = {
         };
         const color = colors[temp] || 'var(--primary)';
         
-        const container = this.dom.form || document;
-        container.querySelectorAll('.btn-temp').forEach(btn => {
+        // Tenta encontrar os botões dentro do formulário atual
+        const form = this.dom?.form || document.getElementById('crm-form');
+        const searchArea = form || document;
+
+        searchArea.querySelectorAll('.btn-temp').forEach(btn => {
             if (btn.dataset.temp === temp) {
                 btn.style.background = `${color}22`;
                 btn.style.borderColor = color;
