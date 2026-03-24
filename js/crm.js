@@ -49,7 +49,6 @@ const CRMModule = {
             this.selectDays(15);
         }
         this.loadAlerts();
-        if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
     },
 
     mountForm() {
@@ -223,13 +222,15 @@ const CRMModule = {
 
         searchArea.querySelectorAll('.btn-origin').forEach(btn => {
             if (btn.dataset.origin === origin) {
-                btn.style.background = `${color}22`;
+                btn.style.background = color;
                 btn.style.borderColor = color;
-                btn.style.color = color;
+                btn.style.color = '#ffffff';
+                btn.style.fontWeight = 'bold';
             } else {
                 btn.style.background = 'transparent';
                 btn.style.borderColor = 'rgba(255,255,255,0.1)';
                 btn.style.color = 'var(--text-main)';
+                btn.style.fontWeight = 'normal';
             }
         });
     },
@@ -251,13 +252,15 @@ const CRMModule = {
 
         searchArea.querySelectorAll('.btn-temp').forEach(btn => {
             if (btn.dataset.temp === temp) {
-                btn.style.background = `${color}22`;
+                btn.style.background = color;
                 btn.style.borderColor = color;
-                btn.style.color = color;
+                btn.style.color = '#ffffff';
+                btn.style.fontWeight = 'bold';
             } else {
                 btn.style.background = 'transparent';
                 btn.style.borderColor = 'rgba(255,255,255,0.1)';
                 btn.style.color = 'var(--text-main)';
+                btn.style.fontWeight = 'normal';
             }
         });
     },
@@ -345,7 +348,6 @@ const CRMModule = {
             alert("✅ Atendimento registrado com sucesso!");
             
             this.loadAlerts();
-            if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
             if (typeof CalendarModule !== 'undefined') CalendarModule.loadEvents();
             if (typeof DashboardModule !== 'undefined') DashboardModule.update();
             
@@ -363,7 +365,6 @@ const CRMModule = {
         if (!confirm('Excluir este registro de contato?')) return;
         DataStore.remove(STORAGE_KEYS.CUSTOMERS, id);
         this.loadAlerts();
-        if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
         if (typeof DashboardModule !== 'undefined') DashboardModule.update();
     },
 
