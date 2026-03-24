@@ -57,6 +57,8 @@ class Sample(Base):
     estimatedReturn = Column(String)
     notes = Column(String, nullable=True)
     status = Column(String)
+    trackingLastEvent = Column(String, nullable=True)
+    trackingUpdatedAt = Column(String, nullable=True)
     createdAt = Column(String)
     updatedAt = Column(String, nullable=True)
 

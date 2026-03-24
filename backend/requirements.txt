@@ -5,3 +5,4 @@ sqlalchemy
 pydantic==1.10.17
 python-dotenv
 psycopg2-binary
+httpx

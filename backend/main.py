@@ -1,4 +1,5 @@
 import os
+import httpx
 import traceback
 import hashlib
 import hmac
@@ -56,6 +57,8 @@ def startup_event():
             'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
             "ALTER TABLE settings ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
             "ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingLastEvent" VARCHAR;',
+            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingUpdatedAt" VARCHAR;',
         ]
 
         is_postgres = "postgres" in str(engine.url)
@@ -181,6 +184,8 @@ class SampleBase(BaseModel):
     estimatedReturn: str
     notes: str = None
     status: str
+    trackingLastEvent: str = None
+    trackingUpdatedAt: str = None
     createdAt: str
     updatedAt: str = None
 
@@ -421,6 +426,100 @@ def delete_sample(sample_id: str, db: Session = Depends(get_db)):
     db.delete(db_sample)
     db.commit()
     return {"ok": True}
+
+@app.get("/api/samples/{sample_id}/track")
+async def track_sample(sample_id: str, db: Session = Depends(get_db)):
+    sample = db.query(models.Sample).filter(models.Sample.id == sample_id).first()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Amostra não encontrada")
+    if not sample.trackingCode:
+        return {"status": sample.status, "lastEvent": "Sem código de rastreio"}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"https://brasilaberto.com/api/v1/trackobject/{sample.trackingCode}")
+            if resp.status_code != 200:
+                return {"status": sample.status, "error": f"API Brasil Aberto erro {resp.status_code}"}
+            data = resp.json()
+
+        events = data.get("result", {}).get("events", [])
+        if not events:
+            return {"status": sample.status, "lastEvent": "Objeto não encontrado ou sem eventos"}
+
+        latest = events[0]
+        description = latest.get("description", "")
+        location = latest.get("unidade", {}).get("local", "")
+        eventDate = latest.get("dtHrCriado", "")
+
+        # Mapear para status do sistema
+        new_status = map_tracking_status(description)
+
+        # Atualizar no banco
+        sample.status = new_status
+        sample.trackingLastEvent = description
+        sample.trackingUpdatedAt = datetime.utcnow().isoformat()
+        sample.updatedAt = datetime.utcnow().isoformat()
+        db.commit()
+
+        return {
+            "status": new_status,
+            "lastEvent": description,
+            "location": location,
+            "eventDate": eventDate,
+            "events": events[:5]
+        }
+    except Exception as e:
+        return {"status": sample.status, "error": str(e)}
+
+@app.post("/api/samples/track-all")
+async def track_all_samples(profile: str = "default", db: Session = Depends(get_db)):
+    active_samples = db.query(models.Sample).filter(
+        models.Sample.profile == profile,
+        models.Sample.trackingCode != None,
+        models.Sample.trackingCode != "",
+        models.Sample.status.notin_(["Convertida", "Rejeitada", "Entregue"])
+    ).all()
+
+    updated = 0
+    errors = 0
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for sample in active_samples:
+            try:
+                resp = await client.get(f"https://brasilaberto.com/api/v1/trackobject/{sample.trackingCode}")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    events = data.get("result", {}).get("events", [])
+                    if events:
+                        description = events[0].get("description", "")
+                        new_status = map_tracking_status(description)
+                        
+                        sample.status = new_status
+                        sample.trackingLastEvent = description
+                        sample.trackingUpdatedAt = datetime.utcnow().isoformat()
+                        sample.updatedAt = datetime.utcnow().isoformat()
+                        updated += 1
+                else:
+                    errors += 1
+            except Exception:
+                errors += 1
+
+    db.commit()
+    return {"ok": True, "updated": updated, "errors": errors, "total": len(active_samples)}
+
+def map_tracking_status(description: str) -> str:
+    desc = description.lower()
+    if "entregue ao destinatário" in desc or "entregue" in desc:
+        return "Entregue"
+    if "saiu para entrega" in desc or "em trânsito" in desc or "trânsito" in desc:
+        return "Em trânsito"
+    if "postado" in desc or "coletado" in desc:
+        return "Enviada"
+    if "tentativa" in desc:
+        return "Tentativa de entrega"
+    if "aguardando retirada" in desc:
+        return "Aguardando retirada"
+    return "Em trânsito"
 
 # --- REMINDERS ---
 @app.get("/api/reminders", response_model=List[ReminderBase])

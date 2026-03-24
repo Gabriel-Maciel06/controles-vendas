@@ -11,6 +11,7 @@ const SamplesModule = {
         this.dom.dateInput.value = new Date().toISOString().split('T')[0];
         this.setDefaultDelivery();
         this.loadSamples();
+        this.startTrackingLoop();
     },
 
     cacheDOM() {
@@ -106,6 +107,46 @@ const SamplesModule = {
         if (typeof DashboardModule !== 'undefined') DashboardModule.update();
     },
 
+    startTrackingLoop() {
+        // Atualizar rastreios ao abrir a tela (com pequeno delay para o DataStore estabilizar)
+        setTimeout(() => this.updateAllTracking(), 2000);
+        
+        // Depois atualizar a cada 4 horas
+        const FOUR_HOURS = 4 * 60 * 60 * 1000;
+        setInterval(() => this.updateAllTracking(), FOUR_HOURS);
+    },
+
+    async updateAllTracking() {
+        const btn = document.getElementById('btn-track-all');
+        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Atualizando...';
+        }
+
+        try {
+            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'https://controles-vendas.onrender.com';
+            const res = await fetch(`${apiBase}/api/samples/track-all?profile=${profile}`, { method: 'POST' });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.updated > 0) {
+                    await DataStore.init(); // Recarrega cache
+                    this.loadSamples();
+                    console.log(`Rastreio: ${data.updated} amostras atualizadas`);
+                }
+            }
+        } catch (e) {
+            console.warn('Erro ao atualizar rastreios:', e);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-refresh"></i> Atualizar Rastreios';
+            }
+        }
+    },
+
     loadSamples() {
         const samples = DataStore.get(STORAGE_KEYS.SAMPLES) || [];
         // Ativas primeiro, depois por data de entrega
@@ -153,9 +194,19 @@ const SamplesModule = {
                 'Follow-up Pendente':  { label:'📞 Follow-up',     cls:'badge-warn'    },
                 'Convertida':          { label:'💰 Convertida',    cls:'badge-accent'  },
                 'Rejeitada':           { label:'❌ Rejeitada',      cls:'badge-danger'  },
+                'Tentativa de entrega':{ label:'⚠️ Tentativa',     cls:'badge-danger'  },
+                'Aguardando retirada': { label:'📬 Na Agência',    cls:'badge-warn'    },
             };
             const st    = statusMap[s.status] || { label: s.status, cls: 'badge-muted' };
-            const badge = `<span class="badge ${st.cls}">${st.label}</span>`;
+            
+            // Subtexto do último evento
+            const lastEvent = s.trackingLastEvent || '';
+            const lastEventFmt = lastEvent.length > 50 ? lastEvent.substring(0, 50) + '...' : lastEvent;
+            
+            const badge = `
+                <span class="badge ${st.cls}">${st.label}</span>
+                ${lastEvent ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;line-height:1.2;font-weight:400;max-width:180px;">${this.esc(lastEventFmt)}</div>` : ''}
+            `;
 
             const dateColor = isLate ? '#E24B4A' : isToday ? '#EF9F27' : 'var(--text-muted)';
             const dateAlert = isLate ? ' ⚠️' : isToday ? ' 🔔' : '';
