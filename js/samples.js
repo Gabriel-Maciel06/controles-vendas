@@ -134,8 +134,14 @@ const SamplesModule = {
                 if (data.updated > 0) {
                     await DataStore.init(); // Recarrega cache
                     this.loadSamples();
-                    console.log(`Rastreio: ${data.updated} amostras atualizadas`);
+                    alert(`✅ Sucesso: ${data.updated} rastreios atualizados!`);
+                } else if (data.errors > 0) {
+                    alert(`⚠️ Nenhum rastreio novo encontrado (${data.errors} verificados). Verifique se o código está correto ou se os Correios já atualizaram o sistema.`);
+                } else if (data.total === 0) {
+                    alert(`ℹ️ Nenhuma amostra ativa com código de rastreio encontrada para atualizar.`);
                 }
+            } else {
+                alert(`❌ Erro no servidor ao tentar atualizar rastreios.`);
             }
         } catch (e) {
             console.warn('Erro ao atualizar rastreios:', e);

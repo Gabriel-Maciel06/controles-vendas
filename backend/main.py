@@ -435,41 +435,59 @@ async def track_sample(sample_id: str, db: Session = Depends(get_db)):
     if not sample.trackingCode:
         return {"status": sample.status, "lastEvent": "Sem código de rastreio"}
 
+    code = sample.trackingCode.upper().strip()
+    
+    # Tentar primeiro Brasil Aberto (conforme plano)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"https://brasilaberto.com/api/v1/trackobject/{sample.trackingCode}")
-            if resp.status_code != 200:
-                return {"status": sample.status, "error": f"API Brasil Aberto erro {resp.status_code}"}
-            data = resp.json()
+            # Tentar URL sugerida com User-Agent
+            url_ba = f"https://api.brasilaberto.com/v1/postal-orders/{code}"
+            headers = {"User-Agent": "Mozilla/5.0"}
+            resp = await client.get(url_ba, headers=headers)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("result", {}).get("events", [])
+                if events:
+                    return await update_sample_tracking(sample, events[0], db)
 
-        events = data.get("result", {}).get("events", [])
-        if not events:
-            return {"status": sample.status, "lastEvent": "Objeto não encontrado ou sem eventos"}
+            # Se falhou Brasil Aberto, tentar LinkeTrack (Fallback Gratuito)
+            url_lt = f"https://api.linketrack.com/track/json?user=test&token=1abcd&codigo={code}"
+            resp = await client.get(url_lt, headers=headers)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("eventos", []) # LinkeTrack usa 'eventos'
+                if events:
+                    # Formato LinkeTrack: {"data": "18/03/2026", "hora": "11:24", "local": "...", "status": "..."}
+                    latest = events[0]
+                    desc = latest.get("status", "")
+                    return await update_sample_tracking(sample, {
+                        "description": desc,
+                        "unidade": {"local": latest.get("local", "")},
+                        "dtHrCriado": f"{latest.get('data')} {latest.get('hora')}"
+                    }, db)
 
-        latest = events[0]
-        description = latest.get("description", "")
-        location = latest.get("unidade", {}).get("local", "")
-        eventDate = latest.get("dtHrCriado", "")
-
-        # Mapear para status do sistema
-        new_status = map_tracking_status(description)
-
-        # Atualizar no banco
-        sample.status = new_status
-        sample.trackingLastEvent = description
-        sample.trackingUpdatedAt = datetime.utcnow().isoformat()
-        sample.updatedAt = datetime.utcnow().isoformat()
-        db.commit()
-
-        return {
-            "status": new_status,
-            "lastEvent": description,
-            "location": location,
-            "eventDate": eventDate,
-            "events": events[:5]
-        }
+        return {"status": sample.status, "error": "Objeto não encontrado ou API indisponível"}
     except Exception as e:
         return {"status": sample.status, "error": str(e)}
+
+async def update_sample_tracking(sample, event_data, db):
+    description = event_data.get("description", "")
+    new_status = map_tracking_status(description)
+    
+    sample.status = new_status
+    sample.trackingLastEvent = description
+    sample.trackingUpdatedAt = datetime.utcnow().isoformat()
+    sample.updatedAt = datetime.utcnow().isoformat()
+    db.commit()
+    
+    return {
+        "status": new_status,
+        "lastEvent": description,
+        "location": event_data.get("unidade", {}).get("local", ""),
+        "eventDate": event_data.get("dtHrCriado", "")
+    }
 
 @app.post("/api/samples/track-all")
 async def track_all_samples(profile: str = "default", db: Session = Depends(get_db)):
@@ -483,15 +501,20 @@ async def track_all_samples(profile: str = "default", db: Session = Depends(get_
     updated = 0
     errors = 0
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         for sample in active_samples:
+            code = sample.trackingCode.upper().strip()
             try:
-                resp = await client.get(f"https://brasilaberto.com/api/v1/trackobject/{sample.trackingCode}")
+                # Tentar LinkeTrack direto para o lote (é mais leve/estável para muitos códigos)
+                url = f"https://api.linketrack.com/track/json?user=test&token=1abcd&codigo={code}"
+                resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                
                 if resp.status_code == 200:
                     data = resp.json()
-                    events = data.get("result", {}).get("events", [])
+                    events = data.get("eventos", [])
                     if events:
-                        description = events[0].get("description", "")
+                        latest = events[0]
+                        description = latest.get("status", "")
                         new_status = map_tracking_status(description)
                         
                         sample.status = new_status
@@ -499,6 +522,8 @@ async def track_all_samples(profile: str = "default", db: Session = Depends(get_
                         sample.trackingUpdatedAt = datetime.utcnow().isoformat()
                         sample.updatedAt = datetime.utcnow().isoformat()
                         updated += 1
+                    else:
+                        errors += 1
                 else:
                     errors += 1
             except Exception:
