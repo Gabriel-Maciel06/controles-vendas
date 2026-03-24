@@ -59,12 +59,25 @@ const CRMModule = {
         // Se o formulário já estiver lá, não faz nada
         if (mount.querySelector('#crm-form')) return;
 
-        // Limpa outros mounts (opcional, só para garantir que o formulário é único)
-        document.querySelectorAll('.crm-form-mount').forEach(m => m.innerHTML = '');
+        // Limpa outros mounts (opcional)
+        document.querySelectorAll('.crm-form-mount').forEach(m => {
+            if (m !== mount) m.innerHTML = '';
+        });
 
-        const template = document.getElementById('crm-form-template');
-        if (template) {
-            mount.appendChild(template.content.cloneNode(true));
+        // Usa instância única do formulário
+        if (!this.formInstance) {
+            const template = document.getElementById('crm-form-template');
+            if (template) {
+                const frag = template.content.cloneNode(true);
+                this.formInstance = frag.querySelector('#crm-form-wrapper') || frag.firstElementChild;
+                
+                // Mapear eventos uma única vez se possível, mas como cacheDOM limpa this.dom, 
+                // vamos garantir que bindEvents saiba lidar com isso.
+            }
+        }
+
+        if (this.formInstance) {
+            mount.appendChild(this.formInstance);
             
             // Ajusta o título do formulário opcionalmente
             const titleMap = {
@@ -73,7 +86,7 @@ const CRMModule = {
                 'crm-inativo': '⏸ Registrar Inativo',
                 'crm-maps': '📍 Novo Contato Maps'
             };
-            const titleEl = mount.querySelector('#crm-form-title');
+            const titleEl = document.getElementById('crm-form-title');
             if (titleEl && titleMap[this.activeView]) {
                 titleEl.innerText = titleMap[this.activeView];
             }
@@ -141,10 +154,16 @@ const CRMModule = {
 
     bindEvents() {
         if (!this.dom.form) return;
+        
+        // Evita duplicar o listener de submit
+        if (this.dom.form._bound) return;
+
         this.dom.form.addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.handleFormSubmit();
         });
+
+        this.dom.form._bound = true;
 
         // Atualiza preview quando muda a data
         if (this.dom.dateInput) this.dom.dateInput.addEventListener('change', () => this.updatePreview());
@@ -182,7 +201,8 @@ const CRMModule = {
         };
         const color = colors[origin] || 'var(--primary)';
         
-        document.querySelectorAll('.btn-origin').forEach(btn => {
+        const container = this.dom.form || document;
+        container.querySelectorAll('.btn-origin').forEach(btn => {
             if (btn.dataset.origin === origin) {
                 btn.style.background = `${color}22`;
                 btn.style.borderColor = color;
@@ -206,7 +226,8 @@ const CRMModule = {
         };
         const color = colors[temp] || 'var(--primary)';
         
-        document.querySelectorAll('.btn-temp').forEach(btn => {
+        const container = this.dom.form || document;
+        container.querySelectorAll('.btn-temp').forEach(btn => {
             if (btn.dataset.temp === temp) {
                 btn.style.background = `${color}22`;
                 btn.style.borderColor = color;
