@@ -21,16 +21,63 @@ const CRMModule = {
 
     init(viewId = 'crm') {
         this.activeView = viewId;
+        this.mountForm(); // Novo: Monta o formulário na view ativa
         this.cacheDOM();
+        
         if (this.dom.form) {
             this.bindEvents();
             if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+            
+            // Configurações padrão por view
+            if (viewId === 'crm-google') {
+                this.selectOrigin('Google');
+                this.selectTemp('Quente');
+            } else if (viewId === 'crm-ativo') {
+                this.selectOrigin('Inativo');
+                this.selectTemp('Pós venda');
+            } else if (viewId === 'crm-inativo') {
+                this.selectOrigin('Inativo');
+                this.selectTemp('Primeiro contato');
+            } else if (viewId === 'crm-maps') {
+                this.selectOrigin('Maps');
+                this.selectTemp('Frio');
+            } else {
+                this.selectOrigin('');
+                this.selectTemp('Primeiro contato');
+            }
+            
             this.selectDays(15);
-            this.selectOrigin('');
-            this.selectTemp('Primeiro contato');
         }
         this.loadAlerts();
         if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
+    },
+
+    mountForm() {
+        const mount = document.querySelector(`#view-${this.activeView} .crm-form-mount`);
+        if (!mount) return;
+
+        // Se o formulário já estiver lá, não faz nada
+        if (mount.querySelector('#crm-form')) return;
+
+        // Limpa outros mounts (opcional, só para garantir que o formulário é único)
+        document.querySelectorAll('.crm-form-mount').forEach(m => m.innerHTML = '');
+
+        const template = document.getElementById('crm-form-template');
+        if (template) {
+            mount.appendChild(template.content.cloneNode(true));
+            
+            // Ajusta o título do formulário opcionalmente
+            const titleMap = {
+                'crm-google': '🔵 Novo Lead Google',
+                'crm-ativo': '✅ Novo Cliente Ativo',
+                'crm-inativo': '⏸ Registrar Inativo',
+                'crm-maps': '📍 Novo Contato Maps'
+            };
+            const titleEl = mount.querySelector('#crm-form-title');
+            if (titleEl && titleMap[this.activeView]) {
+                titleEl.innerText = titleMap[this.activeView];
+            }
+        }
     },
 
     cacheDOM() {
@@ -79,7 +126,7 @@ const CRMModule = {
             buyer:          document.getElementById('crm-buyer'),
             products:       document.getElementById('crm-products'),
             originInput:    document.getElementById('crm-origin'),
-            tempInput:      document.getElementById('crm-temperature'),
+            tempInput:      document.getElementById('crm-temp'), // Alinhado com template
             dateInput:      document.getElementById('crm-date'),
             notes:          document.getElementById('crm-notes'),
             followupDays:   document.getElementById('crm-followup-days'),
