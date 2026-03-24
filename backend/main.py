@@ -231,7 +231,8 @@ class ProspectBase(BaseModel):
         orm_mode = True
 
 class ImportFacilitaReq(BaseModel):
-    customers: List[CustomerBase]
+    customers: List[CustomerBase] = []
+    prospects: List[ProspectBase] = []
     profile: str = "default"
 
 # --- API Endpoints ---
@@ -344,6 +345,7 @@ def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
     ignored = 0
     errors = 0
 
+    # Process Customers
     for c_data in req.customers:
         try:
             db_cust = db.query(models.Customer).filter(models.Customer.id == c_data.id).first()
@@ -351,7 +353,7 @@ def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
                 for key, value in c_data.dict(exclude_unset=True).items():
                     setattr(db_cust, key, value)
                 db.commit()
-                ignored += 1  # Conta como atualizados
+                ignored += 1
                 continue
             
             new_cust = models.Customer(**c_data.dict())
@@ -361,7 +363,27 @@ def import_facilita(req: ImportFacilitaReq, db: Session = Depends(get_db)):
         except Exception as e:
             errors += 1
             db.rollback()
-            print(f"Erro ao importar {c_data.id}: {e}")
+            print(f"Erro ao importar cliente {c_data.id}: {e}")
+
+    # Process Prospects
+    for p_data in req.prospects:
+        try:
+            db_pros = db.query(models.Prospect).filter(models.Prospect.id == p_data.id).first()
+            if db_pros:
+                for key, value in p_data.dict(exclude_unset=True).items():
+                    setattr(db_pros, key, value)
+                db.commit()
+                ignored += 1
+                continue
+            
+            new_pros = models.Prospect(**p_data.dict())
+            db.add(new_pros)
+            db.commit()
+            created += 1
+        except Exception as e:
+            errors += 1
+            db.rollback()
+            print(f"Erro ao importar prospecto {p_data.id}: {e}")
 
     return {"criados": created, "ignorados": ignored, "erros": errors}
 
@@ -457,5 +479,60 @@ def save_settings(settings: dict, profile: str = "default", db: Session = Depend
         db_setting = models.Setting(id=f"{profile}_{k}", profile=profile, key=k, value=str(v))
         db.add(db_setting)
     
+    db.commit()
+    return {"ok": True}
+
+# --- PROSPECTS ---
+@app.get("/api/prospects", response_model=List[ProspectBase])
+def get_prospects(profile: str = "default", db: Session = Depends(get_db)):
+    return db.query(models.Prospect).filter(models.Prospect.profile == profile).all()
+
+@app.post("/api/prospects", response_model=ProspectBase)
+def create_prospect(prospect: ProspectBase, db: Session = Depends(get_db)):
+    db_pros = models.Prospect(**prospect.dict())
+    db.add(db_pros)
+    db.commit()
+    db.refresh(db_pros)
+    return db_pros
+
+@app.post("/api/prospects/{prospect_id}/send-to-crm")
+def send_to_crm(prospect_id: str, db: Session = Depends(get_db)):
+    db_pros = db.query(models.Prospect).filter(models.Prospect.id == prospect_id).first()
+    if not db_pros:
+        raise HTTPException(status_code=404, detail="Prospect not found")
+    
+    # Criar cliente no CRM a partir do prospecto
+    now = datetime.now().isoformat()
+    new_cust = models.Customer(
+        id=f"cli_from_{db_pros.id}",
+        profile=db_pros.profile,
+        name=db_pros.razaoSocial,
+        phone=db_pros.phone,
+        cnpj=db_pros.cnpj,
+        city=db_pros.city,
+        region=db_pros.region,
+        instagram=db_pros.instagram,
+        status="Pós venda", 
+        origin="Maps",      
+        temperature="Frio",
+        notes=f"Vindo da Prospecção. Notas: {db_pros.notes}",
+        createdAt=now,
+        updatedAt=now
+    )
+    
+    db_pros.status = "Enviado"
+    db_pros.crmCustomerId = new_cust.id
+    db_pros.sentToCrmAt = now
+    
+    db.add(new_cust)
+    db.commit()
+    return {"ok": True, "customerId": new_cust.id}
+
+@app.delete("/api/prospects/{prospect_id}")
+def delete_prospect(prospect_id: str, db: Session = Depends(get_db)):
+    db_pros = db.query(models.Prospect).filter(models.Prospect.id == prospect_id).first()
+    if not db_pros:
+        raise HTTPException(status_code=404, detail="Prospect not found")
+    db.delete(db_pros)
     db.commit()
     return {"ok": True}

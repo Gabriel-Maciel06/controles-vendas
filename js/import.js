@@ -169,13 +169,15 @@ const ImportModule = {
 
                 this.log(`<br><b>== Iniciando Envio: ${vendedor} (${totalVendedor} clientes) ==</b>`, "#f3f4f6");
 
-                const payloadCustomers = clientesVendedor.map(c => {
-                    const isAtivo = c.SITUACAO === "ATIVO";
-                    const origin = "Inativo"; // Todos da base Facilita são origin Inativo
-                    const temp = isAtivo ? "Pós venda" : "Primeiro contato";
-                    const stat = isAtivo ? "Pós venda" : "Primeiro contato";
+                const payloadCustomers = [];
+                const payloadProspects = [];
+
+                clientesVendedor.forEach(c => {
+                    const situacao = (c.SITUACAO || "").toUpperCase();
+                    const isProspec = situacao.includes("PROSPEC");
+                    const isAtivo = situacao === "ATIVO";
+
                     const dtStr = limitDateStr(c.DATA_MAIS_RECENTE);
-                    
                     let nextFollow = "";
                     if (c.DATA_MAIS_RECENTE && !isNaN(c.DATA_MAIS_RECENTE.getTime())) {
                         const next = new Date(c.DATA_MAIS_RECENTE);
@@ -185,37 +187,71 @@ const ImportModule = {
 
                     const notas = `Base Facilita | Freq: ${c.FREQ_DIAS ? c.FREQ_DIAS+'d' : '--'} | Ticket médio: ${c.MEDIA_COMPRAS || '--'} | Última compra: ${dateBR(c.DATA_MAIS_RECENTE)} | Valor Histórico: R$ ${c.VALOR_TOTAL.toFixed(2)}`;
 
-                    return {
-                        id: `facilita_${c.COD}_${vendedor}`,
-                        profile: this.SELLERS_MAP[vendedor],
-                        name: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
-                        source: c.SITUACAO || "ATIVO",
-                        origin: origin,
-                        temperature: temp,
-                        status: stat,
-                        region: c.REGIAO,
-                        city: c.CIDADE,
-                        lastContactDate: dtStr,
-                        nextFollowUp: nextFollow,
-                        notes: notas,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    };
+                    if (isProspec) {
+                        payloadProspects.push({
+                            id: `facil_pros_${c.COD}_${vendedor}`,
+                            profile: this.SELLERS_MAP[vendedor],
+                            razaoSocial: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
+                            phone: c.CELULAR || "Sem Telefone", // Tenta pegar celular ou telefone se disponível
+                            city: c.CIDADE,
+                            region: c.REGIAO,
+                            porte: "Geral", // Valor padrão pois a base Facilita não costuma ter porte explicitamente
+                            notes: notas,
+                            status: "Novo",
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+                    } else {
+                        // Cliente Normal (Ativo ou Inativo)
+                        const origin = "Inativo"; 
+                        const temp = isAtivo ? "Pós venda" : "Primeiro contato";
+                        const stat = isAtivo ? "Pós venda" : "Primeiro contato";
+
+                        payloadCustomers.push({
+                            id: `facilita_${c.COD}_${vendedor}`,
+                            profile: this.SELLERS_MAP[vendedor],
+                            name: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
+                            source: c.SITUACAO || "ATIVO",
+                            origin: origin,
+                            temperature: temp,
+                            status: stat,
+                            region: c.REGIAO,
+                            city: c.CIDADE,
+                            lastContactDate: dtStr,
+                            nextFollowUp: nextFollow,
+                            notes: notas,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
                 });
 
                 // Batching para não estourar o limite de Vercel/Render
                 const BATCH_SIZE = 100;
                 let tot_criados = 0, tot_ignorados = 0, tot_erros = 0;
 
-                for (let i = 0; i < totalVendedor; i += BATCH_SIZE) {
-                    const lote = payloadCustomers.slice(i, i + BATCH_SIZE);
-                    this.log(`-> Enviando lote ${Math.floor(i/BATCH_SIZE)+1} (${lote.length} clientes)...`);
+                // Enviar em lotes (Misturando ou separando, API agora aceita ambos no mesmo req)
+                // Vamos enviar de 100 em 100 clientes ou prospectos do vendedor atual
+                const allVendedorRecords = [
+                    ...payloadCustomers.map(x => ({ type: 'cust', data: x })),
+                    ...payloadProspects.map(x => ({ type: 'pros', data: x }))
+                ];
+
+                for (let i = 0; i < allVendedorRecords.length; i += BATCH_SIZE) {
+                    const loteMix = allVendedorRecords.slice(i, i + BATCH_SIZE);
+                    const currentBatch = {
+                        customers: loteMix.filter(x => x.type === 'cust').map(x => x.data),
+                        prospects: loteMix.filter(x => x.type === 'pros').map(x => x.data),
+                        profile: "default"
+                    };
+
+                    this.log(`-> Enviando lote ${Math.floor(i/BATCH_SIZE)+1} (${loteMix.length} registros)...`);
                     
                     try {
                         const res = await fetch(this.API_URL, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ customers: lote, profile: "default" })
+                            body: JSON.stringify(currentBatch)
                         });
 
                         if (res.ok) {
