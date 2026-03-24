@@ -1503,72 +1503,74 @@
     
     <!-- Template para o Formulário de Cadastro do CRM (Movido entre as views via JS) -->
     <template id="crm-form-template">
-        <div class="panel-header">
-            <h2 id="crm-form-title">📝 Novo Contato</h2>
-        </div>
-        <form id="crm-form" class="app-form">
-            <div class="form-group">
-                <label>Cliente / Estabelecimento *</label>
-                <input type="text" id="crm-client" required placeholder="Nome do cliente">
+        <div id="crm-form-wrapper">
+            <div class="panel-header">
+                <h2 id="crm-form-title">📝 Novo Contato</h2>
             </div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <form id="crm-form" class="app-form">
                 <div class="form-group">
-                    <label>Telefone</label>
-                    <input type="text" id="crm-phone" placeholder="(11) 90000-0000">
+                    <label>Cliente / Estabelecimento *</label>
+                    <input type="text" id="crm-client" required placeholder="Nome do cliente">
                 </div>
-                <div class="form-group">
-                    <label>Comprador / Contato</label>
-                    <input type="text" id="crm-buyer" placeholder="Nome do contato">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Produtos de Interesse</label>
-                <input type="text" id="crm-products" placeholder="Ex: Envelopes, Caixas">
-            </div>
-
-            <div class="form-group" style="margin-top:0.5rem;">
-                <label>Origem</label>
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                    <button type="button" class="btn btn-outline btn-origin" data-origin="Google" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Google')">Google</button>
-                    <button type="button" class="btn btn-outline btn-origin" data-origin="Inativo" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Inativo')">Ativo/Inat.</button>
-                    <button type="button" class="btn btn-outline btn-origin" data-origin="Maps" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Maps')">Maps</button>
-                </div>
-                <input type="hidden" id="crm-origin" value="Inativo">
-            </div>
-
-            <div class="form-group">
-                <label>Temperatura (Fase)</label>
-                <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                    <button type="button" class="btn btn-outline btn-temp" data-temp="Frio" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Frio')">❄️ Frio</button>
-                    <button type="button" class="btn btn-outline btn-temp" data-temp="Morno" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Morno')">🌤️ Morno</button>
-                    <button type="button" class="btn btn-outline btn-temp" data-temp="Quente" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Quente')">🔥 Quente</button>
-                    <button type="button" class="btn btn-outline btn-temp" data-temp="Fechando" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Fechando')">🤝 Fechando</button>
-                </div>
-                <input type="hidden" id="crm-temp" value="Frio">
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem;">
-                <div class="form-group">
-                    <label>Anotação / Feedback</label>
-                    <textarea id="crm-notes" rows="2" placeholder="O que foi conversado?" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Próximo Contato em:</label>
-                    <div style="display:flex; gap:0.3rem; margin-bottom:0.4rem;">
-                        <button type="button" class="crm-days-btn btn btn-outline" data-days="7" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(7)">7d</button>
-                        <button type="button" class="crm-days-btn btn btn-outline" data-days="15" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(15)">15d</button>
-                        <button type="button" class="crm-days-btn btn btn-outline" data-days="30" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(30)">30d</button>
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="text" id="crm-phone" placeholder="(11) 90000-0000">
                     </div>
-                    <input type="date" id="crm-date" class="app-input" style="font-size:0.85rem;">
-                    <input type="hidden" id="crm-followup-days" value="15">
-                    <p id="crm-followup-preview" style="font-size:0.72rem; color:var(--primary); margin-top:0.3rem;"></p>
+                    <div class="form-group">
+                        <label>Comprador / Contato</label>
+                        <input type="text" id="crm-buyer" placeholder="Nome do contato">
+                    </div>
                 </div>
-            </div>
 
-            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;"><i class="bx bx-plus"></i> Registrar Atendimento</button>
-        </form>
+                <div class="form-group">
+                    <label>Produtos de Interesse</label>
+                    <input type="text" id="crm-products" placeholder="Ex: Envelopes, Caixas">
+                </div>
+
+                <div class="form-group" style="margin-top:0.5rem;">
+                    <label>Origem</label>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-outline btn-origin" data-origin="Google" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Google')">Google</button>
+                        <button type="button" class="btn btn-outline btn-origin" data-origin="Inativo" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Inativo')">Ativo/Inat.</button>
+                        <button type="button" class="btn btn-outline btn-origin" data-origin="Maps" style="flex:1;font-size:0.78rem;padding:0.4rem;" onclick="CRMModule.selectOrigin('Maps')">Maps</button>
+                    </div>
+                    <input type="hidden" id="crm-origin" value="Inativo">
+                </div>
+
+                <div class="form-group">
+                    <label>Temperatura (Fase)</label>
+                    <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-outline btn-temp" data-temp="Frio" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Frio')">❄️ Frio</button>
+                        <button type="button" class="btn btn-outline btn-temp" data-temp="Morno" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Morno')">🌤️ Morno</button>
+                        <button type="button" class="btn btn-outline btn-temp" data-temp="Quente" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Quente')">🔥 Quente</button>
+                        <button type="button" class="btn btn-outline btn-temp" data-temp="Fechando" style="flex:1;font-size:0.75rem;padding:0.35rem;" onclick="CRMModule.selectTemp('Fechando')">🤝 Fechando</button>
+                    </div>
+                    <input type="hidden" id="crm-temp" value="Frio">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.5rem;">
+                    <div class="form-group">
+                        <label>Anotação / Feedback</label>
+                        <textarea id="crm-notes" rows="2" placeholder="O que foi conversado?" style="width:100%; padding:0.6rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Próximo Contato em:</label>
+                        <div style="display:flex; gap:0.3rem; margin-bottom:0.4rem;">
+                            <button type="button" class="crm-days-btn btn btn-outline" data-days="7" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(7)">7d</button>
+                            <button type="button" class="crm-days-btn btn btn-outline" data-days="15" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(15)">15d</button>
+                            <button type="button" class="crm-days-btn btn btn-outline" data-days="30" style="flex:1;font-size:0.8rem;padding:0.4rem;" onclick="CRMModule.selectDays(30)">30d</button>
+                        </div>
+                        <input type="date" id="crm-date" class="app-input" style="font-size:0.85rem;">
+                        <input type="hidden" id="crm-followup-days" value="15">
+                        <p id="crm-followup-preview" style="font-size:0.72rem; color:var(--primary); margin-top:0.3rem;"></p>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.5rem;"><i class="bx bx-plus"></i> Registrar Atendimento</button>
+            </form>
+        </div>
     </template>
 
     <!-- Scripts -->

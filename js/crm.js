@@ -257,47 +257,83 @@ const CRMModule = {
 
     // ── Registrar novo contato ──
     async handleFormSubmit() {
-        const contactDate = this.dom.dateInput.value;
-        const days    = parseInt(this.dom.followupDays?.value || 15);
-        const dateObj = new Date(contactDate + 'T00:00:00');
-        dateObj.setDate(dateObj.getDate() + days);
+        const btn = this.dom.form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
 
-        const newContact = {
-            name:            this.dom.client.value.trim(),
-            phone:           this.dom.phone.value.trim(),
-            buyerName:       this.dom.buyer.value.trim(),
-            company:         document.getElementById('crm-company')?.value.trim() || '',
-            email:           document.getElementById('crm-email')?.value.trim() || '',
-            cnpj:            document.getElementById('crm-cnpj')?.value.trim() || '',
-            instagram:       document.getElementById('crm-instagram')?.value.trim() || '',
-            segment:         document.getElementById('crm-segment')?.value.trim() || '',
-            address:         document.getElementById('crm-address')?.value.trim() || '',
-            products:        this.dom.products.value.trim(),
-            origin:          this.dom.originInput.value,
-            temperature:     this.dom.tempInput.value || 'Frio',
-            lastContactDate: contactDate,
-            createdAt:       new Date().toISOString(),
-            notes:           this.dom.notes.value.trim(),
-            nextFollowUp:    dateObj.toISOString().split('T')[0],
-            status:          'Contato',
-        };
+        try {
+            let contactDate = this.dom.dateInput.value;
+            // Garantia: se a data estiver vazia, usa hoje
+            if (!contactDate) {
+                contactDate = new Date().toISOString().split('T')[0];
+                this.dom.dateInput.value = contactDate;
+            }
 
-        await DataStore.add(STORAGE_KEYS.CUSTOMERS, newContact);
+            const days    = parseInt(this.dom.followupDays?.value || 15);
+            const dateObj = new Date(contactDate + 'T00:00:00');
+            
+            if (isNaN(dateObj.getTime())) {
+                throw new Error("Data de atendimento inválida.");
+            }
 
-        // Limpar formulário
-        ['client','notes','phone','buyer','products'].forEach(f => this.dom[f].value = '');
-        ['crm-company', 'crm-email', 'crm-cnpj', 'crm-instagram', 'crm-segment', 'crm-address'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
-        this.selectOrigin('');
-        this.selectTemp('Frio');
-        this.selectDays(15); // volta para padrão
-        this.dom.client.focus();
-        this.loadAlerts();
-        if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
-        if (typeof CalendarModule !== 'undefined') CalendarModule.loadEvents();
-        if (typeof DashboardModule !== 'undefined') DashboardModule.update();
+            dateObj.setDate(dateObj.getDate() + days);
+
+            const newContact = {
+                name:            this.dom.client.value.trim(),
+                phone:           this.dom.phone.value.trim(),
+                buyerName:       this.dom.buyer.value.trim(),
+                company:         document.getElementById('crm-company')?.value.trim() || '',
+                email:           document.getElementById('crm-email')?.value.trim() || '',
+                cnpj:            document.getElementById('crm-cnpj')?.value.trim() || '',
+                instagram:       document.getElementById('crm-instagram')?.value.trim() || '',
+                segment:         document.getElementById('crm-segment')?.value.trim() || '',
+                address:         document.getElementById('crm-address')?.value.trim() || '',
+                products:        this.dom.products.value.trim(),
+                origin:          (this.dom.originInput.value || 'Inativo').trim(),
+                temperature:     (this.dom.tempInput.value || 'Frio').trim(),
+                lastContactDate: contactDate,
+                createdAt:       new Date().toISOString(),
+                notes:           this.dom.notes.value.trim(),
+                nextFollowUp:    dateObj.toISOString().split('T')[0],
+                status:          'Contato',
+            };
+
+            if (!newContact.name) {
+                alert("Por favor, preencha o nome do cliente.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Salvando...';
+
+            await DataStore.add(STORAGE_KEYS.CUSTOMERS, newContact);
+
+            // Limpar formulário
+            ['client','notes','phone','buyer','products'].forEach(f => {
+                if(this.dom[f]) this.dom[f].value = '';
+            });
+            
+            ['crm-company', 'crm-email', 'crm-cnpj', 'crm-instagram', 'crm-segment', 'crm-address'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+            this.updatePreview();
+            
+            alert("✅ Atendimento registrado com sucesso!");
+            
+            this.loadAlerts();
+            if (typeof AISuggestions !== 'undefined') AISuggestions.renderSuggestionsPanel();
+            if (typeof CalendarModule !== 'undefined') CalendarModule.loadEvents();
+            if (typeof DashboardModule !== 'undefined') DashboardModule.update();
+            
+        } catch (error) {
+            console.error("Erro ao salvar contato:", error);
+            alert("⚠️ Erro ao salvar: " + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     },
 
     // ── Excluir registro ──
