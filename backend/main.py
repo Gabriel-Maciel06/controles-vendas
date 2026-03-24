@@ -35,6 +35,7 @@ async def global_exception_handler(request, exc):
 @app.on_event("startup")
 def startup_event():
     try:
+        print("Iniciando conexão com banco de dados...")
         models.Base.metadata.create_all(bind=engine)
         print("Banco de dados inicializado com sucesso!")
         
@@ -58,6 +59,7 @@ def startup_event():
         ]
 
         is_postgres = "postgres" in str(engine.url)
+        print(f"Executando {len(migrations)} migrations (postgres={is_postgres})...")
 
         for sql in migrations:
             try:
@@ -68,9 +70,10 @@ def startup_event():
             except Exception:
                 pass  # Coluna já existe, ignorar
                 
-        print("Migrations concluídas.")
+        print("Migrations concluídas. Servidor pronto!")
     except Exception as e:
-        print(f"Erro no startup: {e}")
+        print(f"ERRO no startup (servidor sobe mesmo assim): {e}")
+        # Não re-raise — permite o servidor subir mesmo com erro de banco
 
 # --- debug endpoint ---
 @app.get("/api/db-check")
