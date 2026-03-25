@@ -212,6 +212,7 @@ const SamplesModule = {
             const badge = `
                 <span class="badge ${st.cls}">${st.label}</span>
                 ${lastEvent ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;line-height:1.2;font-weight:400;max-width:180px;">${this.esc(lastEventFmt)}</div>` : ''}
+                ${!lastEvent && tracking ? `<div style="font-size:0.65rem;color:#818cf8;margin-top:4px;cursor:pointer;" onclick="window.open('https://www.17track.net/pt/track?nums=${tracking}', '_blank')">🔍 Ver detalhes no 17track</div>` : ''}
             `;
 
             const dateColor = isLate ? '#E24B4A' : isToday ? '#EF9F27' : 'var(--text-muted)';
@@ -227,7 +228,7 @@ const SamplesModule = {
 
                 <td style="padding:0.75rem 0.5rem;">
                     ${tracking
-                        ? `<a href="https://rastreamento.correios.com.br/app/index.php?objeto=${tracking}"
+                        ? `<a href="https://www.17track.net/pt/track?nums=${tracking}"
                               target="_blank"
                               style="font-family:monospace;font-size:0.8rem;color:#818cf8;text-decoration:none;display:flex;align-items:center;gap:0.3rem;"
                               title="Rastrear no site dos Correios">
