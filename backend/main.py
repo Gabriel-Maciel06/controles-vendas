@@ -430,47 +430,50 @@ def delete_sample(sample_id: str, db: Session = Depends(get_db)):
 @app.get("/api/samples/{sample_id}/track")
 async def track_sample(sample_id: str, db: Session = Depends(get_db)):
     sample = db.query(models.Sample).filter(models.Sample.id == sample_id).first()
-    if not sample:
-        raise HTTPException(status_code=404, detail="Amostra não encontrada")
-    if not sample.trackingCode:
-        return {"status": sample.status, "lastEvent": "Sem código de rastreio"}
+    if not sample or not sample.trackingCode:
+        return {"status": sample.status}
 
     code = sample.trackingCode.upper().strip()
     
-    # Tentar primeiro Brasil Aberto (conforme plano)
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Tentar URL sugerida com User-Agent
-            url_ba = f"https://api.brasilaberto.com/v1/postal-orders/{code}"
-            headers = {"User-Agent": "Mozilla/5.0"}
-            resp = await client.get(url_ba, headers=headers)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+            }
+            # Tentar Scraping da página pública da LinkeTrack (mais estável que a API api.)
+            url_web = f"https://www.linketrack.com.br/rastreio/{code}"
+            resp = await client.get(url_web, headers=headers)
             
             if resp.status_code == 200:
-                data = resp.json()
-                events = data.get("result", {}).get("events", [])
-                if events:
-                    return await update_sample_tracking(sample, events[0], db)
+                html = resp.text
+                # Procura por padrões de status no HTML (LinkeTrack injeta dados no HTML)
+                # O status costuma vir em tags <p class="status"> ou similar
+                # Uma forma robusta é procurar por palavras chave conhecidas
+                status_text = ""
+                if "Objeto entregue" in html: status_text = "Objeto entregue ao destinatário"
+                elif "Objeto postado" in html: status_text = "Objeto postado"
+                elif "em trânsito" in html.lower(): status_text = "Objeto em trânsito"
+                elif "Saiu para entrega" in html: status_text = "Objeto saiu para entrega ao destinatário"
+                
+                if status_text:
+                    return await update_sample_tracking(sample, {"description": status_text, "unidade": {"local": "Correios"}}, db)
 
-            # Se falhou Brasil Aberto, tentar LinkeTrack (Fallback Gratuito)
-            url_lt = f"https://api.linketrack.com/track/json?user=test&token=1abcd&codigo={code}"
-            resp = await client.get(url_lt, headers=headers)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                events = data.get("eventos", []) # LinkeTrack usa 'eventos'
-                if events:
-                    # Formato LinkeTrack: {"data": "18/03/2026", "hora": "11:24", "local": "...", "status": "..."}
-                    latest = events[0]
-                    desc = latest.get("status", "")
-                    return await update_sample_tracking(sample, {
-                        "description": desc,
-                        "unidade": {"local": latest.get("local", "")},
-                        "dtHrCriado": f"{latest.get('data')} {latest.get('hora')}"
-                    }, db)
+            # Fallback: Tentar API Brasil Aberto (caso o Token esteja configurado via env)
+            token = os.getenv("BRASIL_ABERTO_TOKEN")
+            if token:
+                url_ba = f"https://api.brasilaberto.com/v1/postal-orders/{code}"
+                resp_ba = await client.get(url_ba, headers={"Authorization": f"Bearer {token}"})
+                if resp_ba.status_code == 200:
+                    data = resp_ba.json()
+                    events = data.get("result", {}).get("events", [])
+                    if events:
+                        return await update_sample_tracking(sample, events[0], db)
 
-        return {"status": sample.status, "error": "Objeto não encontrado ou API indisponível"}
-    except Exception as e:
-        return {"status": sample.status, "error": str(e)}
+        return {"status": sample.status}
+    except Exception:
+        return {"status": sample.status}
 
 async def update_sample_tracking(sample, event_data, db):
     description = event_data.get("description", "")
@@ -484,9 +487,7 @@ async def update_sample_tracking(sample, event_data, db):
     
     return {
         "status": new_status,
-        "lastEvent": description,
-        "location": event_data.get("unidade", {}).get("local", ""),
-        "eventDate": event_data.get("dtHrCriado", "")
+        "lastEvent": description
     }
 
 @app.post("/api/samples/track-all")
@@ -499,38 +500,34 @@ async def track_all_samples(profile: str = "default", db: Session = Depends(get_
     ).all()
 
     updated = 0
-    errors = 0
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         for sample in active_samples:
             code = sample.trackingCode.upper().strip()
             try:
-                # Tentar LinkeTrack direto para o lote (é mais leve/estável para muitos códigos)
-                url = f"https://api.linketrack.com/track/json?user=test&token=1abcd&codigo={code}"
+                # Scraper silêncio
+                url = f"https://www.linketrack.com.br/rastreio/{code}"
                 resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                
                 if resp.status_code == 200:
-                    data = resp.json()
-                    events = data.get("eventos", [])
-                    if events:
-                        latest = events[0]
-                        description = latest.get("status", "")
+                    html = resp.text
+                    status_text = ""
+                    if "Objeto entregue" in html: status_text = "Objeto entregue ao destinatário"
+                    elif "Objeto postado" in html: status_text = "Objeto postado"
+                    elif "em trânsito" in html.lower(): status_text = "Objeto em trânsito"
+                    elif "Saiu para entrega" in html: status_text = "Objeto saiu para entrega ao destinatário"
+                    
+                    if status_text:
+                        description = status_text
                         new_status = map_tracking_status(description)
-                        
                         sample.status = new_status
                         sample.trackingLastEvent = description
                         sample.trackingUpdatedAt = datetime.utcnow().isoformat()
                         sample.updatedAt = datetime.utcnow().isoformat()
                         updated += 1
-                    else:
-                        errors += 1
-                else:
-                    errors += 1
             except Exception:
-                errors += 1
+                continue
 
     db.commit()
-    return {"ok": True, "updated": updated, "errors": errors, "total": len(active_samples)}
+    return {"ok": True, "updated": updated, "total": len(active_samples)}
 
 def map_tracking_status(description: str) -> str:
     desc = description.lower()

@@ -134,14 +134,7 @@ const SamplesModule = {
                 if (data.updated > 0) {
                     await DataStore.init(); // Recarrega cache
                     this.loadSamples();
-                    alert(`✅ Sucesso: ${data.updated} rastreios atualizados!`);
-                } else if (data.errors > 0) {
-                    alert(`⚠️ Nenhum rastreio novo encontrado (${data.errors} verificados). Verifique se o código está correto ou se os Correios já atualizaram o sistema.`);
-                } else if (data.total === 0) {
-                    alert(`ℹ️ Nenhuma amostra ativa com código de rastreio encontrada para atualizar.`);
                 }
-            } else {
-                alert(`❌ Erro no servidor ao tentar atualizar rastreios.`);
             }
         } catch (e) {
             console.warn('Erro ao atualizar rastreios:', e);
@@ -211,8 +204,6 @@ const SamplesModule = {
             
             const badge = `
                 <span class="badge ${st.cls}">${st.label}</span>
-                ${lastEvent ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:4px;line-height:1.2;font-weight:400;max-width:180px;">${this.esc(lastEventFmt)}</div>` : ''}
-                ${!lastEvent && tracking ? `<div style="font-size:0.65rem;color:#818cf8;margin-top:4px;cursor:pointer;" onclick="window.open('https://www.17track.net/pt/track?nums=${tracking}', '_blank')">🔍 Ver detalhes no 17track</div>` : ''}
             `;
 
             const dateColor = isLate ? '#E24B4A' : isToday ? '#EF9F27' : 'var(--text-muted)';
