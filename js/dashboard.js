@@ -80,6 +80,14 @@ const DashboardModule = {
             pipeOferta:      document.getElementById('pipe-oferta'),
             pipeQualificacao:document.getElementById('pipe-qualificacao'),
             pipeContato:     document.getElementById('pipe-contato'),
+            quickHotClients: document.getElementById('quick-hot-clients'),
+            quickHotClosing: document.getElementById('quick-hot-closing'),
+            quickSamples:    document.getElementById('quick-samples-pending'),
+            quickSamplesLate:document.getElementById('quick-samples-late'),
+            quickFollLate:   document.getElementById('quick-followups-late'),
+            quickFollToday:  document.getElementById('quick-followups-today'),
+            quickReactRate:  document.getElementById('quick-reactivation-rate'),
+            quickReactCount: document.getElementById('quick-reactivation-count'),
         };
     },
 
@@ -126,6 +134,39 @@ const DashboardModule = {
         this.renderChart(sales);
         this.renderCategoryChart(sales, curPrefix);
         this.updateProspeccao(customers, curPrefix);
+        this.updateQuickStats(customers, samples);
+    },
+
+    updateQuickStats(customers, samples) {
+        if (!this.dom.quickHotClients) return;
+
+        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        const today = new Date().toISOString().split('T')[0];
+
+        // 1. Clientes Quentes
+        const hotArr = customers.filter(c => c.profile === profile && c.temperature === 'Quente');
+        const closingArr = customers.filter(c => c.profile === profile && (c.temperature === 'Fechando' || c.status === 'Fechamento'));
+        this.dom.quickHotClients.innerText = hotArr.length;
+        this.dom.quickHotClosing.innerText = `Fechando: ${closingArr.length}`;
+
+        // 2. Amostras Pendentes
+        const pendingArr = samples.filter(s => s.profile === profile && (s.status === 'Enviada' || s.status === 'Em trânsito'));
+        const lateArr = pendingArr.filter(s => s.estimatedReturn && s.estimatedReturn < today);
+        this.dom.quickSamples.innerText = pendingArr.length;
+        this.dom.quickSamplesLate.innerText = `Atrasadas: ${lateArr.length}`;
+
+        // 3. Follow-ups
+        const lateFollow = customers.filter(c => c.profile === profile && c.nextFollowUp && c.nextFollowUp < today);
+        const todayFollow = customers.filter(c => c.profile === profile && c.nextFollowUp === today);
+        this.dom.quickFollLate.innerText = lateFollow.length;
+        this.dom.quickFollToday.innerText = `Hoje: ${todayFollow.length}`;
+
+        // 4. Taxa de Reativação
+        const inativos = customers.filter(c => c.profile === profile && c.origin === 'Inativo');
+        const reativados = inativos.filter(c => c.temperature && c.temperature !== 'Frio' && c.temperature !== 'Primeiro contato');
+        const rate = inativos.length > 0 ? Math.round((reativados.length / inativos.length) * 100) : 0;
+        this.dom.quickReactRate.innerText = `${rate}%`;
+        this.dom.quickReactCount.innerText = `${reativados.length} de ${inativos.length} reat.`;
     },
 
     updateProspeccao(customers, curPrefix) {

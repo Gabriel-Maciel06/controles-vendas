@@ -214,6 +214,10 @@ const AppModule = {
                         if (targetId === 'crm-prospec' && window.ProspecModule) {
                             window.ProspecModule.init();
                         }
+                        // ANALYTICS VIEW
+                        if (targetId === 'analytics' && window.AnalyticsModule) {
+                            window.AnalyticsModule.render();
+                        }
                     } else {
                         section.classList.remove('active');
                         section.classList.add('hidden');

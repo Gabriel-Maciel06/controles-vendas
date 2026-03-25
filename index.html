@@ -103,6 +103,10 @@
                     <span>Importar Base</span>
                 </a>
 
+                <a href="#analytics" class="nav-item" data-target="analytics">
+                    <i class='bx bx-analyse' style="color:#818cf8;"></i>
+                    <span>Analytics</span>
+                </a>
             </nav>
 
             <div class="user-profile">
@@ -1028,21 +1032,45 @@
                     <!-- End Prospec Map & KPIs -->
 
                     <!-- Dashboard 2.0 Smart Metrics -->
-                    <div class="analytics-grid">
+                    <div class="analytics-grid" style="margin-bottom:1rem;">
                         <div class="card-stat">
-                            <span class="stat-label">Ticket Médio</span>
-                            <span class="stat-value" id="stat-avg-ticket">R$ 0,00</span>
-                            <span class="stat-change stat-neutral" id="stat-avg-ticket-change">--</span>
+                            <span class="stat-label" style="font-size:0.75rem;opacity:0.8;">Ticket Médio</span>
+                            <span class="stat-value" id="stat-avg-ticket" style="font-size:1.1rem;">R$ 0,00</span>
+                            <span class="stat-change stat-neutral" id="stat-avg-ticket-change" style="font-size:0.65rem;">--</span>
                         </div>
                         <div class="card-stat">
-                            <span class="stat-label">Crescimento Mensal</span>
-                            <span class="stat-value" id="stat-growth">0%</span>
-                            <span class="stat-change" id="stat-growth-trend">vs mês anterior</span>
+                            <span class="stat-label" style="font-size:0.75rem;opacity:0.8;">Crescimento Mensal</span>
+                            <span class="stat-value" id="stat-growth" style="font-size:1.1rem;">0%</span>
+                            <span class="stat-change" id="stat-growth-trend" style="font-size:0.65rem;">vs mês anterior</span>
                         </div>
                         <div class="card-stat">
-                            <span class="stat-label">Previsão Fechamento</span>
-                            <span class="stat-value" id="stat-forecast">R$ 0,00</span>
-                            <span class="stat-change stat-neutral" id="stat-forecast-status">Baseado no ritmo</span>
+                            <span class="stat-label" style="font-size:0.75rem;opacity:0.8;">Previsão Fechamento</span>
+                            <span class="stat-value" id="stat-forecast" style="font-size:1.1rem;">R$ 0,00</span>
+                            <span class="stat-change stat-neutral" id="stat-forecast-status" style="font-size:0.65rem;">Baseado no ritmo</span>
+                        </div>
+                    </div>
+
+                    <!-- Segunda Linha de KPIs (Analytics Nível 1) -->
+                    <div class="analytics-grid" style="margin-bottom:1.5rem; grid-template-columns: repeat(4, 1fr);">
+                        <div class="card-stat" style="border-top: 3px solid #EF9F27;">
+                            <span class="stat-label">🔥 Clientes Quentes</span>
+                            <span class="stat-value" id="quick-hot-clients">0</span>
+                            <span class="stat-change" id="quick-hot-closing" style="color:#EF9F27;">Fechando: 0</span>
+                        </div>
+                        <div class="card-stat" style="border-top: 3px solid #818cf8;">
+                            <span class="stat-label">📬 Amostras</span>
+                            <span class="stat-value" id="quick-samples-pending">0</span>
+                            <span class="stat-change" id="quick-samples-late" style="color:#f87171;">Atrasadas: 0</span>
+                        </div>
+                        <div class="card-stat" style="border-top: 3px solid #f87171;">
+                            <span class="stat-label">📞 Follow-ups</span>
+                            <span class="stat-value" id="quick-followups-late">0</span>
+                            <span class="stat-change" id="quick-followups-today" style="color:var(--text-muted);">Hoje: 0</span>
+                        </div>
+                        <div class="card-stat" style="border-top: 3px solid #1D9E75;">
+                            <span class="stat-label">🔄 Taxa Reativ.</span>
+                            <span class="stat-value" id="quick-reactivation-rate">0%</span>
+                            <span class="stat-change" id="quick-reactivation-count" style="color:#1D9E75;">0 de 0 reat.</span>
                         </div>
                     </div>
 
@@ -1401,6 +1429,96 @@
                     </div>
                 </section>
 
+                <!-- View: Analytics (NOVO) -->
+                <section id="view-analytics" class="view-section hidden">
+                    <div style="padding:0 0 2rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.2rem;margin-bottom:1.5rem;">
+                            <div>
+                                <h2 style="margin:0;font-size:1.4rem;color:var(--text-main);">🔬 Painel Analytics</h2>
+                                <p style="margin:0.2rem 0 0;font-size:0.85rem;color:var(--text-muted);">Inteligência de Vendas e Saúde do Funil</p>
+                            </div>
+                            
+                            <!-- Seletor de Período -->
+                            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,0.03);padding:0.6rem;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
+                                <button class="btn btn-outline" style="font-size:0.75rem;padding:0.3rem 0.6rem;" onclick="AnalyticsModule.setPeriod('month')">Este mês</button>
+                                <button class="btn btn-outline" style="font-size:0.75rem;padding:0.3rem 0.6rem;" onclick="AnalyticsModule.setPeriod('last30')">30 dias</button>
+                                <button class="btn btn-outline" style="font-size:0.75rem;padding:0.3rem 0.6rem;" onclick="AnalyticsModule.setPeriod('year')">Este ano</button>
+                                <div style="width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 0.3rem;"></div>
+                                <input type="date" id="analytics-start" style="font-size:0.75rem;padding:0.2rem 0.4rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);color:var(--text-main);">
+                                <span style="font-size:0.75rem;color:var(--text-muted);">até</span>
+                                <input type="date" id="analytics-end" style="font-size:0.75rem;padding:0.2rem 0.4rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);color:var(--text-main);">
+                                <button class="btn btn-primary" style="font-size:0.75rem;padding:0.3rem 0.8rem;" onclick="AnalyticsModule.applyFilters()">Aplicar</button>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid">
+                            <!-- SEÇÃO 1: FUNIL DE VENDAS -->
+                            <div class="panel list-panel" style="grid-column: span 2;">
+                                <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
+                                    <h2>🚀 Funil de Conversão</h2>
+                                    <select id="analytics-funnel-origin" onchange="AnalyticsModule.renderFunnel()" style="font-size:0.75rem;padding:0.3rem;background:rgba(0,0,0,0.2);color:var(--text-main);border-radius:6px;border:1px solid rgba(255,255,255,0.1);">
+                                        <option value="all">Todos os Canais</option>
+                                        <option value="Google">Google</option>
+                                        <option value="Inativo">Inativos</option>
+                                        <option value="Prospec">Prospecção</option>
+                                        <option value="Maps">Maps</option>
+                                    </select>
+                                </div>
+                                <div id="analytics-funnel-container" style="padding:1rem;">
+                                    <!-- Rendered via JS -->
+                                </div>
+                                <div id="analytics-bottleneck-alert" style="margin:1rem;padding:1rem;border-radius:10px;background:rgba(239,159,39,0.1);border:1px solid rgba(239,159,39,0.2);display:none;">
+                                    <!-- Alertas de gargalo -->
+                                </div>
+                            </div>
+
+                            <!-- SEÇÃO 2: DISTRIBUIÇÃO -->
+                            <div class="panel form-panel">
+                                <div class="panel-header"><h2>📊 Origem dos Clientes</h2></div>
+                                <div style="height:220px;position:relative;"><canvas id="chart-analytics-origin"></canvas></div>
+                                <div id="analytics-origin-legend" style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;"></div>
+                            </div>
+
+                            <div class="panel form-panel">
+                                <div class="panel-header"><h2>🌡️ Temperatura da Base</h2></div>
+                                <div style="height:220px;position:relative;"><canvas id="chart-analytics-temp"></canvas></div>
+                                <div id="analytics-temp-legend" style="margin-top:1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.75rem;"></div>
+                            </div>
+
+                            <!-- SEÇÃO 3: AMOSTRAS -->
+                            <div class="panel list-panel" style="grid-column: span 2;">
+                                <div class="panel-header"><h2>📦 Performance de Amostras</h2></div>
+                                <div id="analytics-samples-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;padding:1rem;text-align:center;">
+                                    <!-- Contadores -->
+                                </div>
+                                <div style="padding:0 1rem 1rem;">
+                                    <h3 style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem;">⚠️ Amostras Críticas (Sem Retorno)</h3>
+                                    <div id="analytics-samples-late" style="font-size:0.8rem;color:var(--text-main);display:flex;flex-direction:column;gap:0.5rem;"></div>
+                                </div>
+                            </div>
+
+                            <!-- SEÇÃO 4: REATIVAÇÃO -->
+                            <div class="panel list-panel">
+                                <div class="panel-header"><h2>🔄 Prioridade de Reativação</h2></div>
+                                <div id="analytics-reactivation-list" style="padding:0.5rem;">
+                                    <!-- Ranking inativos -->
+                                </div>
+                            </div>
+
+                            <!-- SEÇÃO 5: ATIVIDADE -->
+                            <div class="panel list-panel">
+                                <div class="panel-header"><h2>📞 Cadência de Atividade</h2></div>
+                                <div id="analytics-cadence-container" style="padding:1rem;">
+                                    <!-- Barras semanais -->
+                                </div>
+                                <div id="analytics-activity-summary" style="padding:0 1rem 1rem;font-size:0.8rem;color:var(--text-muted);">
+                                    <!-- Médias -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -1596,5 +1714,6 @@
     <script src="js/whatsapp-analyzer.js"></script>
     <script src="js/app.js"></script>
     <script src="js/import.js"></script>
+    <script src="js/analytics.js"></script>
 </body>
 </html>
