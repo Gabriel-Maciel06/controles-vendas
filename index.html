@@ -572,7 +572,21 @@
                         </div>
 
                         <!-- Filtro por origem -->
-                        <div id="kanban-origin-filter"></div>
+                        <div style="margin-bottom: 1.2rem; display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
+                            <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Filtrar Origem:</span>
+                            <select id="kanban-filter-origin" onchange="KanbanModule.render()" style="padding:0.4rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem; outline:none; cursor:pointer;">
+                                <option value="">Todos os Leads</option>
+                                <option value="Google">🌐 Google</option>
+                                <option value="Inativo">⏸ Inativos</option>
+                                <option value="Maps">🗺 Maps</option>
+                                <option value="Prospec">🎯 Prospecção</option>
+                            </select>
+                        </div>
+
+                        <!-- Painel de Métricas do Funil -->
+                        <div id="kanban-metrics" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                            <!-- Renderizado via JS -->
+                        </div>
 
                         <!-- Board Kanban -->
                         <div id="kanban-board"
@@ -1237,7 +1251,7 @@
                                     <input type="text" id="crm-google-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
                                 </div>
                             </div>
-                            <div id="crm-google-body" style="padding:0.5rem 1rem 1rem;display:flex;flex-direction:column;gap:0.65rem;"></div>
+                            <div id="crm-google-body" style="padding:0 1rem 1rem;display:flex;flex-direction:column;gap:0.5rem;"></div>
                             <div id="crm-google-pagination"></div>
                         </div>
                     </div>
@@ -1291,7 +1305,12 @@
                             <div class="table-container">
                                 <table class="app-table">
                                     <thead><tr>
-                                        <th>Cliente / Cidade</th><th>Dias sem comprar</th><th>Ticket Médio</th><th>Próx. Follow-up</th><th>Ações</th>
+                                        <th>Cliente</th>
+                                        <th>Cidade</th>
+                                        <th>Dias sem comprar</th>
+                                        <th>Ticket Médio</th>
+                                        <th>Follow-up</th>
+                                        <th>Ações</th>
                                     </tr></thead>
                                     <tbody id="crm-inativo-body"></tbody>
                                 </table>
@@ -1320,7 +1339,11 @@
                             <div class="table-container">
                                 <table class="app-table">
                                     <thead><tr>
-                                        <th>Cliente</th><th>Cidade</th><th>Temperatura</th><th>Follow-up</th><th>Ações</th>
+                                        <th>Cliente</th>
+                                        <th>Região / Cidade</th>
+                                        <th>Temperatura</th>
+                                        <th>Follow-up</th>
+                                        <th>Ações</th>
                                     </tr></thead>
                                     <tbody id="crm-maps-body"></tbody>
                                 </table>

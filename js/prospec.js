@@ -162,7 +162,7 @@ const ProspecModule = {
         const prospectData = {
             id: 'pros_' + Date.now() + Math.floor(Math.random()*1000),
             profile,
-            razaoSocial,
+            razaoSocial: razaoSocial.toUpperCase(),
             cnpj,
             phone,
             city,

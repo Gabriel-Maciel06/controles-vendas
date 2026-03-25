@@ -191,7 +191,7 @@ const ImportModule = {
                         payloadProspects.push({
                             id: `facil_pros_${c.COD}_${vendedor}`,
                             profile: this.SELLERS_MAP[vendedor],
-                            razaoSocial: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
+                            razaoSocial: c.CLIENTE ? c.CLIENTE.substring(0, 100).toUpperCase() : "SEM NOME",
                             phone: c.CELULAR || "Sem Telefone", // Tenta pegar celular ou telefone se disponível
                             city: c.CIDADE,
                             region: c.REGIAO,
@@ -210,7 +210,7 @@ const ImportModule = {
                         payloadCustomers.push({
                             id: `facilita_${c.COD}_${vendedor}`,
                             profile: this.SELLERS_MAP[vendedor],
-                            name: c.CLIENTE ? c.CLIENTE.substring(0, 100) : "Sem Nome",
+                            name: c.CLIENTE ? c.CLIENTE.substring(0, 100).toUpperCase() : "SEM NOME",
                             source: c.SITUACAO || "ATIVO",
                             origin: origin,
                             temperature: temp,

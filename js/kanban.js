@@ -18,35 +18,6 @@ const KanbanModule = {
 
     dragId: null,   // id do card sendo arrastado
     dragCol: null,  // coluna de origem
-    activeOriginFilter: 'all',
-
-    ORIGIN_FILTER_OPTIONS: {
-        'all':          { label: 'Todos',    emoji: '🗂',  color: 'var(--primary)' },
-        'Google':       { label: 'Google',   emoji: '🔵',  color: '#818cf8' },
-        'Inativo-ativo':{ label: 'Ativos',   emoji: '✅',  color: '#1D9E75' },
-        'Inativo-frio': { label: 'Inativos', emoji: '⏸',  color: '#71717a' },
-        'Maps':         { label: 'Maps',     emoji: '📍',  color: '#9ca3af' },
-    },
-
-    setOriginFilter(key) {
-        this.activeOriginFilter = key;
-        this.render();
-    },
-
-    renderOriginFilter() {
-        return Object.entries(this.ORIGIN_FILTER_OPTIONS).map(([key, opt]) => {
-            const isActive = this.activeOriginFilter === key;
-            return `<button onclick="KanbanModule.setOriginFilter('${key}')"
-                style="padding:0.28rem 0.8rem;border-radius:20px;
-                       border:1px solid ${isActive ? opt.color : 'rgba(255,255,255,0.1)'};
-                       background:${isActive ? opt.color + '22' : 'transparent'};
-                       color:${isActive ? opt.color : 'var(--text-muted)'};
-                       font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;">
-                ${opt.emoji} ${opt.label}
-            </button>`;
-        }).join('');
-    },
-
     init() {
         this.render();
     },
@@ -56,19 +27,18 @@ const KanbanModule = {
         const board = document.getElementById('kanban-board');
         if (!board) return;
 
-        // Render filtro de origem
-        const filterEl = document.getElementById('kanban-origin-filter');
-        if (filterEl) {
-            filterEl.innerHTML = `
-                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                    <span style="font-size:0.75rem;color:var(--text-muted);font-weight:600;flex-shrink:0;">Ver funil de:</span>
-                    ${this.renderOriginFilter()}
-                </div>`;
+        const filterOrigin = document.getElementById('kanban-filter-origin')?.value || '';
+        let customers = this.getLatestCustomers();
+
+        if (filterOrigin) {
+            customers = customers.filter(c => c.origin === filterOrigin);
         }
 
-        const customers = this.getLatestCustomers();
-        const today     = new Date().toISOString().split('T')[0];
+        // Renderiza Métricas antes de montar as colunas
+        this.renderMetrics(customers);
 
+        const today = new Date().toISOString().split('T')[0];
+        
         // Conta por coluna para os badges
         const counts = {};
         this.COLUMNS.forEach(c => counts[c.id] = 0);
@@ -245,26 +215,44 @@ const KanbanModule = {
         const latest = {};
         all.forEach(c => {
             const name = c.name || c.client;
-            const date = c.lastContactDate || c.contactDate || '';
-            if (!latest[name] || date > (latest[name].lastContactDate || '')) latest[name] = c;
-        });
-        let customers = Object.values(latest);
-
-        if (this.activeOriginFilter !== 'all') {
-            if (this.activeOriginFilter === 'Inativo-ativo') {
-                customers = customers.filter(c =>
-                    c.origin === 'Inativo' && c.temperature !== 'Frio' && c.temperature !== 'Primeiro contato'
-                );
-            } else if (this.activeOriginFilter === 'Inativo-frio') {
-                customers = customers.filter(c =>
-                    c.origin === 'Inativo' && (!c.temperature || c.temperature === 'Frio' || c.temperature === 'Primeiro contato')
-                );
-            } else {
-                customers = customers.filter(c => c.origin === this.activeOriginFilter);
+            if (!latest[name] || (c.updatedAt || c.createdAt) > (latest[name].updatedAt || latest[name].createdAt)) {
+                latest[name] = c;
             }
-        }
+        });
+        return Object.values(latest);
+    },
 
-        return customers;
+    renderMetrics(customers) {
+        const container = document.getElementById('kanban-metrics');
+        if (!container) return;
+
+        const counts = {};
+        this.COLUMNS.forEach(c => {
+            counts[c.id] = customers.filter(cust => this.getCardColumn(cust) === c.id).length;
+        });
+
+        let html = '';
+        // Calcula taxas de conversão entre etapas (idx 0 a 4: Contato até Fechamento)
+        this.COLUMNS.forEach((col, idx) => {
+            if (idx >= this.COLUMNS.length - 2) return; // Pula Pós-venda e Perdido nas taxas
+            
+            const current = counts[col.id];
+            const nextCol = this.COLUMNS[idx+1];
+            const nextVal = counts[nextCol.id];
+            const rate = current > 0 ? Math.round((nextVal / current) * 100) : 0;
+            const isBottleneck = current > 5 && rate < 25;
+
+            html += `
+                <div class="panel" style="padding:0.8rem; text-align:center; border-top: 3px solid ${isBottleneck ? 'var(--danger)' : col.color}">
+                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">${col.label}</div>
+                    <div style="font-size:1.2rem; font-weight:700;">${current}</div>
+                    <div style="font-size:0.75rem; color:${rate < 25 ? 'var(--danger)' : 'var(--accent)'}; font-weight:600;">
+                        ${rate}% conversão
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
     },
 
     // ── Move card para nova coluna ──

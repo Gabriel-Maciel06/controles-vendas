@@ -490,50 +490,11 @@ async def update_sample_tracking(sample, event_data, db):
         "lastEvent": description
     }
 
-@app.post("/api/samples/track-all")
-async def track_all_samples(profile: str = "default", db: Session = Depends(get_db)):
-    active_samples = db.query(models.Sample).filter(
-        models.Sample.profile == profile,
-        models.Sample.trackingCode != None,
-        models.Sample.trackingCode != "",
-        models.Sample.status.notin_(["Convertida", "Rejeitada", "Entregue"])
-    ).all()
-
-    updated = 0
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        for sample in active_samples:
-            code = sample.trackingCode.upper().strip()
-            try:
-                # Scraper silêncio
-                url = f"https://www.linketrack.com.br/rastreio/{code}"
-                resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                if resp.status_code == 200:
-                    html = resp.text
-                    status_text = ""
-                    if "Objeto entregue" in html: status_text = "Objeto entregue ao destinatário"
-                    elif "Objeto postado" in html: status_text = "Objeto postado"
-                    elif "em trânsito" in html.lower(): status_text = "Objeto em trânsito"
-                    elif "Saiu para entrega" in html: status_text = "Objeto saiu para entrega ao destinatário"
-                    
-                    if status_text:
-                        description = status_text
-                        new_status = map_tracking_status(description)
-                        sample.status = new_status
-                        sample.trackingLastEvent = description
-                        sample.trackingUpdatedAt = datetime.utcnow().isoformat()
-                        sample.updatedAt = datetime.utcnow().isoformat()
-                        updated += 1
-            except Exception:
-                continue
-
-    db.commit()
-    return {"ok": True, "updated": updated, "total": len(active_samples)}
-
 def map_tracking_status(description: str) -> str:
     desc = description.lower()
     if "entregue ao destinatário" in desc or "entregue" in desc:
         return "Entregue"
-    if "saiu para entrega" in desc or "em trânsito" in desc or "trânsito" in desc:
+    if "saiu para entrega" in desc or "em trânsito" in desc:
         return "Em trânsito"
     if "postado" in desc or "coletado" in desc:
         return "Enviada"
@@ -542,6 +503,41 @@ def map_tracking_status(description: str) -> str:
     if "aguardando retirada" in desc:
         return "Aguardando retirada"
     return "Em trânsito"
+
+@app.post("/api/samples/track-all")
+async def track_all_samples(profile: str = "default", db: Session = Depends(get_db)):
+    active = db.query(models.Sample).filter(
+        models.Sample.profile == profile,
+        models.Sample.trackingCode != None,
+        models.Sample.trackingCode != "",
+        models.Sample.status.notin_(["Entregue", "Convertida", "Rejeitada"])
+    ).all()
+
+    updated = 0
+    errors = 0
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for sample in active:
+            try:
+                resp = await client.get(
+                    f"https://brasilaberto.com/api/v1/trackobject/{sample.trackingCode}"
+                )
+                data = resp.json()
+                events = data.get("result", {}).get("events", [])
+                if events:
+                    description = events[0].get("description", "")
+                    new_status = map_tracking_status(description)
+                    if new_status != sample.status:
+                        sample.status = new_status
+                        sample.trackingLastEvent = description
+                        sample.trackingUpdatedAt = datetime.utcnow().isoformat()
+                        sample.updatedAt = datetime.utcnow().isoformat()
+                        updated += 1
+            except Exception:
+                errors += 1
+
+    db.commit()
+    return {"ok": True, "updated": updated, "errors": errors, "total": len(active)}
 
 # --- REMINDERS ---
 @app.get("/api/reminders", response_model=List[ReminderBase])

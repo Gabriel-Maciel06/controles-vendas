@@ -303,7 +303,7 @@ const CRMModule = {
             dateObj.setDate(dateObj.getDate() + days);
 
             const newContact = {
-                name:            this.dom.client.value.trim(),
+                name:            this.dom.client.value.trim().toUpperCase(),
                 phone:           this.dom.phone.value.trim(),
                 buyerName:       this.dom.buyer.value.trim(),
                 company:         document.getElementById('crm-company')?.value.trim() || '',
@@ -478,7 +478,7 @@ ${text.substring(0, 4000)}`;
         }
 
         const updated = {
-            name:            document.getElementById('edit-name').value.trim(),
+            name:            document.getElementById('edit-name').value.trim().toUpperCase(),
             phone:           document.getElementById('edit-phone').value.trim(),
             buyerName:       document.getElementById('edit-buyer').value.trim(),
             email:           document.getElementById('edit-email').value.trim(),
@@ -654,63 +654,37 @@ ${text.substring(0, 4000)}`;
         }
     },
 
-    // ── Google: cards com badge NOVO ──
     renderGoogleCards(customers) {
-        const body = this.dom.alertsBody;
+        const body = document.getElementById('crm-google-body');
         if (!body) return;
-
-        // Google usa div de cards, não tbody — limpar com innerHTML
         body.innerHTML = '';
 
         if (!customers.length) {
-            body.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);">Nenhum lead Google registrado.</div>`;
+            body.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum lead Google.</div>`;
             return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
-        // Ordenar mais recentes primeiro
-        const sorted = [...customers].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-
-        sorted.forEach(c => {
-            const name     = c.name || c.client || '—';
-            const phone    = c.phone || '';
-            const isNew    = (c.createdAt||'').startsWith(today);
-            const created  = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-            const notes    = (c.notes||'').replace(/^\[WhatsApp\]\s*/i,'').substring(0,80);
-            const tempColors = { 'Frio':'#3b82f6','Morno':'#EF9F27','Quente':'#E24B4A','Fechando':'#1D9E75','Primeiro contato':'#888' };
-            const tempColor  = tempColors[c.temperature] || '#888';
-
+        customers.forEach(c => {
             const card = document.createElement('div');
-            card.style.cssText = `background:var(--bg-surface);border:1px solid rgba(255,255,255,0.08);border-left:4px solid #818cf8;border-radius:10px;padding:1rem 1.1rem;display:flex;flex-direction:column;gap:0.5rem;transition:border-color 0.15s;`;
-            card.onmouseover = () => card.style.borderColor = 'rgba(129,140,248,0.5)';
-            card.onmouseout  = () => card.style.borderColor = 'rgba(255,255,255,0.08)';
+            card.className = 'google-lead-card';
             card.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">
-                    <div style="display:flex;align-items:center;gap:0.6rem;">
-                        <div style="width:36px;height:36px;border-radius:50%;background:rgba(129,140,248,0.18);display:flex;align-items:center;justify-content:center;font-size:0.88rem;font-weight:700;color:#818cf8;flex-shrink:0;">${this.escapeHTML(name.charAt(0).toUpperCase())}</div>
-                        <div>
-                            <div style="font-weight:700;font-size:0.9rem;color:var(--text-main);">${this.escapeHTML(name)}</div>
-                            ${phone ? `<div style="font-size:0.75rem;color:#25D366;cursor:pointer;" onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}','${this.escapeAttr(name)}')">${this.escapeHTML(phone)}</div>` : '<div style="font-size:0.73rem;color:rgba(255,255,255,0.2);">sem telefone</div>'}
-                        </div>
+                <div class="card-main">
+                    <div class="card-info">
+                        <h4>${this.escapeHTML(c.name || 'Sem Nome')}</h4>
+                        <div style="color:var(--accent); font-size:0.85rem; font-weight:600;">${this.escapeHTML(c.phone || '—')}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                        ${isNew ? `<span style="background:#E24B4A22;color:#E24B4A;font-size:0.65rem;font-weight:700;padding:0.15rem 0.6rem;border-radius:20px;border:1px solid #E24B4A44;">🔴 NOVO</span>` : ''}
-                        <span style="background:${tempColor}22;color:${tempColor};font-size:0.7rem;font-weight:600;padding:0.15rem 0.6rem;border-radius:20px;">${c.temperature||'—'}</span>
+                    <div class="card-actions" style="display:flex; gap:0.5rem;">
+                        <button onclick="WhatsAppModule.openComposer('${c.id}')" class="btn-icon" style="color:var(--accent)"><i class='bx bxl-whatsapp'></i></button>
+                        <button onclick="CRMModule.openEditModal('${c.id}')" class="btn-icon"><i class='bx bx-edit'></i></button>
                     </div>
                 </div>
-                ${notes ? `<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.45;border-left:2px solid rgba(129,140,248,0.3);padding-left:0.65rem;">${this.escapeHTML(notes)}${(c.notes||'').length>80?'…':''}</div>` : ''}
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">
-                    <span style="font-size:0.72rem;color:var(--text-muted);">📅 ${created}</span>
-                    <div style="display:flex;gap:0.4rem;">
-                        ${phone ? `<button onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}','${this.escapeAttr(name)}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(37,211,102,0.12);color:#25D366;cursor:pointer;font-size:0.8rem;font-weight:600;"><i class='bx bxl-whatsapp'></i> Ligar Agora</button>` : ''}
-                        <button onclick="CRMModule.openEditModal('${c.id}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(99,102,241,0.12);color:#818cf8;cursor:pointer;font-size:0.8rem;font-weight:600;"><i class='bx bx-edit'></i> Editar</button>
-                        <button onclick="CRMModule.viewHistory('${this.escapeAttr(name)}')" style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.8rem;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;font-size:0.8rem;"><i class='bx bx-history'></i></button>
-                        <button onclick="CRMModule.deleteContact('${c.id}')" style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;justify-content:center;"><i class='bx bx-trash'></i></button>
-                    </div>
-                </div>`;
+                <div class="secondary-info">
+                    <span><i class='bx bx-purchase-tag'></i> ${this.escapeHTML(c.origin || 'Google')}</span>
+                    <span><i class='bx bx-calendar'></i> ${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</span>
+                </div>
+            `;
             body.appendChild(card);
         });
-        this.enrichWithAI(sorted);
     },
 
     // ── Ativo: tabela padrão ──
@@ -720,63 +694,30 @@ ${text.substring(0, 4000)}`;
 
     // ── Inativo: dias sem comprar + ticket médio ──
     renderInativoTable(customers) {
-        const body = this.dom.alertsBody;
+        const body = document.getElementById('crm-inativo-body');
         if (!body) return;
         body.innerHTML = '';
 
-        if (!customers.length) {
-            body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente inativo registrado.</td></tr>`;
-            return;
-        }
-
         const today = new Date();
-
-        const extractTicket = (notes) => {
-            const m = (notes||'').match(/Ticket[\s\w]*[:\-]?\s*R?\$?\s?([\d.,]+)/i);
-            return m ? parseFloat(m[1].replace(/\./g,'').replace(',','.')) : 0;
-        };
-        const calcDays = (lastDate) => {
-            if (!lastDate) return 999;
-            return Math.ceil((today - new Date(lastDate + 'T00:00:00')) / 86400000);
-        };
-
-        // Ordenar por ticket médio (maior primeiro)
-        const sorted = [...customers].sort((a,b) => extractTicket(b.notes) - extractTicket(a.notes));
-
-        sorted.forEach(c => {
-            const name    = c.name || c.client || '—';
-            const days    = calcDays(c.lastContactDate || c.contactDate);
-            const ticket  = extractTicket(c.notes);
-            const city    = c.address ? c.address.split(',').pop().trim() : (c.city || '—');
-            const next    = c.nextFollowUp || '';
-            const nextFmt = next ? next.split('-').reverse().join('/') : '—';
-
-            const daysBadge = days > 60
-                ? `<span style="color:#E24B4A;font-weight:700;font-size:0.82rem;">🔴 ${days}d</span>`
-                : days > 30
-                ? `<span style="color:#EF9F27;font-weight:600;font-size:0.82rem;">🟡 ${days}d</span>`
-                : `<span style="color:#1D9E75;font-weight:600;font-size:0.82rem;">🟢 ${days}d</span>`;
-
-            const ticketFmt = ticket > 0
-                ? `<span style="font-size:0.82rem;color:var(--text-main);font-weight:600;">${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(ticket)}</span>`
-                : `<span style="color:rgba(255,255,255,0.2);font-size:0.78rem;">—</span>`;
+        customers.forEach(c => {
+            const lastDate = c.lastContactDate ? new Date(c.lastContactDate + 'T00:00:00') : null;
+            const diffDays = lastDate ? Math.floor((today - lastDate) / (1000 * 60 * 60 * 24)) : '—';
+            
+            // Tenta extrair ticket médio das notas se houver (ex: "Ticket R$ 1.500")
+            const ticketMatch = (c.notes || '').match(/Ticket.*?R\$\s?([\d.,]+)/i);
+            const ticket = ticketMatch ? ticketMatch[1] : '—';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="padding:0.75rem 0.5rem;">
-                    <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;">${this.escapeHTML(name)}</div>
-                    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">${this.escapeHTML(city)}</div>
+                <td><strong>${this.escapeHTML(c.name)}</strong></td>
+                <td>${this.escapeHTML(c.city || '—')}</td>
+                <td><span class="badge ${diffDays > 60 ? 'badge-danger' : 'badge-warn'}">${diffDays} dias</span></td>
+                <td style="color:var(--accent); font-weight:600;">R$ ${ticket}</td>
+                <td>${c.nextFollowUp || '—'}</td>
+                <td>
+                    <button onclick="CRMModule.openEditModal('${c.id}')" class="btn btn-sm btn-outline">Reativar</button>
                 </td>
-                <td style="padding:0.75rem 0.5rem;white-space:nowrap;">${daysBadge}</td>
-                <td style="padding:0.75rem 0.5rem;">${ticketFmt}</td>
-                <td style="padding:0.75rem 0.5rem;font-size:0.81rem;color:var(--text-muted);white-space:nowrap;">${nextFmt}</td>
-                <td style="padding:0.75rem 0.5rem;">
-                    <div style="display:flex;gap:0.3rem;">
-                        <button onclick="CRMModule.openEditModal('${c.id}')" title="Reativar / Editar" style="display:flex;align-items:center;gap:0.3rem;padding:0.3rem 0.7rem;border-radius:7px;border:none;background:rgba(29,158,117,0.12);color:#1D9E75;cursor:pointer;font-size:0.78rem;font-weight:600;"><i class='bx bx-refresh'></i> Reativar</button>
-                        ${c.phone ? `<button onclick="WhatsAppModule.openComposer('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"><i class='bx bxl-whatsapp'></i></button>` : ''}
-                        <button onclick="CRMModule.deleteContact('${c.id}')" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;"><i class='bx bx-trash'></i></button>
-                    </div>
-                </td>`;
+            `;
             body.appendChild(tr);
         });
     },
@@ -837,6 +778,45 @@ ${text.substring(0, 4000)}`;
                 body.appendChild(tr);
             });
         });
+    },
+    renderMapsGrouped(customers) {
+        const body = document.getElementById('crm-maps-body');
+        if (!body) return;
+        body.innerHTML = '';
+
+        // Agrupa por Região
+        const groups = customers.reduce((acc, obj) => {
+            const key = obj.region || 'Outros';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(obj);
+            return acc;
+        }, {});
+
+        for (const [region, list] of Object.entries(groups)) {
+            // Linha de Cabeçalho do Grupo
+            const headTr = document.createElement('tr');
+            headTr.innerHTML = `<td colspan="5" style="background:rgba(255,255,255,0.03); font-weight:700; color:var(--primary); padding:0.5rem 1rem;">${region} (${list.length})</td>`;
+            body.appendChild(headTr);
+
+            list.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${this.escapeHTML(c.name)}</strong></td>
+                    <td>${this.escapeHTML(c.city || '—')}</td>
+                    <td><span class="badge" style="background:${this.getTempColor(c.temperature)}22; color:${this.getTempColor(c.temperature)}">${c.temperature || 'Frio'}</span></td>
+                    <td>${c.nextFollowUp || '—'}</td>
+                    <td>
+                        <button onclick="CRMModule.openEditModal('${c.id}')" class="btn-icon"><i class='bx bx-edit'></i></button>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+    },
+
+    getTempColor(temp) {
+        const colors = { 'Quente': '#f87171', 'Morno': '#fbbf24', 'Frio': '#34d399' };
+        return colors[temp] || '#a1a1aa';
     },
 
 
