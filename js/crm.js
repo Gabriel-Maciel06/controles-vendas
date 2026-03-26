@@ -282,8 +282,13 @@ const CRMModule = {
 
     // ── Registrar novo contato ──
     async handleFormSubmit() {
+        if (this._submitting) return;
+        this._submitting = true;
+
         const btn = this.dom.form.querySelector('button[type="submit"]');
         const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Salvando... <i class="bx bx-loader-alt bx-spin"></i>';
 
         try {
             let contactDate = this.dom.dateInput.value;
@@ -355,6 +360,7 @@ const CRMModule = {
             console.error("Erro ao salvar contato:", error);
             alert("⚠️ Erro ao salvar: " + error.message);
         } finally {
+            this._submitting = false;
             btn.disabled = false;
             btn.innerHTML = originalText;
         }
@@ -395,11 +401,6 @@ const CRMModule = {
         document.getElementById('edit-products').value      = record.products || '';
         document.getElementById('edit-origin').value        = record.origin   || '';
         document.getElementById('edit-temperature').value   = record.temperature || '';
-        document.getElementById('edit-status').value        = record.status   || 'Contato';
-        document.getElementById('edit-lastContact').value   = record.lastContactDate || record.contactDate || '';
-        document.getElementById('edit-nextFollowUp').value  = record.nextFollowUp    || '';
-        document.getElementById('edit-notes').value         = record.notes    || '';
-
         document.getElementById('crm-edit-modal').classList.remove('hidden');
     },
 
@@ -416,39 +417,23 @@ const CRMModule = {
         btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Lendo e compreendendo a conversa...';
 
         try {
-            const apiKey = localStorage.getItem('claude_api_key');
-            let summary = '';
+            const system = "Como um analista de vendas sênior corporativo, faça um resumo clínico de no máximo 3 linhas baseado exclusivamente neste bate papo de WhatsApp. Diga 1. Sentimento 2. Etapa atual 3. Oportunidade ou erro a contornar.";
+            const prompt = `CONVERSA: ${text.substring(0, 4000)}`;
 
-            if (!apiKey) {
-                // Modo simulado / Sem chave
-                await new Promise(r => setTimeout(r, 1200));
-                summary = `[IA — SIMULAÇÃO OFFLINE]\nPreencha a API Key do Claude nas configurações para análise real.\n\nSugestão Genérica: O cliente apresenta boa abertura. Retome o assunto do preço listado no histórico.`;
-            } else {
-                const prompt = `Como um analista de vendas sênior corporativo, faça um resumo clínico de no máximo 3 linhas baseado exclusivamente neste bate papo de WhatsApp colado abaixo. 
-Diga 1. Sentimento 2. Etapa atual 3. Oportunidade ou erro a contornar. Seja extremamente direto.
-
-CONVERSA:
-${text.substring(0, 4000)}`;
-
-                const res = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'x-api-key': apiKey, 
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true'
-                    },
-                    body: JSON.stringify({ 
-                        model: 'claude-3-haiku-20240307', 
-                        max_tokens: 250, 
-                        messages: [{ role: 'user', content: prompt }] 
-                    })
-                });
-                
-                if (!res.ok) throw new Error('API Claude falhou: ' + res.status);
-                const data = await res.json();
-                summary = `[🤖 Análise da IA em ${new Date().toLocaleDateString('pt-BR')}]\n${data.content[0].text}`;
-            }
+            const res = await fetch(`${API_BASE_URL}/ai/proxy`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 250,
+                    system: system,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+            
+            if (!res.ok) throw new Error('API do servidor falhou: ' + res.status);
+            const data = await res.json();
+            const summary = `[🤖 Análise da IA em ${new Date().toLocaleDateString('pt-BR')}]\n${data.content[0]?.text || ''}`;
 
             const notesEl = document.getElementById('edit-notes');
             const spacer = notesEl.value ? '\n\n' : '';
@@ -480,14 +465,14 @@ ${text.substring(0, 4000)}`;
         const updated = {
             name:            document.getElementById('edit-name').value.trim().toUpperCase(),
             phone:           document.getElementById('edit-phone').value.trim(),
-            buyerName:       document.getElementById('edit-buyer').value.trim(),
+            buyerName:       document.getElementById('edit-buyer').value.trim().toUpperCase(),
             email:           document.getElementById('edit-email').value.trim(),
-            company:         document.getElementById('edit-company').value.trim(),
+            company:         document.getElementById('edit-company').value.trim().toUpperCase(),
             cnpj:            document.getElementById('edit-cnpj').value.trim(),
-            address:         document.getElementById('edit-address').value.trim(),
+            address:         document.getElementById('edit-address').value.trim().toUpperCase(),
             instagram:       document.getElementById('edit-instagram').value.trim(),
-            segment:         document.getElementById('edit-segment').value.trim(),
-            products:        document.getElementById('edit-products').value.trim(),
+            segment:         document.getElementById('edit-segment').value.trim().toUpperCase(),
+            products:        document.getElementById('edit-products').value.trim().toUpperCase(),
             origin:          document.getElementById('edit-origin').value,
             temperature:     document.getElementById('edit-temperature').value,
             status:          document.getElementById('edit-status').value,
@@ -496,14 +481,19 @@ ${text.substring(0, 4000)}`;
             notes:           document.getElementById('edit-notes').value.trim(),
         };
 
+        if (this._submittingEdit) return;
+        this._submittingEdit = true;
+
         const btn = document.getElementById('btn-save-edit');
+        const originalText = btn.innerHTML;
         btn.disabled  = true;
-        btn.innerText = 'Salvando...';
+        btn.innerHTML = 'Salvando... <i class="bx bx-loader-alt bx-spin"></i>';
 
         await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, updated);
 
         btn.disabled  = false;
-        btn.innerText = 'Salvar alterações';
+        btn.innerHTML = originalText;
+        this._submittingEdit = false;
 
         this.closeEditModal();
         this.loadAlerts();

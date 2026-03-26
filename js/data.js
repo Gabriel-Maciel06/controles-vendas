@@ -1,7 +1,9 @@
 /**
  * Data Management Module - Cloud Sync
  */
-const API_BASE_URL = "https://controles-vendas.onrender.com/api";
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? "http://localhost:8000/api"
+    : "https://controles-vendas.onrender.com/api";
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',
@@ -18,6 +20,14 @@ const STORAGE_KEYS = {
     SETTINGS: 'crm_settings',
     REMINDERS: 'crm_reminders'
 };
+
+function getAuthHeaders() {
+    const token = sessionStorage.getItem('maciel_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
 
 const DataStore = {
     cache: {
@@ -43,12 +53,13 @@ const DataStore = {
         this.isReady = false;
 
         try {
+            const headers = getAuthHeaders();
             const [salesRes, customersRes, samplesRes, settingsRes, remindersRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/sales?profile=${profile}`),
-                fetch(`${API_BASE_URL}/customers?profile=${profile}`),
-                fetch(`${API_BASE_URL}/samples?profile=${profile}`),
-                fetch(`${API_BASE_URL}/settings?profile=${profile}`),
-                fetch(`${API_BASE_URL}/reminders?profile=${profile}`)
+                fetch(`${API_BASE_URL}/sales?profile=${profile}`, { headers }),
+                fetch(`${API_BASE_URL}/customers?profile=${profile}`, { headers }),
+                fetch(`${API_BASE_URL}/samples?profile=${profile}`, { headers }),
+                fetch(`${API_BASE_URL}/settings?profile=${profile}`, { headers }),
+                fetch(`${API_BASE_URL}/reminders?profile=${profile}`, { headers })
             ]);
 
             this.cache.crm_sales = await salesRes.json();
@@ -75,7 +86,7 @@ const DataStore = {
             try {
                 await fetch(`${API_BASE_URL}/settings?profile=${profile}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(data)
                 });
             } catch (e) { console.error("API error", e); }
@@ -103,7 +114,7 @@ const DataStore = {
         try {
             const res = await fetch(`${API_BASE_URL}/${endpoint}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(record)
             });
 
@@ -138,7 +149,7 @@ const DataStore = {
         try {
             const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(data)
             });
 
@@ -162,13 +173,42 @@ const DataStore = {
 
         try {
             const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
             if (!res.ok) throw new Error(`Erro no servidor: ${res.status}`);
             return true;
         } catch (error) {
             console.error("API Error removing:", error);
             alert("⚠️ ERRO AO EXCLUIR: O item pode reaparecer ao atualizar a página.");
+            return false;
+        }
+    },
+
+    async getSettings() {
+        try {
+            const res = await fetch(`${API_BASE_URL}/settings`, {
+                headers: getAuthHeaders()
+            });
+            if (!res.ok) throw new Error(`Erro ao buscar settings: ${res.status}`);
+            return await res.json();
+        } catch (error) {
+            console.error("API Error getting settings:", error);
+            return null;
+        }
+    },
+
+    async saveSettings(data) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/settings`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error(`Erro ao salvar settings: ${res.status}`);
+            return true;
+        } catch (error) {
+            console.error("API Error saving settings:", error);
             return false;
         }
     }

@@ -90,38 +90,43 @@ const AISuggestions = {
         const clientSales = salesHistory.filter(s =>
             (s.client||'').toLowerCase() === (client.name||'').toLowerCase()
         );
-        const prompt = `Você é um assistente de vendas. Analise este cliente e dê UMA sugestão curta de ação.
-Cliente: ${client.name}
-Último contato: ${client.lastContactDate||'desconhecido'}
-Próximo follow-up: ${client.nextFollowUp||'não definido'}
-Anotações: ${client.notes||'sem anotações'}
-Vendas: ${clientSales.length} venda(s) — R$${clientSales.reduce((s,v)=>s+(parseFloat(v.value)||0),0).toFixed(2)}
-Responda APENAS com JSON (sem markdown):
-{"priority":"urgente|alta|media|normal|baixa","emoji":"emoji","title":"título curto","suggestion":"sugestão 1-2 frases","action":"verbo 1-2 palavras"}`;
+        const system = "Você é um assistente de vendas especializado em Isapel CRM. Analise o cliente e dê uma sugestão curta.";
+        const prompt = `Analise este cliente:
+Nome: ${client.name}
+Último contato: ${client.lastContactDate || 'desconhecido'}
+Notas: ${client.notes || 'sem notas'}
+Vendas: ${clientSales.length} compras.
+Responda APENAS com JSON:
+{"priority":"urgente|alta|media|normal|baixa","emoji":"emoji","title":"título","suggestion":"sugestão","action":"verbo"}`;
+
         try {
-            const res  = await fetch('https://api.anthropic.com/v1/messages', {
-                method:'POST', headers:{'Content-Type':'application/json','x-api-key':this.CLAUDE_API_KEY,'anthropic-version':'2023-06-01'},
-                body: JSON.stringify({ model:this.CLAUDE_MODEL, max_tokens:200, messages:[{role:'user',content:prompt}] })
+            const res = await fetch(`${API_BASE_URL}/ai/proxy`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    model: this.CLAUDE_MODEL,
+                    max_tokens: 250,
+                    system: system,
+                    messages: [{ role: 'user', content: prompt }]
+                })
             });
-            if (!res.ok) throw new Error('API '+res.status);
-            const data   = await res.json();
-            const parsed = JSON.parse(data.content[0]?.text.replace(/```json|```/g,'').trim());
-            const badgeMap = {urgente:'badge-danger',alta:'badge-warn',media:'badge-info',normal:'badge-muted',baixa:'badge-muted'};
-            return {...parsed, badge: badgeMap[parsed.priority]||'badge-muted'};
-        } catch(err) {
+
+            if (!res.ok) throw new Error('Proxy error ' + res.status);
+            const data = await res.json();
+            const text = data.content[0]?.text || "{}";
+            const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+            const badgeMap = { urgente: 'badge-danger', alta: 'badge-warn', media: 'badge-info', normal: 'badge-muted', baixa: 'badge-muted' };
+            return { ...parsed, badge: badgeMap[parsed.priority] || 'badge-muted' };
+        } catch (err) {
+            console.warn("AI Proxy failed, using local rules:", err);
             return this.analyzeClientLocal(client, salesHistory);
         }
     },
 
     async analyze(client, salesHistory) {
-        const key = localStorage.getItem('claude_api_key');
-        if (key) {
-            this.CLAUDE_API_KEY = key;
-            this.USE_CLAUDE_API = true;
-            return this.analyzeClientClaude(client, salesHistory);
-        }
-        this.USE_CLAUDE_API = false;
-        return this.analyzeClientLocal(client, salesHistory);
+        // Agora verificamos se o usuário quer usar IA ou se o servidor tem a chave
+        // Por padrão, tentamos o Claude via Proxy. Se falhar, o fallback local entra.
+        return this.analyzeClientClaude(client, salesHistory);
     },
 
     escapeHTML(str) {

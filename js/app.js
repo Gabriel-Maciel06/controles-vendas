@@ -53,7 +53,7 @@ const AppModule = {
             errorMsg.style.display = 'none';
 
             try {
-                const res = await fetch('https://controles-vendas.onrender.com/api/login', {
+                const res = await fetch(`${API_BASE_URL}/login`, {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body:    JSON.stringify({ password: pass })

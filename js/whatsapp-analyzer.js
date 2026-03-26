@@ -265,13 +265,26 @@ const WhatsAppAnalyzer = {
 
     async analyzeConversation(conv) {
         const sample = conv.content.split('\n').filter(l=>l.trim()).slice(-300).join('\n');
-        const prompt = `Analise esta conversa de WhatsApp entre vendedor e cliente. Responda APENAS com JSON válido (sem markdown):
+        const system = "Você é um especialista em análise de conversas de vendas de WhatsApp para o Isapel CRM. Analise a conversa e retorne JSON.";
+        const prompt = `Analise esta conversa de WhatsApp entre vendedor e cliente. Responda APENAS com JSON válido:
 {"score":<0-100>,"scoreLabel":"<Ruim|Regular|Bom|Ótimo>","scoreColor":"<#E24B4A|#EF9F27|#1D9E75|#534AB7>","sentiment":"<Positivo|Neutro|Negativo|Misto>","stage":"<Prospecção|Apresentação|Negociação|Fechamento|Pós-venda|Perdido>","summary":"resumo 1-2 frases","opportunities":["oportunidade perdida"],"positives":["ponto positivo"],"improvements":["melhoria"],"contacts":["contato para prospectar"],"followUp":"o que fazer agora"}
 CONVERSA:\n${sample}`;
-        const res = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':this.CLAUDE_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:this.CLAUDE_MODEL,max_tokens:800,messages:[{role:'user',content:prompt}]})});
-        if (!res.ok) throw new Error('API '+res.status);
+
+        const res = await fetch(`${API_BASE_URL}/ai/proxy`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                model: this.CLAUDE_MODEL,
+                max_tokens: 800,
+                system: system,
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        if (!res.ok) throw new Error('Proxy error ' + res.status);
         const data = await res.json();
-        return JSON.parse(data.content[0]?.text.replace(/```json|```/g,'').trim());
+        const text = data.content[0]?.text || "{}";
+        return JSON.parse(text.replace(/```json|```/g, '').trim());
     },
 
     updateFileStatus(i, icon) { const el=document.getElementById(`wpp-status-${i}`); if(el) el.textContent=icon; },

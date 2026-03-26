@@ -92,25 +92,40 @@ const DashboardModule = {
     },
 
     bindEvents() {
-        this.dom.btnSaveGoal?.addEventListener('click', () => {
+        this.dom.btnSaveGoal?.addEventListener('click', async () => {
             const val = parseFloat(this.dom.goalInput?.value) || 0;
-            localStorage.setItem('crm_monthly_goal', val);
+            const currentSettings = await DataStore.getSettings() || {};
+            await DataStore.saveSettings({
+                ...currentSettings,
+                crm_monthly_goal: val
+            });
             alert('Meta do mês salva com sucesso!');
-            this.update();
+            this.loadGoal();
         });
 
-        this.dom.contactGoal?.addEventListener('change', (e) => {
-            localStorage.setItem('crm_contact_goal', e.target.value);
-            this.update();
+        this.dom.contactGoal?.addEventListener('change', async (e) => {
+            const val = parseInt(e.target.value) || 30;
+            const currentSettings = await DataStore.getSettings() || {};
+            await DataStore.saveSettings({
+                ...currentSettings,
+                crm_contact_goal: val
+            });
+            this.loadGoal();
         });
     },
 
-    loadGoal() {
-        const saved = localStorage.getItem('crm_monthly_goal');
-        if (saved && this.dom.goalInput) this.dom.goalInput.value = saved;
+    async loadGoal() {
+        this.settings = await DataStore.getSettings() || { crm_monthly_goal: 0, crm_contact_goal: 30 };
         
-        const savedContact = localStorage.getItem('crm_contact_goal');
-        if (savedContact && this.dom.contactGoal) this.dom.contactGoal.value = savedContact;
+        if (this.dom.goalInput) {
+            this.dom.goalInput.value = this.settings.crm_monthly_goal || 0;
+        }
+        
+        if (this.dom.contactGoal) {
+            this.dom.contactGoal.value = this.settings.crm_contact_goal || 30;
+        }
+        
+        this.update();
     },
 
     update() {

@@ -227,27 +227,31 @@ const KanbanModule = {
         if (!container) return;
 
         const counts = {};
+        const values = {};
         this.COLUMNS.forEach(c => {
-            counts[c.id] = customers.filter(cust => this.getCardColumn(cust) === c.id).length;
+            const filtered = customers.filter(cust => this.getCardColumn(cust) === c.id);
+            counts[c.id] = filtered.length;
+            // Tenta somar valores se disponíveis (ex: de vendas recentes ou propostas estimadas)
+            values[c.id] = 0; // Por enquanto mantemos 0 ou placeholder se não houver campo de valor no customer
         });
 
         let html = '';
-        // Calcula taxas de conversão entre etapas (idx 0 a 4: Contato até Fechamento)
         this.COLUMNS.forEach((col, idx) => {
-            if (idx >= this.COLUMNS.length - 2) return; // Pula Pós-venda e Perdido nas taxas
+            if (idx >= this.COLUMNS.length - 1) return; // Pula Perdido 
             
             const current = counts[col.id];
             const nextCol = this.COLUMNS[idx+1];
-            const nextVal = counts[nextCol.id];
+            const nextVal = (nextCol && counts[nextCol.id]) || 0;
             const rate = current > 0 ? Math.round((nextVal / current) * 100) : 0;
-            const isBottleneck = current > 5 && rate < 25;
+            
+            const isBottleneck = current > 10 && rate < 20;
 
             html += `
-                <div class="panel" style="padding:0.8rem; text-align:center; border-top: 3px solid ${isBottleneck ? 'var(--danger)' : col.color}">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">${col.label}</div>
-                    <div style="font-size:1.2rem; font-weight:700;">${current}</div>
-                    <div style="font-size:0.75rem; color:${rate < 25 ? 'var(--danger)' : 'var(--accent)'}; font-weight:600;">
-                        ${rate}% conversão
+                <div class="panel" style="padding:0.8rem; text-align:center; border-top: 3px solid ${isBottleneck ? '#ef4444' : col.color}; background:rgba(255,255,255,0.02); border-radius:12px;">
+                    <div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.4rem;">${col.label}</div>
+                    <div style="font-size:1.3rem; font-weight:800; color:var(--text-main);">${current}</div>
+                    <div style="font-size:0.75rem; color:${rate < 25 ? '#ef4444' : '#10b981'}; font-weight:700; margin-top:0.3rem;">
+                        ${idx < this.COLUMNS.length - 2 ? `↘ ${rate}% conversão` : '🚩 Etapa Final'}
                     </div>
                 </div>
             `;

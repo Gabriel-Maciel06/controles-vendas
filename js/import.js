@@ -6,7 +6,8 @@ const ImportModule = {
         "FERNANDA": "fernanda"
     },
 
-    API_URL: "https://controles-vendas.onrender.com/api/import/facilita", // Produção
+    // A URL agora é derivada de API_BASE_URL
+    get API_URL() { return `${API_BASE_URL}/import/facilita`; },
 
     log(msg, color = "var(--text-muted)") {
         const container = document.getElementById("import-progress-container");
@@ -250,7 +251,7 @@ const ImportModule = {
                     try {
                         const res = await fetch(this.API_URL, {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
+                            headers: getAuthHeaders(),
                             body: JSON.stringify(currentBatch)
                         });
 

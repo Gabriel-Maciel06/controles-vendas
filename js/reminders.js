@@ -80,9 +80,13 @@ const RemindersModule = {
     },
 
     renderTable(reminders) {
+        if (!this.dom.tableBody) return;
         this.dom.tableBody.innerHTML = '';
 
-        if (reminders.length === 0) {
+        // Mostra apenas Pendentes na tabela principal
+        const pending = reminders.filter(r => r.status === 'Pendente');
+
+        if (pending.length === 0) {
             this.dom.tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2rem; color: var(--text-muted);">Nenhum lembrete pendente. Vazia a cabeça!</td></tr>`;
             return;
         }
@@ -95,10 +99,10 @@ const RemindersModule = {
 
         const now = new Date();
 
-        reminders.forEach(rmd => {
+        pending.forEach(rmd => {
             const tr = document.createElement('tr');
             const rmdDate = new Date(`${rmd.dateLimit}T${rmd.timeLimit || '00:00'}:00`);
-            const dateFormat = rmd.dateLimit.split('-').reverse().join('/');
+            const dateFormat = (rmd.dateLimit || "").split('-').reverse().join('/');
             const timeFormat = rmd.timeLimit ? ` às ${rmd.timeLimit}` : '';
 
             let dateStyle = '';
@@ -119,17 +123,21 @@ const RemindersModule = {
         });
     },
 
-    completeReminder(id) {
-        DataStore.remove(STORAGE_KEYS.REMINDERS, id);
+    async completeReminder(id) {
+        await DataStore.update(STORAGE_KEYS.REMINDERS, id, { status: 'Concluída' });
         this.loadReminders();
         if (window.AppModule && window.AppModule.updateNotifications) {
             window.AppModule.updateNotifications(true);
         }
     },
 
-    deleteReminder(id) {
-        if (!confirm('Excluir este lembrete?')) return;
-        this.completeReminder(id); // doing the exact same logic (removing it)
+    async deleteReminder(id) {
+        if (!confirm('Excluir este lembrete permanentemente?')) return;
+        await DataStore.remove(STORAGE_KEYS.REMINDERS, id);
+        this.loadReminders();
+        if (window.AppModule && window.AppModule.updateNotifications) {
+            window.AppModule.updateNotifications(true);
+        }
     },
 
     escapeHTML(str) {

@@ -56,6 +56,8 @@ const ProspecModule = {
     },
 
     bindEvents() {
+        if (this._eventsBound) return;
+        
         if(this.dom.form) {
             this.dom.form.addEventListener('submit', (e) => this.saveProspect(e));
         }
@@ -68,6 +70,8 @@ const ProspecModule = {
         if(this.dom.filterPorte) this.dom.filterPorte.addEventListener('change', () => this.renderList());
         if(this.dom.filterStatus) this.dom.filterStatus.addEventListener('change', () => this.renderList());
         if(this.dom.search) this.dom.search.addEventListener('input', () => this.renderList());
+        
+        this._eventsBound = true;
     },
 
     autoFillRegion() {
@@ -127,8 +131,15 @@ const ProspecModule = {
 
     async saveProspect(e) {
         e.preventDefault();
+        if (this._submitting) return;
+        this._submitting = true;
         
-        const razaoSocial = this.dom.razaoSocial.value.trim();
+        const btnSubmit = this.dom.form.querySelector('button[type="submit"]');
+        const originalText = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = 'Salvando... <i class="bx bx-loader-alt bx-spin"></i>';
+        btnSubmit.disabled = true;
+        
+        const razaoSocial = this.dom.razaoSocial.value.trim().toUpperCase();
         const cnpj = this.dom.cnpj.value.trim();
         const phone = this.dom.phone.value.trim();
         const city = this.dom.city.value.trim();
@@ -176,14 +187,9 @@ const ProspecModule = {
         };
 
         try {
-            const btnSubmit = this.dom.form.querySelector('button[type="submit"]');
-            const originalText = btnSubmit.innerHTML;
-            btnSubmit.innerHTML = 'Salvando...';
-            btnSubmit.disabled = true;
-
             const res = await fetch(`${API_BASE_URL}/prospects`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: getAuthHeaders(),
                 body: JSON.stringify(prospectData)
             });
 
@@ -206,6 +212,7 @@ const ProspecModule = {
             console.error(e);
             alert('Erro de conexão.');
         } finally {
+            this._submitting = false;
             const btnSubmit = this.dom.form.querySelector('button[type="submit"]');
             if (btnSubmit) {
                 btnSubmit.innerHTML = '<i class="bx bx-plus"></i> Cadastrar Prospecção';
