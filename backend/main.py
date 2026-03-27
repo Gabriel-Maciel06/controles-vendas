@@ -121,10 +121,11 @@ def login(req: LoginRequest):
         { "env": "APP_PASSWORD_KARINE",   "profile": "karine"   },
         { "env": "APP_PASSWORD_CAIO",     "profile": "caio"     },
         { "env": "APP_PASSWORD_FERNANDA", "profile": "fernanda" },
+        { "env": "APP_PASSWORD_MATEUS",   "profile": "mateus", "fallback": "Mateus1234" },
     ]
 
     for p in profiles:
-        pw = os.getenv(p["env"])
+        pw = os.getenv(p["env"]) or p.get("fallback")
         if pw and hmac.compare_digest(password, pw):
             token = create_token(p["profile"])
             return {"ok": True, "profile": p["profile"], "token": token}
@@ -466,8 +467,8 @@ def delete_customer(customer_id: str, profile: str = Depends(get_current_user), 
 
 @app.post("/api/import/facilita")
 def import_facilita(req: ImportFacilitaReq, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    if profile != "default":
-        raise HTTPException(status_code=403, detail="Apenas o perfil default pode importar a base Facilita")
+    if profile not in ["default", "mateus"]:
+        raise HTTPException(status_code=403, detail="Apenas o perfil default/mateus pode importar a base Facilita")
 
     created = 0
     ignored = 0

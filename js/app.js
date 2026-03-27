@@ -95,6 +95,7 @@ const AppModule = {
             'karine':   { name: 'Karine',    initials: 'KA', role: 'Comercial' },
             'caio':     { name: 'Caio',      initials: 'CA', role: 'Comercial' },
             'fernanda': { name: 'Fernanda',  initials: 'FE', role: 'Comercial' },
+            'mateus':   { name: 'Mateus',    initials: 'MT', role: 'Gerente'   },
         };
         const user     = profileData[profile] || profileData['default'];
         const avatarEl = document.querySelector('.avatar');
@@ -108,7 +109,7 @@ const AppModule = {
 
         const importNav = document.getElementById('nav-import');
         if (importNav) {
-            if (profile === 'default') importNav.classList.remove('hidden');
+            if (profile === 'default' || profile === 'mateus') importNav.classList.remove('hidden');
             else importNav.classList.add('hidden');
         }
 
