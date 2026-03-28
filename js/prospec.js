@@ -101,7 +101,9 @@ const ProspecModule = {
     async loadProspects() {
         try {
             const profile = sessionStorage.getItem('maciel_profile') || 'default';
-            const res = await fetch(`${API_BASE_URL}/prospects?profile=${profile}`);
+            const res = await fetch(`${API_BASE_URL}/prospects?profile=${profile}`, {
+                headers: getAuthHeaders()
+            });
             if(res.ok) {
                 this.prospects = await res.json();
                 this.updateFilters();
@@ -226,7 +228,8 @@ const ProspecModule = {
 
         try {
             const res = await fetch(`${API_BASE_URL}/prospects/${id}/send-to-crm`, {
-                method: 'POST'
+                method: 'POST',
+                headers: getAuthHeaders()
             });
 
             if(res.ok) {
@@ -260,7 +263,8 @@ const ProspecModule = {
 
         try {
             const res = await fetch(`${API_BASE_URL}/prospects/${id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: getAuthHeaders()
             });
 
             if(res.ok) {
