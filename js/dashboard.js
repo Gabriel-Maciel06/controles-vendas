@@ -112,6 +112,21 @@ const DashboardModule = {
             });
             this.loadGoal();
         });
+
+        const monthFilter = document.getElementById('global-month-filter');
+        if (monthFilter && !monthFilter._boundDash) {
+            if (!monthFilter.value) {
+                const initDate = new Date();
+                monthFilter.value = `${initDate.getFullYear()}-${String(initDate.getMonth()+1).padStart(2,'0')}`;
+            }
+            monthFilter.addEventListener('change', () => {
+                this.update();
+                if (window.SalesModule && typeof SalesModule.loadSales === 'function') {
+                    SalesModule.loadSales();
+                }
+            });
+            monthFilter._boundDash = true;
+        }
     },
 
     async loadGoal() {
@@ -134,7 +149,15 @@ const DashboardModule = {
         const samples   = DataStore.get(STORAGE_KEYS.SAMPLES)   || [];
         const reminders = DataStore.get(STORAGE_KEYS.REMINDERS) || [];
 
-        const now           = new Date();
+        const monthFilter = document.getElementById('global-month-filter');
+        let now;
+        if (monthFilter && monthFilter.value) {
+            const [y, m] = monthFilter.value.split('-');
+            now = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 15);
+        } else {
+            now = new Date();
+        }
+
         const curPrefix     = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
         const lastPrefix    = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth()+1).padStart(2,'0')}`;

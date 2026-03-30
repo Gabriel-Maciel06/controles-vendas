@@ -131,7 +131,11 @@
                     <h1 id="current-page-title">Painel de Vendas</h1>
                     <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 1rem;">v2.0-cloud</span>
                 </div>
-                <div class="topbar-actions">
+                <div class="topbar-actions" style="align-items: center;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-right: 1rem;">
+                        <span style="font-size:0.75rem; color:var(--text-muted);"><i class='bx bx-calendar'></i> Mês Vigente:</span>
+                        <input type="month" id="global-month-filter" style="padding:0.4rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:var(--text-main); font-size:0.85rem; outline:none; cursor:pointer;" title="Altere para visualizar métricas de outros meses">
+                    </div>
                     <div style="position: relative;">
                         <button id="btn-notifications" class="icon-btn"><i class='bx bx-bell'></i><span
                                 class="badge-dot" id="notif-dot"></span></button>

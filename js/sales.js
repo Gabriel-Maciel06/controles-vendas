@@ -211,7 +211,14 @@ const SalesModule = {
 
     updateKPIs(sales) {
         if (!Array.isArray(sales)) return;
-        const now = new Date();
+        const monthFilter = document.getElementById('global-month-filter');
+        let now;
+        if (monthFilter && monthFilter.value) {
+            const [y, m] = monthFilter.value.split('-');
+            now = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 15);
+        } else {
+            now = new Date();
+        }
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
 
