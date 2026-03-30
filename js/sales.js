@@ -11,22 +11,27 @@ const SalesModule = {
 
     _pegaMesEAno(dateStr) {
         if (!dateStr) return {y: -1, m: -1, time: 0};
-        dateStr = dateStr.split('T')[0];
-        let y, m;
-        const delim = dateStr.includes('/') ? '/' : '-';
-        const parts = dateStr.split(delim);
-        if (parts.length >= 3) {
-            if (parts[0].length === 4) { y = parseInt(parts[0], 10); m = parseInt(parts[1], 10) - 1; }
-            else if (parts[2].length === 4) { y = parseInt(parts[2], 10); m = parseInt(parts[1], 10) - 1; }
+        try {
+            dateStr = String(dateStr).split('T')[0];
+            let y, m;
+            const delim = dateStr.includes('/') ? '/' : '-';
+            const parts = dateStr.split(delim);
+            if (parts.length >= 3) {
+                if (parts[0].length === 4) { y = parseInt(parts[0], 10); m = parseInt(parts[1], 10) - 1; }
+                else if (parts[2].length === 4) { y = parseInt(parts[2], 10); m = parseInt(parts[1], 10) - 1; }
+            }
+            let time = 0;
+            let d = new Date(dateStr + (dateStr.length <= 10 ? 'T00:00:00' : ''));
+            if (isNaN(d.getTime())) d = new Date(dateStr); 
+            if (!isNaN(d.getTime())) {
+                if (y === undefined) { y = d.getFullYear(); m = d.getMonth(); }
+                time = d.getTime();
+            }
+            return { y, m, time };
+        } catch (e) {
+            console.error("Data Parse Crash na venda", e);
+            return {y: -1, m: -1, time: 0};
         }
-        let time = 0;
-        let d = new Date(dateStr + (dateStr.length <= 10 ? 'T00:00:00' : ''));
-        if (isNaN(d)) d = new Date(dateStr); // fallback global
-        if (!isNaN(d)) {
-            if (y === undefined) { y = d.getFullYear(); m = d.getMonth(); }
-            time = d.getTime();
-        }
-        return { y, m, time };
     },
 
     getFixedRules() {
@@ -193,7 +198,10 @@ const SalesModule = {
             return dt.y === currentYear && dt.m === currentMonth;
         });
 
-        this.renderTable(filteredSales);
+        // Retornamos a Tabela Listando do GERAL (sem filtro), pra que o usuário acesse o histórico livremente sem "apagar" o que não é do mês selecionado
+        this.renderTable(allSales);
+
+        // Apenas KPIs calculadas sobre as Filtradas (Mês Selecionado)
         this.updateKPIs(filteredSales);
         this.updateCustomerDatalist();
     },
