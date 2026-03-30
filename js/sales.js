@@ -9,6 +9,26 @@ const SalesModule = {
         VARIABLE_PCT: 0.01 // 1%
     },
 
+    _pegaMesEAno(dateStr) {
+        if (!dateStr) return {y: -1, m: -1, time: 0};
+        dateStr = dateStr.split('T')[0];
+        let y, m;
+        const delim = dateStr.includes('/') ? '/' : '-';
+        const parts = dateStr.split(delim);
+        if (parts.length >= 3) {
+            if (parts[0].length === 4) { y = parseInt(parts[0], 10); m = parseInt(parts[1], 10) - 1; }
+            else if (parts[2].length === 4) { y = parseInt(parts[2], 10); m = parseInt(parts[1], 10) - 1; }
+        }
+        let time = 0;
+        let d = new Date(dateStr + (dateStr.length <= 10 ? 'T00:00:00' : ''));
+        if (isNaN(d)) d = new Date(dateStr); // fallback global
+        if (!isNaN(d)) {
+            if (y === undefined) { y = d.getFullYear(); m = d.getMonth(); }
+            time = d.getTime();
+        }
+        return { y, m, time };
+    },
+
     getFixedRules() {
         const settings = DataStore.get('crm_settings') || {};
         return {
@@ -156,11 +176,25 @@ const SalesModule = {
     loadSales() {
         const allSales = DataStore.get(STORAGE_KEYS.SALES) || [];
         
-        // Mantemos a tabela listando os lançamentos recentes geral (base não-filtrada), p/ UX de acesso rápido a vendas antigas
-        this.renderTable(allSales);
-        
-        // As KPIs utilizam as vendas totais com filtro interno por Data (conforme Month Filter)
-        this.updateKPIs(allSales);
+        const monthFilter = document.getElementById('global-month-filter');
+        let currentYear, currentMonth;
+        if (monthFilter && monthFilter.value) {
+            const [y, m] = monthFilter.value.split('-');
+            currentYear = parseInt(y, 10);
+            currentMonth = parseInt(m, 10) - 1;
+        } else {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+        }
+
+        const filteredSales = allSales.filter(s => {
+            const dt = this._pegaMesEAno(s.saleDate);
+            return dt.y === currentYear && dt.m === currentMonth;
+        });
+
+        this.renderTable(filteredSales);
+        this.updateKPIs(filteredSales);
         this.updateCustomerDatalist();
     },
 
@@ -177,11 +211,15 @@ const SalesModule = {
     renderTable(sales) {
         this.dom.tableBody.innerHTML = '';
         if (sales.length === 0) {
-            this.dom.tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Nenhuma venda registrada ainda.</td></tr>`;
+            this.dom.tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Nenhuma venda registrada no mês.</td></tr>`;
             return;
         }
 
-        const recent = [...sales].sort((a,b) => b.saleDate.localeCompare(a.saleDate)).slice(0, 50);
+        const recent = [...sales].sort((a,b) => {
+            const tA = this._pegaMesEAno(a.saleDate).time;
+            const tB = this._pegaMesEAno(b.saleDate).time;
+            return tB - tA;
+        }).slice(0, 50);
         const typeMapping = {
             "Google": '<span class="badge badge-primary">Google</span>',
             "Reativacao": '<span class="badge badge-accent">Reativação</span>',
@@ -215,48 +253,13 @@ const SalesModule = {
 
     updateKPIs(sales) {
         if (!Array.isArray(sales)) return;
-        const monthFilter = document.getElementById('global-month-filter');
-        
-        let currentYear, currentMonth;
-        if (monthFilter && monthFilter.value) {
-            const [y, m] = monthFilter.value.split('-');
-            currentYear = parseInt(y, 10);
-            currentMonth = parseInt(m, 10) - 1; // getMonth() is zero-indexed
-        } else {
-            const now = new Date();
-            currentYear = now.getFullYear();
-            currentMonth = now.getMonth();
-        }
-
         let stats = { google: 0, reativacao: 0, introducao: 0, totalCommission: 0 };
 
         sales.forEach(sale => {
-            let dateStr = (sale.saleDate || "").split('T')[0];
-            if (dateStr) {
-                // Tenta extrair manualmente e via Date para cobrir todos formatos passados da base
-                let y, m;
-                const delim = dateStr.includes('/') ? '/' : '-';
-                const parts = dateStr.split(delim);
-                if (parts.length >= 3) {
-                    if (parts[0].length === 4) { y = parseInt(parts[0], 10); m = parseInt(parts[1], 10) - 1; }
-                    else if (parts[2].length === 4) { y = parseInt(parts[2], 10); m = parseInt(parts[1], 10) - 1; }
-                }
-
-                if (y === undefined) {
-                    const d = new Date(dateStr + (dateStr.length <= 10 ? 'T00:00:00' : ''));
-                    if (!isNaN(d)) {
-                        y = d.getFullYear();
-                        m = d.getMonth();
-                    }
-                }
-
-                if (y === currentYear && m === currentMonth) {
-                    if (sale.type === "Google") stats.google++;
-                    if (sale.type === "Reativacao") stats.reativacao++;
-                    if (sale.type === "Introducao") stats.introducao++;
-                    stats.totalCommission += parseFloat(sale.commission || 0);
-                }
-            }
+            if (sale.type === "Google") stats.google++;
+            if (sale.type === "Reativacao") stats.reativacao++;
+            if (sale.type === "Introducao") stats.introducao++;
+            stats.totalCommission += parseFloat(sale.commission || 0);
         });
 
         if (this.dom.kpiGoogle) this.dom.kpiGoogle.innerText = stats.google;
