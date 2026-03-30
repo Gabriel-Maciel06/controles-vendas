@@ -115,11 +115,26 @@ const DashboardModule = {
 
         const monthFilter = document.getElementById('global-month-filter');
         if (monthFilter && !monthFilter._boundDash) {
-            if (!monthFilter.value) {
+            const savedMonth = localStorage.getItem('crm_current_month');
+            if (savedMonth) {
+                monthFilter.value = savedMonth;
+            } else if (!monthFilter.value) {
                 const initDate = new Date();
-                monthFilter.value = `${initDate.getFullYear()}-${String(initDate.getMonth()+1).padStart(2,'0')}`;
+                // Especial a pedido: Se for Março 2026, adianta para Abril.
+                if (initDate.getMonth() === 2 && initDate.getFullYear() === 2026) {
+                    monthFilter.value = '2026-04';
+                } else {
+                    monthFilter.value = `${initDate.getFullYear()}-${String(initDate.getMonth()+1).padStart(2,'0')}`;
+                }
             }
+            
+            // Força a salvar a visualização se for 2026-04 no inicio a pedido dele
+            if (monthFilter.value === '2026-04') {
+                localStorage.setItem('crm_current_month', '2026-04');
+            }
+
             monthFilter.addEventListener('change', () => {
+                localStorage.setItem('crm_current_month', monthFilter.value);
                 this.update();
                 if (window.SalesModule && typeof SalesModule.loadSales === 'function') {
                     SalesModule.loadSales();

@@ -193,13 +193,8 @@ const SalesModule = {
             currentMonth = now.getMonth();
         }
 
-        const filteredSales = allSales.filter(s => {
-            const dt = this._pegaMesEAno(s.saleDate);
-            return dt.y === currentYear && dt.m === currentMonth;
-        });
-
-        // Retornamos a Tabela Listando do GERAL (sem filtro), pra que o usuário acesse o histórico livremente sem "apagar" o que não é do mês selecionado
-        this.renderTable(allSales);
+        // O usuário solicitou que a Tabela filtre e mostre apenas AS VENDAS DAQUELE MÊS também (ao invés de base global baguncada).
+        this.renderTable(filteredSales);
 
         // Apenas KPIs calculadas sobre as Filtradas (Mês Selecionado)
         this.updateKPIs(filteredSales);
