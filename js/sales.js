@@ -155,7 +155,19 @@ const SalesModule = {
 
     loadSales() {
         const allSales = DataStore.get(STORAGE_KEYS.SALES) || [];
-        this.renderTable(allSales);
+        
+        const monthFilter = document.getElementById('global-month-filter');
+        let filteredSales = [...allSales];
+        
+        if (monthFilter && monthFilter.value) {
+            const prefix = monthFilter.value; // "YYYY-MM"
+            filteredSales = allSales.filter(s => s.saleDate && s.saleDate.startsWith(prefix));
+        }
+
+        // Tabela limpa e filtrada para o mês que o usuário escolher no dashboard
+        this.renderTable(filteredSales);
+        
+        // As KPIs também utilizam as vendas totais com filtro interno, vou passar allSales
         this.updateKPIs(allSales);
         this.updateCustomerDatalist();
     },
@@ -212,28 +224,23 @@ const SalesModule = {
     updateKPIs(sales) {
         if (!Array.isArray(sales)) return;
         const monthFilter = document.getElementById('global-month-filter');
-        let now;
+        
+        let prefix = "";
         if (monthFilter && monthFilter.value) {
-            const [y, m] = monthFilter.value.split('-');
-            now = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 15);
+            prefix = monthFilter.value; // "YYYY-MM"
         } else {
-            now = new Date();
+            const now = new Date();
+            prefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         }
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
 
         let stats = { google: 0, reativacao: 0, introducao: 0, totalCommission: 0 };
 
         sales.forEach(sale => {
-            let dateStr = (sale.saleDate || "").split('T')[0];
-            if (dateStr) {
-                const saleDate = new Date(dateStr + 'T00:00:00');
-                if (saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-                    if (sale.type === "Google") stats.google++;
-                    if (sale.type === "Reativacao") stats.reativacao++;
-                    if (sale.type === "Introducao") stats.introducao++;
-                    stats.totalCommission += parseFloat(sale.commission || 0);
-                }
+            if (sale.saleDate && sale.saleDate.startsWith(prefix)) {
+                if (sale.type === "Google") stats.google++;
+                if (sale.type === "Reativacao") stats.reativacao++;
+                if (sale.type === "Introducao") stats.introducao++;
+                stats.totalCommission += parseFloat(sale.commission || 0);
             }
         });
 
