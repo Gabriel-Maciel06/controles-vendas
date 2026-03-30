@@ -193,6 +193,11 @@ const SalesModule = {
             currentMonth = now.getMonth();
         }
 
+        const filteredSales = allSales.filter(s => {
+            const dt = this._pegaMesEAno(s.saleDate);
+            return dt.y === currentYear && dt.m === currentMonth;
+        });
+
         // O usuário solicitou que a Tabela filtre e mostre apenas AS VENDAS DAQUELE MÊS também (ao invés de base global baguncada).
         this.renderTable(filteredSales);
 
