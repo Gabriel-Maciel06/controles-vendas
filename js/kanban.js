@@ -28,10 +28,19 @@ const KanbanModule = {
         if (!board) return;
 
         const filterOrigin = document.getElementById('kanban-filter-origin')?.value || '';
+        const searchQuery  = (document.getElementById('kanban-search')?.value || '').trim().toLowerCase();
         let customers = this.getLatestCustomers();
 
         if (filterOrigin) {
             customers = customers.filter(c => c.origin === filterOrigin);
+        }
+
+        if (searchQuery) {
+            customers = customers.filter(c => {
+                const name = (c.name || c.client || '').toLowerCase();
+                const company = (c.company || '').toLowerCase();
+                return name.includes(searchQuery) || company.includes(searchQuery);
+            });
         }
 
         // Renderiza Métricas antes de montar as colunas
