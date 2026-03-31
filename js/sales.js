@@ -178,9 +178,27 @@ const SalesModule = {
         this.dom.fatInput.value = today;
     },
 
-    loadSales() {
-        const allSales = DataStore.get(STORAGE_KEYS.SALES) || [];
-        
+    async loadSales() {
+        // Busca fresca da API para garantir dados atualizados
+        let allSales = DataStore.get(STORAGE_KEYS.SALES) || [];
+
+        // Se o cache está vazio, vai buscar direto na API
+        if (allSales.length === 0) {
+            try {
+                const profile = sessionStorage.getItem('maciel_profile') || 'default';
+                const res = await fetch(`${API_BASE_URL}/sales?profile=${profile}`, {
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    allSales = await res.json();
+                    // Atualiza cache local também
+                    DataStore.cache.crm_sales = allSales;
+                }
+            } catch (e) {
+                console.error('Erro ao buscar vendas da API:', e);
+            }
+        }
+
         const monthFilter = document.getElementById('global-month-filter');
         let currentYear, currentMonth;
         if (monthFilter && monthFilter.value) {
@@ -193,15 +211,16 @@ const SalesModule = {
             currentMonth = now.getMonth();
         }
 
+        console.log(`[SalesModule] Total vendas: ${allSales.length}, Filtrando: ${currentYear}-${currentMonth + 1}`);
+
         const filteredSales = allSales.filter(s => {
             const dt = this._pegaMesEAno(s.saleDate);
             return dt.y === currentYear && dt.m === currentMonth;
         });
 
-        // O usuário solicitou que a Tabela filtre e mostre apenas AS VENDAS DAQUELE MÊS também (ao invés de base global baguncada).
-        this.renderTable(filteredSales);
+        console.log(`[SalesModule] Vendas filtradas para o mês: ${filteredSales.length}`);
 
-        // Apenas KPIs calculadas sobre as Filtradas (Mês Selecionado)
+        this.renderTable(filteredSales);
         this.updateKPIs(filteredSales);
         this.updateCustomerDatalist();
     },

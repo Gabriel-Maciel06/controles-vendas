@@ -9,6 +9,15 @@ window.Utils = {
 
 const AppModule = {
     init() {
+        // Limpa preferência de mês salva anteriormente para garantir mês atual do sistema
+        const savedMonth = localStorage.getItem('crm_current_month');
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        // Se o mês salvo for diferente do mês atual, reseta para o atual
+        if (savedMonth && savedMonth !== currentMonthStr) {
+            localStorage.removeItem('crm_current_month');
+        }
+
         this.checkAuth();
         // Start cloud data sync
         DataStore.init();
