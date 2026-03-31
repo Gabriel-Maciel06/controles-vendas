@@ -27,6 +27,54 @@ function getAuthHeaders() {
     };
 }
 
+// Faz fetch com re-autenticação automática se o token expirar (servidor Render reiniciou)
+async function fetchWithAuth(url, options = {}) {
+    options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
+    let res = await fetch(url, options);
+
+    if (res.status === 401) {
+        // Token expirado — tenta renovar fazendo login novamente
+        const renewed = await renewToken();
+        if (renewed) {
+            // Atualiza o header com o novo token e repete
+            options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
+            res = await fetch(url, options);
+        }
+    }
+    return res;
+}
+
+async function renewToken() {
+    // Não temos a senha em memória por segurança, então recarregamos a página para que o usuário faça login
+    // Mas isso interrompe o fluxo — melhor estratégia: guardar senha hasheada em sessionStorage durante login
+    const cachedPass = sessionStorage.getItem('_maciel_session_key');
+    if (!cachedPass) {
+        console.warn('Token expirado e sem senha em cache. Redirecionando para login...');
+        sessionStorage.removeItem('maciel_auth');
+        sessionStorage.removeItem('maciel_token');
+        location.reload();
+        return false;
+    }
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: cachedPass })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            sessionStorage.setItem('maciel_token', data.token || '');
+            sessionStorage.setItem('maciel_profile', data.profile || 'default');
+            console.log('[Auth] Token renovado automaticamente com sucesso!');
+            return true;
+        }
+    } catch (e) {
+        console.error('[Auth] Falha ao renovar token:', e);
+    }
+    return false;
+}
+
 const DataStore = {
     cache: {
         crm_sales: [],
@@ -51,13 +99,12 @@ const DataStore = {
         this.isReady = false;
 
         try {
-            const headers = getAuthHeaders();
             const [salesRes, customersRes, samplesRes, settingsRes, remindersRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/sales?profile=${profile}`, { headers }),
-                fetch(`${API_BASE_URL}/customers?profile=${profile}`, { headers }),
-                fetch(`${API_BASE_URL}/samples?profile=${profile}`, { headers }),
-                fetch(`${API_BASE_URL}/settings?profile=${profile}`, { headers }),
-                fetch(`${API_BASE_URL}/reminders?profile=${profile}`, { headers })
+                fetchWithAuth(`${API_BASE_URL}/sales?profile=${profile}`),
+                fetchWithAuth(`${API_BASE_URL}/customers?profile=${profile}`),
+                fetchWithAuth(`${API_BASE_URL}/samples?profile=${profile}`),
+                fetchWithAuth(`${API_BASE_URL}/settings?profile=${profile}`),
+                fetchWithAuth(`${API_BASE_URL}/reminders?profile=${profile}`)
             ]);
 
             this.cache.crm_sales = await salesRes.json();
@@ -82,9 +129,8 @@ const DataStore = {
         if (key === STORAGE_KEYS.SETTINGS) {
             const profile = sessionStorage.getItem('maciel_profile') || 'default';
             try {
-                await fetch(`${API_BASE_URL}/settings?profile=${profile}`, {
+                await fetchWithAuth(`${API_BASE_URL}/settings?profile=${profile}`, {
                     method: 'POST',
-                    headers: getAuthHeaders(),
                     body: JSON.stringify(data)
                 });
             } catch (e) { console.error("API error", e); }
@@ -110,9 +156,8 @@ const DataStore = {
         }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/${endpoint}`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/${endpoint}`, {
                 method: 'POST',
-                headers: getAuthHeaders(),
                 body: JSON.stringify(record)
             });
 
@@ -145,9 +190,8 @@ const DataStore = {
         }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/${endpoint}/${id}`, {
                 method: 'PUT',
-                headers: getAuthHeaders(),
                 body: JSON.stringify(data)
             });
 
@@ -170,9 +214,8 @@ const DataStore = {
         }
 
         try {
-            const res = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
+            const res = await fetchWithAuth(`${API_BASE_URL}/${endpoint}/${id}`, {
+                method: 'DELETE'
             });
             if (!res.ok) throw new Error(`Erro no servidor: ${res.status}`);
             return true;
@@ -185,9 +228,7 @@ const DataStore = {
 
     async getSettings() {
         try {
-            const res = await fetch(`${API_BASE_URL}/settings`, {
-                headers: getAuthHeaders()
-            });
+            const res = await fetchWithAuth(`${API_BASE_URL}/settings`);
             if (!res.ok) throw new Error(`Erro ao buscar settings: ${res.status}`);
             return await res.json();
         } catch (error) {
@@ -198,9 +239,8 @@ const DataStore = {
 
     async saveSettings(data) {
         try {
-            const res = await fetch(`${API_BASE_URL}/settings`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/settings`, {
                 method: 'POST',
-                headers: getAuthHeaders(),
                 body: JSON.stringify(data)
             });
             if (!res.ok) throw new Error(`Erro ao salvar settings: ${res.status}`);

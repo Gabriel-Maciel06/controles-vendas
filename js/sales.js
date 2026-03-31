@@ -186,9 +186,7 @@ const SalesModule = {
         if (allSales.length === 0) {
             try {
                 const profile = sessionStorage.getItem('maciel_profile') || 'default';
-                const res = await fetch(`${API_BASE_URL}/sales?profile=${profile}`, {
-                    headers: getAuthHeaders()
-                });
+                const res = await fetchWithAuth(`${API_BASE_URL}/sales?profile=${profile}`);
                 if (res.ok) {
                     allSales = await res.json();
                     // Atualiza cache local também

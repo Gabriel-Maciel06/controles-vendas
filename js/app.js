@@ -73,6 +73,7 @@ const AppModule = {
                     sessionStorage.setItem('maciel_auth',    'true');
                     sessionStorage.setItem('maciel_profile', data.profile || 'default');
                     sessionStorage.setItem('maciel_token',   data.token   || '');
+                    sessionStorage.setItem('_maciel_session_key', pass); // Permite renovação automática de token
                     overlay.style.display = 'none';
                     this.applyProfileTheme();
                     // Recarrega os dados do perfil correto, limpando cache do perfil anterior
