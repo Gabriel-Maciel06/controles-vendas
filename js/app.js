@@ -9,18 +9,8 @@ window.Utils = {
 
 const AppModule = {
     init() {
-        // Limpa preferência de mês salva anteriormente para garantir mês atual do sistema
-        const savedMonth = localStorage.getItem('crm_current_month');
-        const now = new Date();
-        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        // Se o mês salvo for diferente do mês atual, reseta para o atual
-        if (savedMonth && savedMonth !== currentMonthStr) {
-            localStorage.removeItem('crm_current_month');
-        }
-
         this.checkAuth();
-        // Start cloud data sync
-        DataStore.init();
+        // DataStore.init() é chamado dentro do checkAuth() após autenticação bem-sucedida
     },
 
     onDataReady() {
@@ -46,10 +36,11 @@ const AppModule = {
         const errorMsg  = document.getElementById('login-error');
         const btnSubmit = form?.querySelector('button[type="submit"]');
 
-        // Já autenticado nesta sessão
+        // Já autenticado nesta sessão — carrega dados direto
         if (sessionStorage.getItem('maciel_auth') === 'true') {
             overlay.style.display = 'none';
             this.applyProfileTheme();
+            DataStore.init(); // Token ainda válido na sessão — carrega dados
             return;
         }
 

@@ -27,52 +27,50 @@ function getAuthHeaders() {
     };
 }
 
-// Faz fetch com re-autenticação automática se o token expirar (servidor Render reiniciou)
+/**
+ * Faz fetch autenticado. Se receber 401 E o usuário já estiver logado,
+ * tenta renovar o token silenciosamente e repete a requisição.
+ * NÃO é chamado durante o próprio processo de login.
+ */
 async function fetchWithAuth(url, options = {}) {
     options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
     let res = await fetch(url, options);
 
-    if (res.status === 401) {
-        // Token expirado — tenta renovar fazendo login novamente
-        const renewed = await renewToken();
-        if (renewed) {
-            // Atualiza o header com o novo token e repete
-            options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
-            res = await fetch(url, options);
+    // Só tenta renovar se o usuário já estava autenticado (token expirou)
+    if (res.status === 401 && sessionStorage.getItem('maciel_auth') === 'true') {
+        const cachedPass = sessionStorage.getItem('_maciel_session_key');
+
+        if (cachedPass) {
+            try {
+                const loginRes = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: cachedPass })
+                });
+
+                if (loginRes.ok) {
+                    const data = await loginRes.json();
+                    sessionStorage.setItem('maciel_token', data.token || '');
+                    sessionStorage.setItem('maciel_profile', data.profile || 'default');
+                    console.log('[Auth] Token renovado automaticamente!');
+
+                    // Repete a requisição original com novo token
+                    options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
+                    res = await fetch(url, options);
+                }
+            } catch (e) {
+                console.error('[Auth] Falha ao renovar token:', e);
+            }
+        } else {
+            // Sem senha em cache — força login novamente
+            console.warn('[Auth] Token expirado, redirecionando para login...');
+            sessionStorage.removeItem('maciel_auth');
+            sessionStorage.removeItem('maciel_token');
+            location.reload();
         }
     }
+
     return res;
-}
-
-async function renewToken() {
-    // Não temos a senha em memória por segurança, então recarregamos a página para que o usuário faça login
-    // Mas isso interrompe o fluxo — melhor estratégia: guardar senha hasheada em sessionStorage durante login
-    const cachedPass = sessionStorage.getItem('_maciel_session_key');
-    if (!cachedPass) {
-        console.warn('Token expirado e sem senha em cache. Redirecionando para login...');
-        sessionStorage.removeItem('maciel_auth');
-        sessionStorage.removeItem('maciel_token');
-        location.reload();
-        return false;
-    }
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: cachedPass })
-        });
-        if (res.ok) {
-            const data = await res.json();
-            sessionStorage.setItem('maciel_token', data.token || '');
-            sessionStorage.setItem('maciel_profile', data.profile || 'default');
-            console.log('[Auth] Token renovado automaticamente com sucesso!');
-            return true;
-        }
-    } catch (e) {
-        console.error('[Auth] Falha ao renovar token:', e);
-    }
-    return false;
 }
 
 const DataStore = {
@@ -88,7 +86,7 @@ const DataStore = {
     async init() {
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
 
-        // Limpa cache antes de carregar — garante que dados do perfil anterior não apareçam
+        // Limpa cache antes de carregar
         this.cache = {
             crm_sales:     [],
             crm_customers: [],
@@ -107,11 +105,13 @@ const DataStore = {
                 fetchWithAuth(`${API_BASE_URL}/reminders?profile=${profile}`)
             ]);
 
-            this.cache.crm_sales = await salesRes.json();
-            this.cache.crm_customers = await customersRes.json();
-            this.cache.crm_samples = await samplesRes.json();
-            this.cache.crm_settings = await settingsRes.json();
-            this.cache.crm_reminders = await remindersRes.json();
+            if (salesRes.ok)    this.cache.crm_sales     = await salesRes.json();
+            if (customersRes.ok) this.cache.crm_customers = await customersRes.json();
+            if (samplesRes.ok)  this.cache.crm_samples    = await samplesRes.json();
+            if (settingsRes.ok) this.cache.crm_settings   = await settingsRes.json();
+            if (remindersRes.ok) this.cache.crm_reminders = await remindersRes.json();
+
+            console.log(`[DataStore] Carregado: ${this.cache.crm_sales.length} vendas, ${this.cache.crm_customers.length} clientes`);
 
             this.isReady = true;
             document.dispatchEvent(new Event('DataStoreReady'));
@@ -125,7 +125,6 @@ const DataStore = {
 
     async set(key, data) {
         this.cache[key] = data;
-        // Só dispara API se for as configurações
         if (key === STORAGE_KEYS.SETTINGS) {
             const profile = sessionStorage.getItem('maciel_profile') || 'default';
             try {
@@ -143,14 +142,12 @@ const DataStore = {
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
         record.profile = profile;
 
-        // Injetar timestamps exigidos pelo Backend
         const now = new Date().toISOString();
         if (!record.createdAt) record.createdAt = now;
         if (!record.updatedAt) record.updatedAt = now;
 
         const endpoint = STORAGE_MAP[key];
 
-        // Atualizar cache local primeiro (Otimista)
         if (Array.isArray(this.cache[key])) {
             this.cache[key].push(record);
         }
@@ -181,7 +178,6 @@ const DataStore = {
         data.updatedAt = now;
         data.profile = sessionStorage.getItem('maciel_profile') || 'default';
 
-        // Atualizar cache local
         if (Array.isArray(this.cache[key])) {
             const index = this.cache[key].findIndex(item => String(item.id) === String(id));
             if (index !== -1) {
@@ -208,7 +204,6 @@ const DataStore = {
     async remove(key, id) {
         const endpoint = STORAGE_MAP[key];
 
-        // Remover do cache local primeiro
         if (Array.isArray(this.cache[key])) {
             this.cache[key] = this.cache[key].filter(item => String(item.id) !== String(id));
         }
@@ -255,3 +250,5 @@ const DataStore = {
 window.DataStore = DataStore;
 window.STORAGE_KEYS = STORAGE_KEYS;
 window.STORAGE_MAP = STORAGE_MAP;
+window.fetchWithAuth = fetchWithAuth;
+window.getAuthHeaders = getAuthHeaders;
