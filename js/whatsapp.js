@@ -1,86 +1,41 @@
 /**
- * WhatsApp Integration Module
- * Abre conversas via wa.me — 100% gratuito, sem API
+ * WhatsApp Integration Module - Versão Agente Inteligente (Isapel AI)
+ * Integração Real com Evolution API + Histórico no CRM
  */
 
 const WhatsAppModule = {
-
-    // ── Templates de mensagem por situação ──
     TEMPLATES: [
-        {
-            id: 'followup',
-            label: '📞 Follow-up geral',
-            text: `Olá {nome}, tudo bem? Passando para dar um oi e ver se posso te ajudar com alguma coisa. Alguma novidade por aí?`
-        },
-        {
-            id: 'apresentacao',
-            label: '👋 Primeira apresentação',
-            text: `Olá {nome}! Meu nome é Maciel, trabalho com {produto}. Vi que vocês podem se interessar pelo nosso portfólio. Posso te apresentar rapidinho?`
-        },
-        {
-            id: 'proposta',
-            label: '📋 Enviar proposta',
-            text: `Olá {nome}! Conforme conversamos, segue nossa proposta. Qualquer dúvida estou à disposição. Podemos fechar essa semana?`
-        },
-        {
-            id: 'reativacao',
-            label: '🔄 Reativar cliente',
-            text: `Olá {nome}, tudo bem? Faz um tempinho que não nos falamos. Temos novidades no portfólio que acho que vão te interessar. Posso te contar?`
-        },
-        {
-            id: 'amostra',
-            label: '📦 Cobrar amostra',
-            text: `Olá {nome}! Passando para saber como ficou a amostra que enviamos. O que achou? Podemos conversar sobre um pedido?`
-        },
-        {
-            id: 'obrigado',
-            label: '✅ Pós-venda',
-            text: `Olá {nome}! Obrigado pela confiança e pelo pedido. Qualquer coisa que precisar pode me chamar. Foi um prazer!`
-        },
-        {
-            id: 'custom',
-            label: '✏️ Personalizada',
-            text: ``
-        },
+        { id: 'followup', label: '📞 Follow-up', text: `Olá {nome}, tudo bem? Passando para dar um oi e ver se posso te ajudar com alguma coisa. Alguma novidade por aí?` },
+        { id: 'proposta', label: '📋 Proposta', text: `Olá {nome}! Conforme conversamos, segue nossa proposta. Qualquer dúvida estou à disposição. Podemos fechar essa semana?` },
+        { id: 'reativacao', label: '🔄 Reativar', text: `Olá {nome}, tudo bem? Faz um tempinho que não nos falamos. Temos novidades no portfólio que acho que vão te interessar. Posso te contar?` },
+        { id: 'obrigado', label: '✅ Pós-venda', text: `Olá {nome}! Obrigado pela confiança e pelo pedido. Foi um prazer!` },
+        { id: 'custom', label: '✏️ Personalizada', text: `` },
     ],
 
-    // Registro do cliente atual aberto no compositor
     _currentClient: null,
+    _isGenerating: false,
 
-    // ── Abre compositor de mensagem ──
-    openComposer(clientId) {
-        const all    = DataStore.get(STORAGE_KEYS.CUSTOMERS);
+    async openComposer(clientId) {
+        const all = DataStore.get(STORAGE_KEYS.CUSTOMERS);
         const record = all.find(c => String(c.id) === String(clientId));
         if (!record) return;
 
         this._currentClient = record;
+        const name = record.name || record.client || '';
+        const phone = record.phone || '';
 
-        const name    = record.name || record.client || '';
-        const phone   = record.phone || '';
-        const produto = record.products || 'nossos produtos';
+        // UI Setup
+        document.getElementById('wapp-client-name').innerText = name;
+        document.getElementById('wapp-client-phone').innerText = phone || 'Sem telefone';
+        document.getElementById('wapp-client-id').value = clientId;
+        document.getElementById('wapp-phone-input').value = this.cleanPhone(phone);
+        document.getElementById('wapp-message').value = '';
 
-        // Preenche dados no modal
-        const nameEl     = document.getElementById('wapp-client-name');
-        const phoneEl    = document.getElementById('wapp-client-phone');
-        const idInput    = document.getElementById('wapp-client-id');
-        const phoneInput = document.getElementById('wapp-phone-input');
-
-        if (nameEl)     nameEl.innerText   = name;
-        if (phoneEl)    phoneEl.innerText  = phone || 'Sem telefone';
-        if (idInput)    idInput.value      = clientId;
-        if (phoneInput) phoneInput.value   = this.cleanPhone(phone);
-
-        // Aviso se não tem telefone
-        const alertEl = document.getElementById('wapp-no-phone-alert');
-        if (alertEl) alertEl.style.display = phone ? 'none' : 'block';
-
-        // Renderiza templates com as variáveis do cliente
-        this.renderTemplates(name, produto);
-
-        // Seleciona o primeiro template por padrão
-        this.selectTemplate('followup', name, produto);
-
+        this.renderTemplates(name);
         document.getElementById('wapp-modal')?.classList.remove('hidden');
+
+        // Carrega Histórico Real
+        await this.loadMessages(this.cleanPhone(phone));
     },
 
     closeComposer() {
@@ -88,164 +43,163 @@ const WhatsAppModule = {
         this._currentClient = null;
     },
 
-    // ── Renderiza botões de template ──
-    renderTemplates(clientName, produto) {
+    // ── Carrega mensagens do Backend ──
+    async loadMessages(phone) {
+        const container = document.getElementById('wapp-chat-container');
+        if (!container) return;
+
+        const jid = `${phone}@s.whatsapp.net`;
+        const token = sessionStorage.getItem('maciel_token');
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/whatsapp/messages/${jid}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error('Erro ao carregar mensagens');
+
+            const messages = await res.json();
+            this.renderChat(messages);
+        } catch (err) {
+            container.innerHTML = `<div style="text-align:center; color:#ef4444; font-size:0.75rem; padding:1rem;">⚠️ Erro ao carregar histórico: ${err.message}</div>`;
+        }
+    },
+
+    renderChat(messages) {
+        const container = document.getElementById('wapp-chat-container');
+        if (!container) return;
+
+        if (messages.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.75rem; padding:2rem 0;">Nenhuma conversa recente encontrada no banco.</div>`;
+            return;
+        }
+
+        container.innerHTML = messages.map(m => `
+            <div class="chat-bubble ${m.fromMe ? 'me' : 'client'}">
+                ${m.content}
+                <span class="chat-time">${new Date(m.timestamp * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+        `).join('');
+
+        // Scroll para o final
+        container.scrollTop = container.scrollHeight;
+    },
+
+    // ── GERA SUGESTÃO COM IA (O "Cérebro" Original) ──
+    async generateAISuggestion() {
+        if (this._isGenerating) return;
+        
+        const btn = document.getElementById('btn-wapp-ai');
+        const textarea = document.getElementById('wapp-message');
+        const container = document.getElementById('wapp-chat-container');
+        
+        // Pega as mensagens do container para contexto
+        const lastMessages = Array.from(container.querySelectorAll('.chat-bubble'))
+            .slice(-6) // Últimas 6 mensagens
+            .map(el => `${el.classList.contains('me') ? 'Eu' : 'Cliente'}: ${el.innerText.split('\n')[0]}`)
+            .join('\n');
+
+        if (!lastMessages) {
+            alert('Sem histórico suficiente para gerar sugestão.');
+            return;
+        }
+
+        this._isGenerating = true;
+        btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Isapel AI pensando...`;
+        btn.style.opacity = '0.7';
+
+        try {
+            const token = sessionStorage.getItem('maciel_token');
+            const profile = sessionStorage.getItem('maciel_profile') || 'default';
+            
+            const prompt = `Você é o Isapel AI, assistente de vendas de Maciel.
+            Contexto do Cliente: ${this._currentClient.name}, Segmento: ${this._currentClient.segment || 'Varejo'}.
+            Últimas mensagens:
+            ${lastMessages}
+            
+            Escreva uma resposta curta, profissional e persuasiva para continuar a venda ou follow-up. 
+            Use um tom amigável. Responda APENAS com a mensagem sugerida.`;
+
+            const res = await fetch(`${API_BASE_URL}/ai/proxy`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: prompt }],
+                    system: "Você é um assistente de vendas focado em fechamento e follow-up para a empresa Isapel."
+                })
+            });
+
+            const data = await res.json();
+            const suggestion = data.content?.[0]?.text || data.choices?.[0]?.message?.content || "";
+            
+            if (suggestion) {
+                textarea.value = suggestion.trim();
+                textarea.focus();
+                this.updateCharCount();
+            }
+        } catch (err) {
+            console.error('Erro IA:', err);
+            alert('Erro ao gerar sugestão da IA.');
+        } finally {
+            this._isGenerating = false;
+            btn.innerHTML = `<i class='bx bx-sparkles'></i> Sugerir Resposta com Isapel AI`;
+            btn.style.opacity = '1';
+        }
+    },
+
+    renderTemplates(clientName) {
         const container = document.getElementById('wapp-templates');
         if (!container) return;
         container.innerHTML = '';
 
         this.TEMPLATES.forEach(t => {
-            const btn           = document.createElement('button');
-            btn.className       = 'btn btn-outline';
-            btn.id              = `wapp-tpl-${t.id}`;
-            btn.style.cssText   = 'font-size:0.78rem; padding:0.3rem 0.7rem; text-align:left; white-space:nowrap; margin-bottom:2px;';
-            btn.innerHTML       = t.label;
-            btn.onclick         = () => this.selectTemplate(t.id, clientName, produto);
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline';
+            btn.style.cssText = 'font-size:0.72rem; padding:0.3rem 0.6rem; margin-bottom:2px;';
+            btn.innerHTML = t.label;
+            btn.onclick = () => {
+                const textarea = document.getElementById('wapp-message');
+                textarea.value = t.text.replace(/{nome}/g, clientName || 'cliente');
+                this.updateCharCount();
+            };
             container.appendChild(btn);
         });
     },
 
-    // ── Seleciona template e preenche textarea ──
-    selectTemplate(id, clientName, produto) {
-        const tpl = this.TEMPLATES.find(t => t.id === id);
-        if (!tpl) return;
-
-        // Destaca botão selecionado
-        this.TEMPLATES.forEach(t => {
-            const btn = document.getElementById(`wapp-tpl-${t.id}`);
-            if (btn) btn.style.background = t.id === id ? 'rgba(83,74,183,0.3)' : '';
-        });
-
-        const textarea = document.getElementById('wapp-message');
-        if (textarea) {
-            if (id === 'custom') {
-                textarea.value = '';
-                textarea.focus();
-            } else {
-                // Substitui {nome} e {produto} com os dados reais do cliente
-                textarea.value = tpl.text
-                    .replace(/{nome}/g,    clientName || 'cliente')
-                    .replace(/{produto}/g, produto    || 'nossos produtos');
-            }
-        }
-        this.updateCharCount();
-    },
-
     updateCharCount() {
         const len = (document.getElementById('wapp-message')?.value || '').length;
-        const el  = document.getElementById('wapp-char-count');
+        const el = document.getElementById('wapp-char-count');
         if (el) el.innerText = len + ' caracteres';
     },
 
-    // ── Limpa número de telefone para o formato wa.me ──
     cleanPhone(phone) {
         if (!phone) return '';
         let clean = phone.replace(/\D/g, '');
-        // Adiciona DDI 55 (Brasil) se não tiver
         if (clean.length === 10 || clean.length === 11) clean = '55' + clean;
         return clean;
     },
 
-    // ── Valida se o número limpo é válido ──
-    isValidPhone(clean) {
-        return clean.length >= 12 && clean.length <= 13; // 55 + 10 ou 11 dígitos
-    },
-
-    // ── Envia: abre WhatsApp na aba ──
     send() {
-        const phoneRaw = document.getElementById('wapp-phone-input')?.value.trim();
-        const message  = document.getElementById('wapp-message')?.value.trim();
+        const phone = document.getElementById('wapp-phone-input')?.value;
+        const message = document.getElementById('wapp-message')?.value;
 
-        if (!phoneRaw) {
-            alert('Digite o número de telefone do cliente.');
-            document.getElementById('wapp-phone-input')?.focus();
-            return;
-        }
+        if (!phone || !message) return alert('Telefone ou mensagem ausente.');
 
-        const cleanedPhone = this.cleanPhone(phoneRaw);
-        if (!this.isValidPhone(cleanedPhone)) {
-            alert('Número de telefone inválido. Use o formato: (DDD) 9XXXX-XXXX.');
-            document.getElementById('wapp-phone-input')?.focus();
-            return;
-        }
-
-        if (!message) {
-            alert('Escreva uma mensagem antes de enviar.');
-            document.getElementById('wapp-message')?.focus();
-            return;
-        }
-
-        const url = `https://wa.me/${cleanedPhone}?text=${encodeURIComponent(message)}`;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
-
-        // Registra o contato no CRM — atualiza o registro existente
-        this.registerContact(message, cleanedPhone);
-    },
-
-    // ── Cria nova entrada de contato no CRM (mantém histórico por conversa) ──
-    async registerContact(message, phoneUsed) {
-        const clientId = document.getElementById('wapp-client-id')?.value;
-        if (!clientId) return;
-
-        const all    = DataStore.get(STORAGE_KEYS.CUSTOMERS);
-        const record = all.find(c => String(c.id) === String(clientId));
-        if (!record) return;
-
-        const today    = new Date().toISOString().split('T')[0];
-        const nextDate = new Date(today + 'T00:00:00');
-        nextDate.setDate(nextDate.getDate() + 15);
-
-        // Herda os dados do cliente, sobrepõe apenas informações do contato atual
-        const newEntry = {
-            name:            record.name || record.client,
-            phone:           record.phone,
-            buyerName:       record.buyerName || '',
-            products:        record.products  || '',
-            source:          record.source    || '',
-            company:         record.company   || '',
-            cnpj:            record.cnpj      || '',
-            instagram:       record.instagram || '',
-            address:         record.address   || '',
-            segment:         record.segment   || '',
-            email:           record.email     || '',
-            status:          record.status    || 'Contato',
-            lastContactDate: today,
-            nextFollowUp:    nextDate.toISOString().split('T')[0],
-            notes:           `[WhatsApp] ${message.substring(0, 300)}${message.length > 300 ? '...' : ''}`,
-        };
-
-        await DataStore.add(STORAGE_KEYS.CUSTOMERS, newEntry);
-
-        if (typeof CRMModule       !== 'undefined') CRMModule.loadAlerts();
-        if (typeof DashboardModule !== 'undefined') DashboardModule.update();
-
         this.closeComposer();
     },
 
-
-    // ── Abre WhatsApp direto sem modal (clique no número) ──
-    openDirect(phone, name) {
-        const clean = this.cleanPhone(phone);
-        if (!clean || !this.isValidPhone(clean)) {
-            alert('Número inválido ou não cadastrado.');
-            return;
-        }
-        const msg = `Olá ${name || ''}!`;
-        window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank');
-    },
-
     init() {
-        // Fechar modal clicando fora
         document.getElementById('wapp-modal')?.addEventListener('click', (e) => {
             if (e.target.id === 'wapp-modal') this.closeComposer();
         });
-        // Contador de caracteres em tempo real
         document.getElementById('wapp-message')?.addEventListener('input', () => this.updateCharCount());
     }
 };
 
 window.WhatsAppModule = WhatsAppModule;
-
-document.addEventListener('DataStoreReady', () => {
-    WhatsAppModule.init();
-});
+document.addEventListener('DataStoreReady', () => WhatsAppModule.init());

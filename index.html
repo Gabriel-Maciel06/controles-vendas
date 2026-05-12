@@ -773,54 +773,51 @@
                             <button class="btn-sm" onclick="WhatsAppModule.closeComposer()"><i class='bx bx-x'></i></button>
                         </div>
                         <div class="modal-body">
-
-                            <!-- Info do cliente -->
-                            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.8rem;background:rgba(37,211,102,0.06);border-radius:8px;margin-bottom:1.2rem;border:1px solid rgba(37,211,102,0.15);">
-                                <div style="width:40px;height:40px;border-radius:50%;background:rgba(37,211,102,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">👤</div>
-                                <div>
-                                    <div style="font-weight:600;color:var(--text-main);" id="wapp-client-name">—</div>
-                                    <div style="font-size:0.82rem;color:#25D366;" id="wapp-client-phone">—</div>
+                            <!-- Área de Chat Real-time -->
+                            <div id="wapp-chat-container" class="chat-container">
+                                <div style="text-align:center; color:var(--text-muted); font-size:0.82rem; padding:2rem 0;">
+                                    <i class='bx bx-loader-alt bx-spin' style="font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i>
+                                    Carregando histórico...
                                 </div>
                             </div>
 
-                            <!-- Alerta sem telefone -->
-                            <div id="wapp-no-phone-alert" style="display:none;padding:0.7rem 1rem;background:rgba(239,159,39,0.1);border:1px solid rgba(239,159,39,0.3);border-radius:8px;font-size:0.83rem;color:#EF9F27;margin-bottom:1rem;">
-                                ⚠️ Este cliente não tem telefone cadastrado. Edite o cliente antes de enviar.
-                            </div>
+                            <!-- Botão de IA -->
+                            <button id="btn-wapp-ai" class="ai-suggestion-btn" onclick="WhatsAppModule.generateAISuggestion()">
+                                <i class='bx bx-sparkles'></i> Sugerir Resposta com Isapel AI
+                            </button>
 
-                            <!-- Número (editável) -->
-                            <div class="form-group" style="margin-bottom:1rem;">
-                                <label style="font-size:0.82rem;">Número (com DDD)</label>
-                                <input type="tel" id="wapp-phone-input" placeholder="11999990000" style="padding:0.5rem 0.8rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);width:100%;font-size:0.9rem;">
+                            <!-- Info do cliente -->
+                            <div style="display:flex;align-items:center;gap:0.8rem;padding:0.7rem;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:1rem;border:1px solid rgba(255,255,255,0.05);">
+                                <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-dim);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">👤</div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600;color:var(--text-main);font-size:0.85rem;" id="wapp-client-name">—</div>
+                                    <div style="font-size:0.75rem;color:var(--text-muted);" id="wapp-client-phone">—</div>
+                                </div>
                                 <input type="hidden" id="wapp-client-id">
+                                <input type="hidden" id="wapp-phone-input">
                             </div>
 
                             <!-- Templates -->
                             <div style="margin-bottom:0.8rem;">
-                                <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;">Templates rápidos:</div>
-                                <div id="wapp-templates" style="display:flex;flex-wrap:wrap;gap:0.4rem;"></div>
+                                <div style="id:wapp-templates-label; font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem;text-transform:uppercase;font-weight:700;">Templates rápidos:</div>
+                                <div id="wapp-templates" style="display:flex;flex-wrap:wrap;gap:0.3rem;"></div>
                             </div>
 
                             <!-- Área de texto -->
                             <div class="form-group" style="margin-bottom:0.5rem;">
-                                <label style="font-size:0.82rem;">Mensagem</label>
-                                <textarea id="wapp-message" rows="5"
-                                    style="width:100%;padding:0.7rem 0.9rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);resize:vertical;font-size:0.88rem;line-height:1.5;"
-                                    placeholder="Digite sua mensagem..."></textarea>
+                                <textarea id="wapp-message" rows="4"
+                                    style="width:100%;padding:0.7rem 0.9rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface-2);color:var(--text-main);resize:vertical;font-size:0.88rem;line-height:1.5;"
+                                    placeholder="Escreva sua resposta aqui..."></textarea>
                             </div>
-                            <div style="text-align:right;font-size:0.75rem;color:var(--text-muted);margin-bottom:1.2rem;" id="wapp-char-count">0 caracteres</div>
+                            <div style="text-align:right;font-size:0.72rem;color:var(--text-muted);margin-bottom:1rem;" id="wapp-char-count">0 caracteres</div>
 
                             <!-- Botões -->
                             <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
-                                <button class="btn btn-outline" onclick="WhatsAppModule.closeComposer()">Cancelar</button>
-                                <button class="btn btn-primary" style="background:#25D366;border-color:#25D366;" onclick="WhatsAppModule.send()">
-                                    <i class='bx bxl-whatsapp'></i> Abrir no WhatsApp
+                                <button class="btn btn-outline btn-sm" onclick="WhatsAppModule.closeComposer()">Cancelar</button>
+                                <button class="btn btn-primary btn-sm" style="background:#25D366;border-color:#25D366;" onclick="WhatsAppModule.send()">
+                                    <i class='bx bxl-whatsapp'></i> Enviar agora
                                 </button>
                             </div>
-
-                            <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.8rem;">
-                                O WhatsApp abrirá em nova aba. O contato deve ter um número cadastrado.
-                            </p>
                         </div>
                     </div>
                 </div>

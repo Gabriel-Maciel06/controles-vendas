@@ -295,6 +295,18 @@ class ReminderUpdate(BaseModel):
     status: str = None
     updatedAt: str = None
 
+
+class WhatsAppMessageBase(BaseModel):
+    remoteJid: str
+    fromMe: int
+    content: str
+    pushName: str = None
+    timestamp: int
+    profile: str = "default"
+
+    class Config:
+        orm_mode = True
+
 class ImportFacilitaReq(BaseModel):
     customers: List[CustomerBase] = []
     prospects: List[ProspectBase] = []
@@ -784,3 +796,81 @@ def delete_prospect(prospect_id: str, profile: str = Depends(get_current_user), 
     db.delete(db_pros)
     db.commit()
     return {"ok": True}
+
+# --- WHATSAPP ---
+
+@app.get("/api/whatsapp/messages/{remote_jid}", response_model=List[WhatsAppMessageBase])
+def get_whatsapp_messages(remote_jid: str, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Busca o histórico de mensagens de um contato específico."""
+    return db.query(models.WhatsAppMessage).filter(
+        models.WhatsAppMessage.remoteJid == remote_jid,
+        models.WhatsAppMessage.profile == profile
+    ).order_by(models.WhatsAppMessage.timestamp.asc()).limit(100).all()
+
+@app.post("/api/whatsapp/webhook")
+async def whatsapp_webhook(payload: dict, profile: str = "default"):
+    """
+    Recebe eventos da Evolution API.
+    A URL do webhook deve ser configurada como: /api/whatsapp/webhook?profile=NOME_DO_PERFIL
+    """
+    event = payload.get("event")
+    db = next(get_db())
+    
+    if event == "messages.upsert":
+        data = payload.get("data", {})
+        message = data.get("message", {})
+        
+        # Ignorar se não tiver mensagem válida (ex: reações, status)
+        key = message.get("key", {})
+        remote_jid = key.get("remoteJid")
+        from_me = 1 if key.get("fromMe") else 0
+        
+        # Extrair conteúdo de texto (suporta texto simples e conversa)
+        msg_content = ""
+        m = message.get("message", {})
+        if "conversation" in m:
+            msg_content = m["conversation"]
+        elif "extendedTextMessage" in m:
+            msg_content = m["extendedTextMessage"].get("text", "")
+        
+        if not msg_content or not remote_jid:
+            return {"ok": True, "info": "ignored_no_content"}
+
+        # Salvar no Banco
+        new_msg = models.WhatsAppMessage(
+            profile=profile,
+            remoteJid=remote_jid,
+            fromMe=from_me,
+            content=msg_content,
+            pushName=data.get("pushName"),
+            timestamp=message.get("messageTimestamp"),
+            createdAt=datetime.now().isoformat()
+        )
+        db.add(new_msg)
+        
+        # Atualizar Data de Último Contato no CRM se for mensagem recebida (fromMe=0)
+        if from_me == 0:
+            # Tenta limpar o número para bater com o CRM
+            clean_number = remote_jid.split("@")[0].replace("55", "", 1)
+            
+            cust = db.query(models.Customer).filter(
+                models.Customer.profile == profile,
+                models.Customer.phone.contains(clean_number[-8:])
+            ).first()
+            
+            if cust:
+                cust.lastContactDate = datetime.now().strftime("%Y-%m-%d")
+                cust.updatedAt = datetime.now().isoformat()
+            else:
+                pros = db.query(models.Prospect).filter(
+                    models.Prospect.profile == profile,
+                    models.Prospect.phone.contains(clean_number[-8:])
+                ).first()
+                if pros:
+                    pros.updatedAt = datetime.now().isoformat()
+
+        db.commit()
+        return {"ok": True, "saved": True}
+
+    return {"ok": True, "info": "ignored_event"}
+

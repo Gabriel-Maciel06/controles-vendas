@@ -101,3 +101,15 @@ class Prospect(Base):
     sentToCrmAt = Column(String, nullable=True)
     createdAt = Column(String)
     updatedAt = Column(String, nullable=True)
+
+class WhatsAppMessage(Base):
+    __tablename__ = "whatsapp_messages"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    profile = Column(String, default="default")
+    remoteJid = Column(String, index=True) # ID do WhatsApp (ex: 55119... @s.whatsapp.net)
+    fromMe = Column(Integer, default=0) # 1 se eu enviei, 0 se recebi
+    content = Column(String)
+    pushName = Column(String, nullable=True) # Nome que aparece no WhatsApp
+    timestamp = Column(Integer)
+    createdAt = Column(String)
