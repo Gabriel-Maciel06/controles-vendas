@@ -115,20 +115,21 @@ const DashboardModule = {
 
         const monthFilter = document.getElementById('global-month-filter');
         if (monthFilter && !monthFilter._boundDash) {
-            const savedMonth = localStorage.getItem('crm_current_month');
-            if (savedMonth) {
-                monthFilter.value = savedMonth;
-            } else if (!monthFilter.value) {
-                const initDate = new Date();
-                monthFilter.value = `${initDate.getFullYear()}-${String(initDate.getMonth()+1).padStart(2,'0')}`;
-                localStorage.setItem('crm_current_month', monthFilter.value);
-            }
+            // SEMPRE inicializa com o mês atual ao abrir a página
+            // Isso garante que quando o mês vira (ex: maio→junho), o filtro acompanha
+            const initDate = new Date();
+            const currentMonth = `${initDate.getFullYear()}-${String(initDate.getMonth()+1).padStart(2,'0')}`;
+            monthFilter.value = currentMonth;
+            localStorage.setItem('crm_current_month', currentMonth);
 
             monthFilter.addEventListener('change', () => {
                 localStorage.setItem('crm_current_month', monthFilter.value);
                 this.update();
                 if (window.SalesModule && typeof SalesModule.loadSales === 'function') {
                     SalesModule.loadSales();
+                }
+                if (window.CalendarModule && typeof CalendarModule.loadEvents === 'function') {
+                    CalendarModule.loadEvents();
                 }
             });
             monthFilter._boundDash = true;
