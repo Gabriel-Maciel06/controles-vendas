@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Reativações - Isapel</title>
+    <!-- Icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/reactivations.css">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+        <div class="logo">
+            <i class='bx bx-trending-up icon-logo'></i>
+            <div class="logo-text">
+                <h1>Isapel</h1>
+                <span>Reativação de Inativos</span>
+            </div>
+        </div>
+
+        <div class="vendedor-selector-container">
+            <label for="active-seller"><i class='bx bx-user'></i> Vendedor:</label>
+            <select id="active-seller">
+                <option value="" disabled selected>Selecione seu perfil...</option>
+                <option value="ALBERT">Albert</option>
+                <option value="ALMEIDA">Almeida</option>
+                <option value="CAIO">Caio</option>
+                <option value="FERNANDA">Fernanda</option>
+                <option value="GABRIEL">Gabriel</option>
+                <option value="HUGO">Hugo</option>
+                <option value="IGOR">Igor</option>
+                <option value="KARINE">Karine</option>
+                <option value="MACIEL">Maciel</option>
+                <option value="MATEUS">Mateus</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <ul class="nav-links">
+                <li>
+                    <a href="#" class="nav-item active" data-tab="inativos">
+                        <i class='bx bx-group'></i>
+                        <span>Inativos da Carteira</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="registrar">
+                        <i class='bx bx-plus-circle'></i>
+                        <span>Registrar Reativação</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="checklist">
+                        <i class='bx bx-checkbox-checked'></i>
+                        <span>Checklist de Segunda</span>
+                        <span class="badge-alert hidden" id="checklist-alert-badge">!</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="historico">
+                        <i class='bx bx-history'></i>
+                        <span>Histórico</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-item" data-tab="upload" id="nav-upload">
+                        <i class='bx bx-cloud-upload'></i>
+                        <span>Upload Facilita</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <a href="index.html" class="back-to-crm">
+                    <i class='bx bx-arrow-back'></i>
+                    <span>Voltar para o CRM</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Banner de Alerta de Segunda-feira Atrasado -->
+            <div class="alert-banner hidden" id="late-monday-banner">
+                <div class="alert-banner-content">
+                    <i class='bx bx-error-alt alert-icon-spin'></i>
+                    <div>
+                        <h3>Atenção: Checklist de Segunda-feira Pendente!</h3>
+                        <p>Você possui verificações de reativação pendentes da semana passada. Por favor, dê o visto na aba <b>Checklist de Segunda</b>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Inativos da Carteira -->
+            <section id="tab-inativos" class="tab-content active">
+                <div class="tab-header">
+                    <h2>📂 Inativos da Carteira</h2>
+                    <p>Veja e filtre os clientes inativos associados ao seu perfil de vendas.</p>
+                </div>
+
+                <!-- Filtros e Busca -->
+                <div class="filter-bar">
+                    <div class="search-input-wrapper">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="search-inativos" placeholder="Buscar cliente por nome ou código...">
+                    </div>
+                    
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="todos">Todos</button>
+                        <button class="filter-btn btn-new" data-filter="Novo">Novos Inativos</button>
+                        <button class="filter-btn btn-old" data-filter="Antigo">Inativos Antigos</button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Inativos -->
+                <div class="card table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Razão Social / Nome</th>
+                                <th>Cidade / Região</th>
+                                <th>Status na Lista</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inativos-table-body">
+                            <tr>
+                                <td colspan="5" class="empty-state">Selecione seu perfil de vendedor acima para carregar seus clientes inativos.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB: Registrar Reativação -->
+            <section id="tab-registrar" class="tab-content">
+                <div class="tab-header">
+                    <h2>📝 Registrar Reativação</h2>
+                    <p>Lanche um novo pedido de reativação. O sistema validará automaticamente se o cliente está na lista de inativos oficial da sua carteira.</p>
+                </div>
+
+                <div class="grid-form-dashboard">
+                    <div class="card form-card">
+                        <form id="reactivation-form">
+                            <div class="form-group">
+                                <label for="react-client-name">Cliente / Estabelecimento *</label>
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" id="react-client-name" required autocomplete="off" placeholder="Comece a digitar o nome do cliente...">
+                                    <div class="autocomplete-dropdown" id="react-autocomplete-dropdown"></div>
+                                </div>
+                                <div class="validation-feedback" id="client-validation-feedback"></div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="react-value">Valor Faturado (R$) *</label>
+                                    <input type="number" step="0.01" id="react-value" required placeholder="0,00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="react-sale-date">Data da Venda *</label>
+                                    <input type="date" id="react-sale-date" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="react-fat-date">Previsão de Faturamento *</label>
+                                <input type="date" id="react-fat-date" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block" id="btn-submit-react">
+                                <i class='bx bx-check-double'></i> Registrar e Validar Reativação
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card info-card">
+                        <h3>ℹ️ Regras de Validação de Reativação</h3>
+                        <ul class="rules-list">
+                            <li>
+                                <div class="rule-icon success"><i class='bx bx-check'></i></div>
+                                <div class="rule-desc">
+                                    <strong>Reativação Válida:</strong> O cliente informado consta na lista de clientes inativos oficiais (com compras há mais de 60 dias) vinculados à sua carteira.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="rule-icon danger"><i class='bx bx-x'></i></div>
+                                <div class="rule-desc">
+                                    <strong>Reativação Inválida:</strong> O cliente faturado não foi encontrado ou está registrado como ativo na carteira de outro vendedor na base Facilita.
+                                </div>
+                            </li>
+                            <li>
+                                <div class="rule-icon warning"><i class='bx bx-time-five'></i></div>
+                                <div class="rule-desc">
+                                    <strong>Checklist de Segunda:</strong> O sistema criará um lembrete para você confirmar se o faturamento apareceu no sistema até a próxima segunda-feira.
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB: Checklist de Segunda-feira -->
+            <section id="tab-checklist" class="tab-content">
+                <div class="tab-header">
+                    <h2>📅 Checklist de Segunda-feira</h2>
+                    <p>Verifique os pedidos de reativação abaixo no seu sistema oficial de faturamento na segunda-feira e confirme se foram faturados com sucesso.</p>
+                </div>
+
+                <div class="card table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Valor</th>
+                                <th>Previsão Fat.</th>
+                                <th>Status de Validação</th>
+                                <th>Data Limite do Visto</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="checklist-table-body">
+                            <tr>
+                                <td colspan="6" class="empty-state">Selecione seu perfil de vendedor acima para ver seu checklist de segunda-feira.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB: Histórico de Reativações -->
+            <section id="tab-historico" class="tab-content">
+                <div class="tab-header">
+                    <h2>📊 Histórico de Reativações Registradas</h2>
+                    <p>Acompanhe todos os pedidos de reativação lançados por você e o respectivo status de validação da comissão.</p>
+                </div>
+
+                <div class="card table-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data Registro</th>
+                                <th>Cliente</th>
+                                <th>Valor Faturado</th>
+                                <th>Status Validação</th>
+                                <th>Checklist Segunda</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historico-table-body">
+                            <tr>
+                                <td colspan="5" class="empty-state">Selecione seu perfil de vendedor acima para ver seu histórico.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TAB: Upload do Facilita Vendas -->
+            <section id="tab-upload" class="tab-content">
+                <div class="tab-header">
+                    <h2>📥 Upload da Base Facilita Vendas</h2>
+                    <p>Arraste ou selecione a planilha atualizada para recalcular os inativos de todos os vendedores e reavaliar o status da carteira.</p>
+                </div>
+
+                <div class="card upload-area" id="excel-drop-zone">
+                    <i class='bx bx-cloud-upload upload-main-icon'></i>
+                    <h3>Arraste o arquivo .xlsx aqui ou</h3>
+                    <button class="btn btn-outline" id="btn-browse-excel">Selecionar Arquivo Excel</button>
+                    <input type="file" id="excel-file-input" accept=".xlsx" style="display: none;">
+                    <span class="file-name-label" id="file-name-label">Nenhum arquivo selecionado</span>
+                </div>
+
+                <!-- Progresso e Logs de Importação -->
+                <div class="card progress-card hidden" id="upload-progress-card">
+                    <div class="progress-header">
+                        <h3>Processando Planilha Facilita Vendas</h3>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                    </div>
+                    <div class="import-stats" id="import-stats" style="display: none;">
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-novos">0</span>
+                            <span class="stat-label">Novos Inativos</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-mantidos">0</span>
+                            <span class="stat-label">Mantidos (Antigos)</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-removidos">0</span>
+                            <span class="stat-label">Removidos (Ativados)</span>
+                        </div>
+                    </div>
+                    <div class="log-console" id="log-console"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/reactivations.js"></script>
+</body>
+</html>

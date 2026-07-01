@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > /home/azureuser/backend/auth.py
 from fastapi import Header, HTTPException
 import os
 import hmac
@@ -34,3 +35,7 @@ def get_current_user(authorization: str = Header(None)) -> str:
         return payload.get("profile")
     except Exception:
         raise HTTPException(status_code=401, detail="Token corrompido")
+INNER_EOF
+
+cd /home/azureuser
+sudo docker-compose restart fastapi_backend

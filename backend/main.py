@@ -4,9 +4,11 @@ import traceback
 import hashlib
 import hmac
 import secrets
+import io
+import pandas as pd
 from typing import List, Dict, Any
-from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException
+from datetime import datetime, timedelta
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -70,6 +72,9 @@ def startup_event():
             "ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
             'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingLastEvent" VARCHAR;',
             'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingUpdatedAt" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "inactiveStatus" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastImportedSessionId" VARCHAR;',
+            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "reactivationStatus" VARCHAR;',
         ]
 
         is_postgres = "postgres" in str(engine.url)
@@ -145,6 +150,7 @@ class SaleBase(BaseModel):
     invoiceDate: str
     value: float
     commission: float
+    reactivationStatus: str = None # "Valida", "Invalida" ou None
     createdAt: str
     updatedAt: str = None
 
@@ -173,6 +179,8 @@ class CustomerBase(BaseModel):
     temperature: str = None
     region: str = None
     city: str = None
+    inactiveStatus: str = None # "Novo" ou "Antigo"
+    lastImportedSessionId: str = None
     createdAt: str
     updatedAt: str = None
 
@@ -253,6 +261,7 @@ class SaleUpdate(BaseModel):
     invoiceDate: str = None
     value: float = None
     commission: float = None
+    reactivationStatus: str = None
     updatedAt: str = None
 
 class CustomerUpdate(BaseModel):
@@ -275,7 +284,40 @@ class CustomerUpdate(BaseModel):
     temperature: str = None
     region: str = None
     city: str = None
+    inactiveStatus: str = None
+    lastImportedSessionId: str = None
     updatedAt: str = None
+
+class InactiveReferenceBase(BaseModel):
+    id: str
+    vendedor: str
+    codigo_cliente: str
+    nome_cliente: str
+    regiao: str = None
+    cidade: str = None
+    status: str = "Novo"
+    importSessionId: str
+    createdAt: str
+
+    class Config:
+        orm_mode = True
+
+class ReactivationBase(BaseModel):
+    id: str
+    vendedor: str
+    cliente_nome: str
+    valor_venda: float
+    data_venda: str
+    data_faturamento: str
+    status_validacao: str
+    visto_segunda: int = 0
+    data_limite_check: str
+    alerta_atraso: int = 0
+    createdAt: str
+    updatedAt: str = None
+
+    class Config:
+        orm_mode = True
 
 class SampleUpdate(BaseModel):
     client: str = None
@@ -357,9 +399,6 @@ async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
             print(f"Proxy Exception: {str(e)}")
             raise HTTPException(status_code=502, detail=f"Erro ao conectar com Anthropic: {str(e)}")
 
-@app.get("/")
-def read_root():
-    return {"status": "Isapel CRM API Online", "version": "2.1.0"}
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
@@ -869,8 +908,277 @@ async def whatsapp_webhook(payload: dict, profile: str = "default"):
                 if pros:
                     pros.updatedAt = datetime.now().isoformat()
 
-        db.commit()
-        return {"ok": True, "saved": True}
-
     return {"ok": True, "info": "ignored_event"}
 
+
+# --- SISTEMA DE REATIVACÕES E INATIVOS (NOVO) ---
+
+@app.post("/api/reativacoes/upload")
+async def upload_reativacoes_excel(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Recebe a planilha Excel 'Facilita Vendas' e processa inativos.
+    Descarta duplicatas de (VENDEDOR, CÓD.C) e detecta se o cliente é Novo ou Antigo.
+    O processamento é feito usando Pandas.
+    """
+    try:
+        # Lendo os bytes na memória
+        contents = await file.read()
+        
+        # Carregando dataframe via pandas a partir de bytes
+        print("Lendo a planilha BASE FACILITA...")
+        df = pd.read_excel(io.BytesIO(contents), sheet_name="BASE FACILITA")
+        
+        # Validar colunas
+        expected_cols = ['VENDEDOR', 'SITUAÇÃO', 'CÓD.C', 'CLIENTE/FORNEC.']
+        for col in expected_cols:
+            if col not in df.columns:
+                # Tenta normalizar os nomes se for o caso
+                df.columns = [c.strip().upper() for c in df.columns]
+                break
+        
+        # Mapeando nomes normalizados para colunas esperadas
+        col_vendedor = 'VENDEDOR' if 'VENDEDOR' in df.columns else None
+        col_situacao = 'SITUAÇÃO' if 'SITUAÇÃO' in df.columns else ('SITUACAO' if 'SITUACAO' in df.columns else None)
+        col_codigo = 'CÓD.C' if 'CÓD.C' in df.columns else ('COD' if 'COD' in df.columns else None)
+        col_cliente = 'CLIENTE/FORNEC.' if 'CLIENTE/FORNEC.' in df.columns else ('CLIENTE' if 'CLIENTE' in df.columns else None)
+        col_regiao = 'REGIÃO' if 'REGIÃO' in df.columns else ('REGIAO' if 'REGIAO' in df.columns else None)
+        col_cidade = 'CIDADE' if 'CIDADE' in df.columns else None
+        
+        if not col_vendedor or not col_situacao or not col_codigo or not col_cliente:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Colunas obrigatórias não encontradas no Excel. Colunas detectadas: {df.columns.tolist()}"
+            )
+            
+        # Filtrar apenas linhas onde a situação é 'INATIVO'
+        df_inativos = df[df[col_situacao].astype(str).str.upper().str.strip() == 'INATIVO']
+        
+        # Deduplicar pelo par (VENDEDOR, CÓD.C)
+        df_unicos = df_inativos.drop_duplicates(subset=[col_vendedor, col_codigo])
+        
+        print(f"Total de inativos únicos no lote: {len(df_unicos)}")
+        
+        import_session_id = datetime.now().isoformat()
+        created_at_str = datetime.now().isoformat()
+        
+        created = 0
+        updated = 0
+        
+        # Mapeamento de vendedores válidos (para normalizar)
+        vendedores_validos = ["MATEUS", "ALBERT", "ALMEIDA", "HUGO", "IGOR", "MACIEL", "FERNANDA", "GABRIEL", "KARINE", "CAIO"]
+        
+        for idx, row in df_unicos.iterrows():
+            vendedor_raw = str(row[col_vendedor]).strip().upper()
+            if vendedor_raw not in vendedores_validos:
+                continue
+                
+            cod_c = str(row[col_codigo]).strip()
+            if not cod_c or cod_c == "" or cod_c == "nan":
+                continue
+                
+            cliente_nome = str(row[col_cliente]).strip().upper()
+            regiao = str(row[col_regiao]).strip() if col_regiao and pd.notna(row[col_regiao]) else ""
+            cidade = str(row[col_cidade]).strip() if col_cidade and pd.notna(row[col_cidade]) else ""
+            
+            # ID único do inativo: ref_{COD}_{VENDEDOR}
+            ref_id = f"ref_{cod_c}_{vendedor_raw}"
+            
+            # Buscar se já existia
+            existing = db.query(models.InactiveReference).filter(models.InactiveReference.id == ref_id).first()
+            
+            if existing:
+                # Já existia! Portanto ele já era inativo na semana passada (Antigo)
+                existing.nome_cliente = cliente_nome
+                existing.regiao = regiao
+                existing.cidade = cidade
+                existing.status = "Antigo"
+                existing.importSessionId = import_session_id
+                updated += 1
+            else:
+                # Não existia! Portanto ele virou inativo agora (Novo)
+                new_ref = models.InactiveReference(
+                    id=ref_id,
+                    vendedor=vendedor_raw,
+                    codigo_cliente=cod_c,
+                    nome_cliente=cliente_nome,
+                    regiao=regiao,
+                    cidade=cidade,
+                    status="Novo",
+                    importSessionId=import_session_id,
+                    createdAt=created_at_str
+                )
+                db.add(new_ref)
+                created += 1
+                
+        db.commit()
+        
+        # Limpeza: qualquer cliente inativo deste vendedor que não constava na planilha nova
+        # (seu importSessionId é diferente do atual) significa que reativou ou deixou de ser inativo.
+        # Vamos deletar essas referências do banco
+        deleted = db.query(models.InactiveReference).filter(
+            models.InactiveReference.importSessionId != import_session_id
+        ).delete(synchronize_session=False)
+        
+        db.commit()
+        
+        return {
+            "ok": True,
+            "session_id": import_session_id,
+            "novos_inativos": created,
+            "inativos_mantidos": updated,
+            "inativos_removidos": deleted
+        }
+        
+    except Exception as e:
+        print(f"Erro ao processar importação: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Erro de processamento: {str(e)}")
+
+@app.get("/api/reativacoes/inativos")
+def get_reativacoes_inativos(
+    vendedor: str = None,
+    status: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna a lista de inativos de um vendedor específico, filtrando opcionalmente por status (Novo/Antigo).
+    """
+    query = db.query(models.InactiveReference)
+    if vendedor:
+        query = query.filter(models.InactiveReference.vendedor == vendedor.upper().strip())
+    if status:
+        query = query.filter(models.InactiveReference.status == status)
+    return query.order_by(models.InactiveReference.nome_cliente.asc()).all()
+
+@app.post("/api/reativacoes/registrar")
+def registrar_reativacao(
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Registra uma nova venda de reativação e valida na hora se ela está na lista de inativos do vendedor.
+    Gera automaticamente a tarefa de checklist de segunda-feira.
+    """
+    vendedor = str(payload.get("vendedor")).strip().upper()
+    cliente_nome = str(payload.get("cliente_nome")).strip().upper()
+    valor = float(payload.get("valor_venda") or 0.0)
+    data_venda = str(payload.get("data_venda"))
+    data_faturamento = str(payload.get("data_faturamento"))
+    
+    # 1. Validar se o cliente está na lista de inativos do vendedor
+    ref = db.query(models.InactiveReference).filter(
+        models.InactiveReference.vendedor == vendedor,
+        models.InactiveReference.nome_cliente == cliente_nome
+    ).first()
+    
+    if not ref:
+        # Tenta buscar por substring
+        ref = db.query(models.InactiveReference).filter(
+            models.InactiveReference.vendedor == vendedor,
+            models.InactiveReference.nome_cliente.contains(cliente_nome)
+        ).first()
+        
+    status_val = "Valida" if ref else "Invalida"
+    
+    # 2. Calcular a data limite de check (próxima segunda-feira)
+    hoje = datetime.now()
+    dias_para_segunda = 7 - hoje.weekday() if hoje.weekday() < 7 else 1
+    if hoje.weekday() == 0:  # Segunda-feira
+        dias_para_segunda = 7
+    data_limite = (hoje + timedelta(days=dias_para_segunda)).strftime("%Y-%m-%d")
+    
+    react_id = f"react_{datetime.now().timestamp()}_{secrets.token_hex(2)}"
+    
+    new_react = models.Reactivation(
+        id=react_id,
+        vendedor=vendedor,
+        cliente_nome=cliente_nome,
+        valor_venda=valor,
+        data_venda=data_venda,
+        data_faturamento=data_faturamento,
+        status_validacao=status_val,
+        visto_segunda=0,
+        data_limite_check=data_limite,
+        alerta_atraso=0,
+        createdAt=datetime.now().isoformat()
+    )
+    
+    db.add(new_react)
+    db.commit()
+    
+    return {
+        "ok": True,
+        "id": react_id,
+        "status_validacao": status_val,
+        "data_limite_check": data_limite
+    }
+
+@app.get("/api/reativacoes/checklist")
+def get_reativacoes_checklist(
+    vendedor: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna os checklists pendentes de um vendedor.
+    Atualiza dinamicamente os alertas de atraso se a data limite passou e o vendedor não deu o visto.
+    """
+    vendedor = vendedor.strip().upper()
+    hoje_str = datetime.now().strftime("%Y-%m-%d")
+    
+    items = db.query(models.Reactivation).filter(
+        models.Reactivation.vendedor == vendedor,
+        models.Reactivation.visto_segunda == 0
+    ).all()
+    
+    updated = False
+    for item in items:
+        if item.data_limite_check < hoje_str and item.alerta_atraso == 0:
+            item.alerta_atraso = 1
+            updated = True
+            
+    if updated:
+        db.commit()
+        
+    return items
+
+@app.post("/api/reativacoes/{react_id}/visto")
+def checklist_visto(
+    react_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Dá o visto na segunda-feira em uma reativação, finalizando a tarefa.
+    """
+    item = db.query(models.Reactivation).filter(models.Reactivation.id == react_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item de reativação não encontrado")
+        
+    item.visto_segunda = 1
+    item.alerta_atraso = 0
+    item.updatedAt = datetime.now().isoformat()
+    db.commit()
+    
+    return {"ok": True}
+
+@app.get("/api/reativacoes/lista")
+def get_reativacoes_lista(
+    vendedor: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna o histórico de todas as reativações registradas.
+    """
+    query = db.query(models.Reactivation)
+    if vendedor:
+        query = query.filter(models.Reactivation.vendedor == vendedor.strip().upper())
+    return query.order_by(models.Reactivation.createdAt.desc()).all()
+
+
+from fastapi.staticfiles import StaticFiles
+import os
+
+frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

@@ -126,7 +126,7 @@ const SamplesModule = {
         }
 
         try {
-            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'http://20.85.228.35:8000';
+            const apiBase = "";
             const res = await fetch(`${apiBase}/api/samples/track-all?profile=${profile}`, { method: 'POST' });
             
             if (res.ok) {

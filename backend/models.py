@@ -113,3 +113,32 @@ class WhatsAppMessage(Base):
     pushName = Column(String, nullable=True) # Nome que aparece no WhatsApp
     timestamp = Column(Integer)
     createdAt = Column(String)
+
+class InactiveReference(Base):
+    __tablename__ = "inactive_references"
+
+    id = Column(String, primary_key=True, index=True)
+    vendedor = Column(String, index=True)
+    codigo_cliente = Column(String, index=True)
+    nome_cliente = Column(String)
+    regiao = Column(String, nullable=True)
+    cidade = Column(String, nullable=True)
+    status = Column(String, default="Novo") # "Novo" ou "Antigo"
+    importSessionId = Column(String)
+    createdAt = Column(String)
+
+class Reactivation(Base):
+    __tablename__ = "reactivations"
+
+    id = Column(String, primary_key=True, index=True)
+    vendedor = Column(String, index=True)
+    cliente_nome = Column(String)
+    valor_venda = Column(Float)
+    data_venda = Column(String)
+    data_faturamento = Column(String)
+    status_validacao = Column(String) # "Valida" ou "Invalida"
+    visto_segunda = Column(Integer, default=0) # 0 = False, 1 = True
+    data_limite_check = Column(String)
+    alerta_atraso = Column(Integer, default=0) # 0 = False, 1 = True
+    createdAt = Column(String)
+    updatedAt = Column(String, nullable=True)

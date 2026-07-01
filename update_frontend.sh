@@ -1,7 +1,7 @@
-/**
+cat << 'INNER_EOF' > /home/azureuser/backend/frontend/js/data.js/**
  * Data Management Module - Cloud Sync
  */
-const API_BASE_URL = "http://20.85.228.35:8000/api";
+const API_BASE_URL = "/api";
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',
@@ -167,8 +167,12 @@ const DataStore = {
             return await res.json();
         } catch (error) {
             console.error("API Error adding:", error);
-            alert("⚠️ ERRO DE SINCRONIZAÇÃO: O dado foi registrado localmente mas NÃO foi salvo no servidor. Verifique sua conexão ou se o backend está online. Erro: " + error.message);
-            return record;
+            // Reverter a adição local se falhou no servidor
+            if (Array.isArray(this.cache[key])) {
+                this.cache[key] = this.cache[key].filter(item => String(item.id) !== String(record.id));
+            }
+            alert("⚠️ ERRO DE SINCRONIZAÇÃO: O dado NÃO foi salvo no servidor devido a um erro. Por favor, tente novamente. Erro: " + error.message);
+            throw error; // Lançar erro para o chamador saber que falhou
         }
     },
 
@@ -252,3 +256,5 @@ window.STORAGE_KEYS = STORAGE_KEYS;
 window.STORAGE_MAP = STORAGE_MAP;
 window.fetchWithAuth = fetchWithAuth;
 window.getAuthHeaders = getAuthHeaders;
+INNER_EOF
+az vm run-command invoke -g isapel-crm-rg -n isapel-backend-vm --command-id RunShellScript --scripts @update_frontend.sh
