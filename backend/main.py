@@ -921,38 +921,64 @@ async def upload_reativacoes_excel(
     """
     Recebe a planilha Excel 'Facilita Vendas' e processa inativos.
     Descarta duplicatas de (VENDEDOR, CÓD.C) e detecta se o cliente é Novo ou Antigo.
-    O processamento é feito usando Pandas.
+    O processamento é otimizado usando Pandas.
     """
     try:
         # Lendo os bytes na memória
         contents = await file.read()
         
-        # Carregando dataframe via pandas a partir de bytes
-        print("Lendo a planilha BASE FACILITA...")
-        df = pd.read_excel(io.BytesIO(contents), sheet_name="BASE FACILITA")
+        # Carregando dataframe via pandas a partir de bytes lendo apenas colunas necessárias (usecols)
+        print("Lendo a planilha BASE FACILITA de forma otimizada...")
         
-        # Validar colunas
-        expected_cols = ['VENDEDOR', 'SITUAÇÃO', 'CÓD.C', 'CLIENTE/FORNEC.']
-        for col in expected_cols:
-            if col not in df.columns:
-                # Tenta normalizar os nomes se for o caso
-                df.columns = [c.strip().upper() for c in df.columns]
+        # Como as colunas podem variar na caixa de texto, vamos primeiro carregar apenas a primeira linha
+        # para mapear os nomes das colunas e então ler com usecols.
+        preview_df = pd.read_excel(io.BytesIO(contents), sheet_name="BASE FACILITA", nrows=1)
+        
+        # Mapeando nomes das colunas reais
+        preview_cols = [str(c).strip().upper() for c in preview_df.columns]
+        
+        # Resolver nomes originais baseados nos mapeamentos esperados
+        col_vendedor = preview_df.columns[preview_cols.index('VENDEDOR')] if 'VENDEDOR' in preview_cols else None
+        
+        col_situacao = None
+        for s in ['SITUAÇÃO', 'SITUACAO', 'SITUACAO']:
+            if s in preview_cols:
+                col_situacao = preview_df.columns[preview_cols.index(s)]
                 break
-        
-        # Mapeando nomes normalizados para colunas esperadas
-        col_vendedor = 'VENDEDOR' if 'VENDEDOR' in df.columns else None
-        col_situacao = 'SITUAÇÃO' if 'SITUAÇÃO' in df.columns else ('SITUACAO' if 'SITUACAO' in df.columns else None)
-        col_codigo = 'CÓD.C' if 'CÓD.C' in df.columns else ('COD' if 'COD' in df.columns else None)
-        col_cliente = 'CLIENTE/FORNEC.' if 'CLIENTE/FORNEC.' in df.columns else ('CLIENTE' if 'CLIENTE' in df.columns else None)
-        col_regiao = 'REGIÃO' if 'REGIÃO' in df.columns else ('REGIAO' if 'REGIAO' in df.columns else None)
-        col_cidade = 'CIDADE' if 'CIDADE' in df.columns else None
+                
+        col_codigo = None
+        for s in ['CÓD.C', 'COD', 'CODIGO']:
+            if s in preview_cols:
+                col_codigo = preview_df.columns[preview_cols.index(s)]
+                break
+                
+        col_cliente = None
+        for s in ['CLIENTE/FORNEC.', 'CLIENTE', 'FORNECEDOR']:
+            if s in preview_cols:
+                col_cliente = preview_df.columns[preview_cols.index(s)]
+                break
+                
+        col_regiao = None
+        for s in ['REGIÃO', 'REGIAO']:
+            if s in preview_cols:
+                col_regiao = preview_df.columns[preview_cols.index(s)]
+                break
+                
+        col_cidade = preview_df.columns[preview_cols.index('CIDADE')] if 'CIDADE' in preview_cols else None
         
         if not col_vendedor or not col_situacao or not col_codigo or not col_cliente:
             raise HTTPException(
                 status_code=400,
-                detail=f"Colunas obrigatórias não encontradas no Excel. Colunas detectadas: {df.columns.tolist()}"
+                detail=f"Colunas obrigatórias não encontradas no Excel. Colunas detectadas: {preview_df.columns.tolist()}"
             )
             
+        # Carregar colunas mapeadas reais
+        usecols_list = [col_vendedor, col_situacao, col_codigo, col_cliente]
+        if col_regiao: usecols_list.append(col_regiao)
+        if col_cidade: usecols_list.append(col_cidade)
+        
+        df = pd.read_excel(io.BytesIO(contents), sheet_name="BASE FACILITA", usecols=usecols_list)
+        
         # Filtrar apenas linhas onde a situação é 'INATIVO'
         df_inativos = df[df[col_situacao].astype(str).str.upper().str.strip() == 'INATIVO']
         
@@ -964,11 +990,15 @@ async def upload_reativacoes_excel(
         import_session_id = datetime.now().isoformat()
         created_at_str = datetime.now().isoformat()
         
+        # Carregar todas as referências existentes em um cache local de dicionário
+        print("Carregando banco de dados local para cache de memória...")
+        existing_refs = {r.id: r for r in db.query(models.InactiveReference).all()}
+        
+        vendedores_validos = ["MATEUS", "ALBERT", "ALMEIDA", "HUGO", "IGOR", "MACIEL", "FERNANDA", "GABRIEL", "KARINE", "CAIO"]
+        
+        created_list = []
         created = 0
         updated = 0
-        
-        # Mapeamento de vendedores válidos (para normalizar)
-        vendedores_validos = ["MATEUS", "ALBERT", "ALMEIDA", "HUGO", "IGOR", "MACIEL", "FERNANDA", "GABRIEL", "KARINE", "CAIO"]
         
         for idx, row in df_unicos.iterrows():
             vendedor_raw = str(row[col_vendedor]).strip().upper()
@@ -983,11 +1013,11 @@ async def upload_reativacoes_excel(
             regiao = str(row[col_regiao]).strip() if col_regiao and pd.notna(row[col_regiao]) else ""
             cidade = str(row[col_cidade]).strip() if col_cidade and pd.notna(row[col_cidade]) else ""
             
-            # ID único do inativo: ref_{COD}_{VENDEDOR}
+            # ID único do inativo
             ref_id = f"ref_{cod_c}_{vendedor_raw}"
             
-            # Buscar se já existia
-            existing = db.query(models.InactiveReference).filter(models.InactiveReference.id == ref_id).first()
+            # Checar cache na memória
+            existing = existing_refs.get(ref_id)
             
             if existing:
                 # Já existia! Portanto ele já era inativo na semana passada (Antigo)
@@ -1010,14 +1040,16 @@ async def upload_reativacoes_excel(
                     importSessionId=import_session_id,
                     createdAt=created_at_str
                 )
-                db.add(new_ref)
+                created_list.append(new_ref)
                 created += 1
                 
+        # Salvar novos registros em lote
+        if created_list:
+            db.bulk_save_objects(created_list)
+            
         db.commit()
         
-        # Limpeza: qualquer cliente inativo deste vendedor que não constava na planilha nova
-        # (seu importSessionId é diferente do atual) significa que reativou ou deixou de ser inativo.
-        # Vamos deletar essas referências do banco
+        # Limpeza: qualquer cliente inativo cujo importSessionId é diferente do atual
         deleted = db.query(models.InactiveReference).filter(
             models.InactiveReference.importSessionId != import_session_id
         ).delete(synchronize_session=False)
