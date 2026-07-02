@@ -377,8 +377,8 @@ async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
     # Roteamento automático baseado no prefixo da chave
     if api_key.startswith("AQ.") or api_key.startswith("AIza"):
         print("[AI PROXY] Direcionando chamada para Google Gemini API (AI Studio)...")
-        # Usamos o modelo rápido gemini-1.5-flash
-        gemini_model = "gemini-1.5-flash"
+        # Usamos o modelo atualizado gemini-2.5-flash
+        gemini_model = "gemini-2.5-flash"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
         
         # Extrair texto do payload no formato Anthropic para enviar ao Gemini
