@@ -361,43 +361,99 @@ from auth import get_current_user
 @app.post("/api/ai/proxy")
 async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
     """
-    Proxy de segurança para a API do Claude (Anthropic).
-    Oculta a chave da API do frontend e centraliza as chamadas.
+    Proxy de segurança híbrido para a API do Gemini (Google) ou Claude (Anthropic).
+    Oculta a chave da API do frontend e centraliza as chamadas de IA.
     """
-    claude_key = os.getenv("CLAUDE_API_KEY") or "AQ.Ab8RN6LXBW6LW51zD48PEHoTjmsJ1ka_fr3hThaD8CX-aqL0tw"
-    if not claude_key:
-        raise HTTPException(status_code=500, detail="Claude API Key não configurada no servidor.")
+    api_key = os.getenv("CLAUDE_API_KEY") or "AQ.Ab8RN6LXBW6LW51zD48PEHoTjmsJ1ka_fr3hThaD8CX-aqL0tw"
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Chave de API de IA não configurada no servidor.")
     
-    # Extrair campos do payload do frontend
+    # Extrair campos comuns do payload do frontend
     model = payload.get("model", "claude-3-haiku-20240307")
     messages = payload.get("messages", [])
     max_tokens = payload.get("max_tokens", 800)
     system = payload.get("system", "Você é um assistente útil.")
     
-    url = "https://api.anthropic.com/v1/messages"
-    headers = {
-        "x-api-key": claude_key,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json"
-    }
+    # Roteamento automático baseado no prefixo da chave
+    if api_key.startswith("AQ.") or api_key.startswith("AIza"):
+        print("[AI PROXY] Direcionando chamada para Google Gemini API (AI Studio)...")
+        # Usamos o modelo rápido gemini-1.5-flash
+        gemini_model = "gemini-1.5-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={api_key}"
+        
+        # Extrair texto do payload no formato Anthropic para enviar ao Gemini
+        user_text = ""
+        if messages:
+            content_block = messages[0].get("content")
+            if isinstance(content_block, str):
+                user_text = content_block
+            elif isinstance(content_block, list):
+                user_text = "".join([part.get("text", "") for part in content_block if isinstance(part, dict)])
+        
+        gemini_payload = {
+            "contents": [{
+                "role": "user",
+                "parts": [{"text": user_text}]
+            }],
+            "systemInstruction": {
+                "parts": [{"text": system}]
+            },
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "maxOutputTokens": max_tokens
+            }
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, json=gemini_payload, timeout=30.0)
+                if response.status_code != 200:
+                    print(f"Gemini API Error: {response.status_code} - {response.text}")
+                    return JSONResponse(status_code=response.status_code, content=response.json())
+                
+                res_data = response.json()
+                try:
+                    generated_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                except (KeyError, IndexError) as parse_err:
+                    print(f"Erro ao parsear resposta do Gemini: {res_data}")
+                    raise HTTPException(status_code=502, detail="Resposta do Gemini em formato inesperado.")
+                
+                # Devolve no formato que o frontend espera (formato da Anthropic)
+                return {
+                    "content": [{
+                        "text": generated_text
+                    }]
+                }
+            except Exception as e:
+                print(f"Gemini Proxy Exception: {str(e)}")
+                raise HTTPException(status_code=502, detail=f"Erro ao conectar com Gemini API: {str(e)}")
     
-    proxy_payload = {
-        "model": model,
-        "max_tokens": max_tokens,
-        "messages": messages,
-        "system": system
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, headers=headers, json=proxy_payload, timeout=30.0)
-            if response.status_code != 200:
-                print(f"Claude API Error: {response.status_code} - {response.text}")
-                return JSONResponse(status_code=response.status_code, content=response.json())
-            return response.json()
-        except Exception as e:
-            print(f"Proxy Exception: {str(e)}")
-            raise HTTPException(status_code=502, detail=f"Erro ao conectar com Anthropic: {str(e)}")
+    else:
+        print("[AI PROXY] Direcionando chamada para Anthropic Claude API...")
+        url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+        }
+        
+        proxy_payload = {
+            "model": model,
+            "max_tokens": max_tokens,
+            "messages": messages,
+            "system": system
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, headers=headers, json=proxy_payload, timeout=30.0)
+                if response.status_code != 200:
+                    print(f"Claude API Error: {response.status_code} - {response.text}")
+                    return JSONResponse(status_code=response.status_code, content=response.json())
+                return response.json()
+            except Exception as e:
+                print(f"Proxy Exception: {str(e)}")
+                raise HTTPException(status_code=502, detail=f"Erro ao conectar com Anthropic: {str(e)}")
 
 
 # --- SALES ---
