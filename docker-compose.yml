@@ -26,7 +26,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://isapel_user:isapel_password123@db:5432/isapel_crm
-      # Adicione outras variáveis de ambiente se necessário (como CORS_ORIGINS)
+      - CLAUDE_API_KEY=AQ.Ab8RN6LXBW6LW51zD48PEHoTjmsJ1ka_fr3hThaD8CX-aqL0tw
     command: gunicorn main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120
 
 volumes:

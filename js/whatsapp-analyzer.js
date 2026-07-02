@@ -4,7 +4,7 @@
  */
 
 const WhatsAppAnalyzer = {
-    CLAUDE_API_KEY: '',
+    CLAUDE_API_KEY: 'AQ.Ab8RN6LXBW6LW51zD48PEHoTjmsJ1ka_fr3hThaD8CX-aqL0tw',
     CLAUDE_MODEL: 'claude-haiku-4-5-20251001',
     conversations: [],
     results: [],

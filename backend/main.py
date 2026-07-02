@@ -364,7 +364,7 @@ async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
     Proxy de segurança para a API do Claude (Anthropic).
     Oculta a chave da API do frontend e centraliza as chamadas.
     """
-    claude_key = os.getenv("CLAUDE_API_KEY")
+    claude_key = os.getenv("CLAUDE_API_KEY") or "AQ.Ab8RN6LXBW6LW51zD48PEHoTjmsJ1ka_fr3hThaD8CX-aqL0tw"
     if not claude_key:
         raise HTTPException(status_code=500, detail="Claude API Key não configurada no servidor.")
     
