@@ -235,7 +235,12 @@ const WhatsAppAnalyzer = {
 
                 this.results.push({contactName:cleanName, phone:potentialPhone, ...result});
                 this.renderResult(result, cleanName, this.results.length - 1);
-            } catch(err) { conv.status='erro'; this.updateFileStatus(realIdx,'❌'); }
+            } catch(err) { 
+                conv.status='erro'; 
+                this.updateFileStatus(realIdx,'❌'); 
+                console.error("Erro ao analisar conversa:", err);
+                this.showToast(`❌ Falha na análise: ${err.message}`, 'error');
+            }
             if (i < convOrdered.length-1) await this.sleep(800);
         }
         btn.disabled=false; btn.innerHTML='<i class="bx bx-search-alt"></i> Analisar Conversas';
@@ -335,10 +340,26 @@ CONVERSA:\n${sample}`;
             })
         });
 
-        if (!res.ok) throw new Error('Proxy error ' + res.status);
+        if (!res.ok) {
+            let errorMsg = `Erro no servidor (status ${res.status})`;
+            try {
+                const errData = await res.json();
+                if (errData && errData.detail) {
+                    errorMsg = errData.detail;
+                } else if (errData && errData.error && errData.error.message) {
+                    errorMsg = errData.error.message;
+                }
+            } catch(e){}
+            throw new Error(errorMsg);
+        }
         const data = await res.json();
-        const text = data.content[0]?.text || "{}";
-        return JSON.parse(text.replace(/```json|```/g, '').trim());
+        const text = data.content ? (data.content[0]?.text || "{}") : "{}";
+        try {
+            return JSON.parse(text.replace(/```json|```/g, '').trim());
+        } catch(parseErr) {
+            console.error("Falha ao processar resposta JSON da IA. Texto:", text);
+            throw new Error("A IA respondeu fora do formato JSON. Retorno: " + text.slice(0, 80));
+        }
     },
 
     updateFileStatus(i, icon) { const el=document.getElementById(`wpp-status-${i}`); if(el) el.textContent=icon; },
