@@ -119,14 +119,14 @@ def login(req: LoginRequest):
     password = req.password.strip()
     from auth import create_token
 
-    # Lê as senhas APENAS das variáveis de ambiente enviadas pelo Render
+    # Lê as senhas com fallback seguro se não estiverem nas variáveis de ambiente
     profiles = [
-        { "env": "APP_PASSWORD_DEFAULT",  "profile": "default"  },
-        { "env": "APP_PASSWORD_MAMAE",    "profile": "mamae"    },
-        { "env": "APP_PASSWORD_KARINE",   "profile": "karine"   },
-        { "env": "APP_PASSWORD_CAIO",     "profile": "caio"     },
-        { "env": "APP_PASSWORD_FERNANDA", "profile": "fernanda" },
-        { "env": "APP_PASSWORD_MATEUS",   "profile": "mateus", "fallback": "Mateus1234" },
+        { "env": "APP_PASSWORD_DEFAULT",  "profile": "default",  "fallback": "maciel123" },
+        { "env": "APP_PASSWORD_MAMAE",    "profile": "mamae",    "fallback": "mamae" },
+        { "env": "APP_PASSWORD_KARINE",   "profile": "karine",   "fallback": "Karine1234" },
+        { "env": "APP_PASSWORD_CAIO",     "profile": "caio",     "fallback": "Caio1234" },
+        { "env": "APP_PASSWORD_FERNANDA", "profile": "fernanda", "fallback": "Fernanda1234" },
+        { "env": "APP_PASSWORD_MATEUS",   "profile": "mateus",   "fallback": "Mateus1234" },
     ]
 
     for p in profiles:
