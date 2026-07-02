@@ -28,8 +28,10 @@ const WhatsAppAnalyzer = {
 
     async loadFiles(files) {
         const valid = files.filter(f =>
-            f.name.endsWith('.txt') || f.name.endsWith('.zip') ||
-            f.type === 'text/plain' || f.type === 'application/zip' ||
+            f.name.toLowerCase().endsWith('.txt') || 
+            f.name.toLowerCase().endsWith('.zip') ||
+            f.type === 'text/plain' || 
+            f.type === 'application/zip' ||
             f.type === 'application/x-zip-compressed'
         );
         if (!valid.length) {
@@ -41,16 +43,28 @@ const WhatsAppAnalyzer = {
         let totalLoaded = 0;
 
         for (const file of valid) {
-            if (file.name.endsWith('.zip')) {
-                await this.loadZip(file);
-            } else {
-                await this.loadTxt(file);
+            try {
+                let success = false;
+                if (file.name.toLowerCase().endsWith('.zip')) {
+                    success = await this.loadZip(file);
+                } else {
+                    success = await this.loadTxt(file);
+                }
+                if (success) {
+                    totalLoaded++;
+                }
+            } catch (err) {
+                console.error("Erro ao carregar arquivo:", file.name, err);
+                this.showToast(`❌ Erro ao processar ${file.name}`, 'error');
             }
-            totalLoaded++;
         }
 
         this.renderFileList();
-        this.showToast(`✅ ${totalLoaded} arquivo(s) carregado(s).`, 'success');
+        if (totalLoaded > 0) {
+            this.showToast(`✅ ${totalLoaded} conversa(s) carregada(s) com sucesso.`, 'success');
+        } else {
+            this.showToast('⚠️ Nenhuma conversa válida foi importada.', 'warn');
+        }
     },
 
     // Lê arquivo .txt direto
@@ -58,11 +72,28 @@ const WhatsAppAnalyzer = {
         return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const content = e.target.result;
-                const name    = this.extractContactName(file.name, content);
-                if (!this.conversations.find(c => c.fileName === file.name))
-                    this.conversations.push({ fileName: file.name, contactName: name, content, status: 'pendente', loadedAt: Date.now() });
-                resolve();
+                try {
+                    const content = e.target.result;
+                    const name    = this.extractContactName(file.name, content);
+                    if (!this.conversations.find(c => c.fileName === file.name)) {
+                        this.conversations.push({ 
+                            fileName: file.name, 
+                            contactName: name, 
+                            content, 
+                            status: 'pendente', 
+                            loadedAt: Date.now() 
+                        });
+                        resolve(true);
+                    } else {
+                        resolve(false); // Já existia
+                    }
+                } catch (err) {
+                    console.error(err);
+                    resolve(false);
+                }
+            };
+            reader.onerror = () => {
+                resolve(false);
             };
             reader.readAsText(file, 'UTF-8');
         });
@@ -72,30 +103,50 @@ const WhatsAppAnalyzer = {
     async loadZip(file) {
         // Carrega JSZip dinamicamente se não estiver disponível
         if (typeof JSZip === 'undefined') {
-            await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+            try {
+                await this.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+            } catch (err) {
+                this.showToast(`❌ Erro ao carregar biblioteca de descompactação ZIP: ${err.message}`, 'error');
+                return false;
+            }
         }
 
         try {
             const arrayBuffer = await file.arrayBuffer();
             const zip         = await JSZip.loadAsync(arrayBuffer);
             const txtFiles    = Object.keys(zip.files).filter(name =>
-                name.endsWith('.txt') && !zip.files[name].dir
+                name.toLowerCase().endsWith('.txt') && !zip.files[name].dir
             );
 
             if (!txtFiles.length) {
-                this.showToast(`⚠️ Nenhum .txt encontrado dentro de ${file.name}`, 'warn');
-                return;
+                this.showToast(`⚠️ Nenhum arquivo de texto (.txt) encontrado dentro de ${file.name}`, 'warn');
+                return false;
             }
 
+            let loadedInZip = 0;
             for (const txtName of txtFiles) {
-                const content     = await zip.files[txtName].async('string');
-                const contactName = this.extractContactName(txtName, content);
-                const fileKey     = `${file.name}::${txtName}`;
-                if (!this.conversations.find(c => c.fileName === fileKey))
-                    this.conversations.push({ fileName: fileKey, contactName, content, status: 'pendente', loadedAt: Date.now() });
+                try {
+                    const content     = await zip.files[txtName].async('string');
+                    const contactName = this.extractContactName(txtName, content);
+                    const fileKey     = `${file.name}::${txtName}`;
+                    if (!this.conversations.find(c => c.fileName === fileKey)) {
+                        this.conversations.push({ 
+                            fileName: fileKey, 
+                            contactName, 
+                            content, 
+                            status: 'pendente', 
+                            loadedAt: Date.now() 
+                        });
+                        loadedInZip++;
+                    }
+                } catch (txtErr) {
+                    console.error("Erro ao ler arquivo dentro do zip:", txtName, txtErr);
+                }
             }
+            return loadedInZip > 0;
         } catch (err) {
             this.showToast(`❌ Erro ao abrir ${file.name}: ${err.message}`, 'error');
+            return false;
         }
     },
 
@@ -112,10 +163,13 @@ const WhatsAppAnalyzer = {
     },
 
     extractContactName(fileName, content) {
-        const fromFile = fileName.replace(/conversa do whatsapp com /i,'').replace('.txt','').trim();
-        if (fromFile && fromFile !== fileName.replace('.txt','')) return fromFile;
+        // Remove 'Conversa do WhatsApp com ' e a extensão de forma case-insensitive
+        const cleanFileName = fileName.replace(/conversa do whatsapp com /i,'').replace(/\.txt$/i,'').trim();
+        if (cleanFileName && cleanFileName.toLowerCase() !== fileName.replace(/\.txt$/i,'').toLowerCase()) {
+            return cleanFileName;
+        }
         const match = content.split('\n').slice(0,5).join(' ').match(/com ([\w\s]+)/i);
-        return match ? match[1].trim() : fileName.replace('.txt','');
+        return match ? match[1].trim() : fileName.replace(/\.txt$/i,'');
     },
 
     renderFileList() {
