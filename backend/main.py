@@ -465,7 +465,12 @@ def get_sales(profile: str = Depends(get_current_user), db: Session = Depends(ge
 def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
     # Normalizar Nome do Cliente para evitar duplicidade (Espaços/Caixa)
     sale.client = sale.client.strip().upper()
-    db_sale = models.Sale(**sale.dict())
+    
+    # Remove campos virtuais que não pertencem ao modelo físico do banco
+    sale_data = sale.dict()
+    sale_data.pop("reactivationStatus", None)
+    
+    db_sale = models.Sale(**sale_data)
     db.add(db_sale)
 
     # Auto-cria cliente ativo ou atualiza se já existir (pelo nome normalizado)
@@ -506,7 +511,11 @@ def update_sale(sale_id: str, sale: SaleUpdate, profile: str = Depends(get_curre
     if not db_sale:
         raise HTTPException(status_code=404, detail="Sale not found or unauthorized")
     
-    for key, value in sale.dict(exclude_unset=True).items():
+    # Remove campos virtuais que não pertencem ao modelo físico do banco
+    update_data = sale.dict(exclude_unset=True)
+    update_data.pop("reactivationStatus", None)
+    
+    for key, value in update_data.items():
         setattr(db_sale, key, value)
     
     db.commit()
