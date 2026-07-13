@@ -10,6 +10,7 @@ window.Utils = {
 const AppModule = {
     init() {
         this.checkAuth();
+        this.initChangePassword();
         // DataStore.init() é chamado dentro do checkAuth() após autenticação bem-sucedida
     },
 
@@ -30,11 +31,12 @@ const AppModule = {
     },
 
     checkAuth() {
-        const overlay   = document.getElementById('login-overlay');
-        const form      = document.getElementById('login-form');
-        const passInput = document.getElementById('login-password');
-        const errorMsg  = document.getElementById('login-error');
-        const btnSubmit = form?.querySelector('button[type="submit"]');
+        const overlay       = document.getElementById('login-overlay');
+        const form          = document.getElementById('login-form');
+        const usernameInput = document.getElementById('login-username');
+        const passInput     = document.getElementById('login-password');
+        const errorMsg      = document.getElementById('login-error');
+        const btnSubmit     = form?.querySelector('button[type="submit"]');
 
         // Já autenticado nesta sessão — carrega dados direto
         if (sessionStorage.getItem('maciel_auth') === 'true') {
@@ -46,7 +48,8 @@ const AppModule = {
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const pass = passInput.value;
+            const userVal = usernameInput ? usernameInput.value.trim() : '';
+            const passVal = passInput.value;
 
             // UI: mostra loading
             if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = 'Verificando... <i class="bx bx-loader-alt bx-spin"></i>'; }
@@ -56,21 +59,23 @@ const AppModule = {
                 const res = await fetch(`${API_BASE_URL}/login`, {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ password: pass })
+                    body:    JSON.stringify({ username: userVal, password: passVal })
                 });
 
                 if (res.ok) {
                     const data = await res.json();
-                    sessionStorage.setItem('maciel_auth',    'true');
-                    sessionStorage.setItem('maciel_profile', data.profile || 'default');
-                    sessionStorage.setItem('maciel_token',   data.token   || '');
-                    sessionStorage.setItem('_maciel_session_key', pass); // Permite renovação automática de token
+                    sessionStorage.setItem('maciel_auth',      'true');
+                    sessionStorage.setItem('maciel_profile',   data.profile || 'default');
+                    sessionStorage.setItem('maciel_username',  data.username || 'Vendedor');
+                    sessionStorage.setItem('maciel_token',     data.token   || '');
+                    sessionStorage.setItem('_maciel_session_key', passVal); // Permite renovação automática de token
                     overlay.style.display = 'none';
                     this.applyProfileTheme();
                     // Recarrega os dados do perfil correto, limpando cache do perfil anterior
                     await DataStore.init();
                 } else {
-                    // Senha errada
+                    const errData = await res.json().catch(() => ({}));
+                    errorMsg.textContent = errData.detail || 'Usuário ou senha incorretos. Tente novamente.';
                     errorMsg.style.display = 'block';
                     passInput.value = '';
                     passInput.focus();
@@ -86,19 +91,119 @@ const AppModule = {
         });
     },
 
+    initChangePassword() {
+        const btnChange   = document.getElementById('btn-change-password');
+        const modal       = document.getElementById('change-password-modal');
+        const closeBtn    = document.getElementById('close-change-password');
+        const form        = document.getElementById('change-password-form');
+        const currentPass = document.getElementById('cp-current-password');
+        const newPass     = document.getElementById('cp-new-password');
+        const confirmPass = document.getElementById('cp-confirm-password');
+        const errorMsg    = document.getElementById('cp-error');
+        const successMsg  = document.getElementById('cp-success');
+
+        if (btnChange && modal) {
+            btnChange.onclick = (e) => {
+                e.preventDefault();
+                if (currentPass) currentPass.value = '';
+                if (newPass) newPass.value = '';
+                if (confirmPass) confirmPass.value = '';
+                if (errorMsg) errorMsg.style.display = 'none';
+                if (successMsg) successMsg.style.display = 'none';
+                modal.classList.remove('hidden');
+            };
+        }
+
+        if (closeBtn && modal) {
+            closeBtn.onclick = (e) => {
+                e.preventDefault();
+                modal.classList.add('hidden');
+            };
+        }
+
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+
+                const curVal  = currentPass.value;
+                const newVal  = newPass.value;
+                const confVal = confirmPass.value;
+
+                if (newVal !== confVal) {
+                    errorMsg.textContent = 'As novas senhas não coincidem.';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                if (newVal.length < 4) {
+                    errorMsg.textContent = 'A nova senha deve ter pelo menos 4 caracteres.';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                const token = sessionStorage.getItem('maciel_token');
+                try {
+                    const btnSave = form.querySelector('button[type="submit"]');
+                    if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Salvando...'; }
+
+                    const res = await fetch(`${API_BASE_URL}/change-password`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            currentPassword: curVal,
+                            newPassword: newVal
+                        })
+                    });
+
+                    if (res.ok) {
+                        successMsg.textContent = 'Senha alterada com sucesso!';
+                        successMsg.style.display = 'block';
+                        sessionStorage.setItem('_maciel_session_key', newVal);
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                        }, 1500);
+                    } else {
+                        const errData = await res.json();
+                        errorMsg.textContent = errData.detail || 'Erro ao alterar a senha.';
+                        errorMsg.style.display = 'block';
+                    }
+                } catch (err) {
+                    errorMsg.textContent = 'Erro de conexão com o servidor.';
+                    errorMsg.style.display = 'block';
+                } finally {
+                    const btnSave = form.querySelector('button[type="submit"]');
+                    if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Salvar Nova Senha'; }
+                }
+            };
+        }
+    },
+
     applyProfileTheme() {
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        const username = sessionStorage.getItem('maciel_username') || 'Vendedor';
 
         // Nome e iniciais por perfil
         const profileData = {
-            'default':  { name: 'Vendedor',  initials: 'VP', role: 'Comercial' },
+            'default':  { name: 'Maciel',    initials: 'MA', role: 'Comercial' },
             'mamae':    { name: 'Mamãe',     initials: 'MA', role: 'Gestão'    },
             'karine':   { name: 'Karine',    initials: 'KA', role: 'Comercial' },
             'caio':     { name: 'Caio',      initials: 'CA', role: 'Comercial' },
             'fernanda': { name: 'Fernanda',  initials: 'FE', role: 'Comercial' },
             'mateus':   { name: 'Mateus',    initials: 'MT', role: 'Gerente'   },
         };
-        const user     = profileData[profile] || profileData['default'];
+
+        let user = profileData[profile];
+        if (!user) {
+            // Suporte a novos perfis dinâmicos criados no banco de dados
+            const initials = username.substring(0, 2).toUpperCase();
+            user = { name: username, initials: initials, role: 'Comercial' };
+        }
+
         const avatarEl = document.querySelector('.avatar');
         const nameEl   = document.querySelector('.user-name');
         const roleEl   = document.querySelector('.user-role');

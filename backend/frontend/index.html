@@ -121,7 +121,8 @@
                     <span class="user-role">Comercial</span>
                 </div>
             </div>
-            <div style="padding: 0 1rem 1rem 1rem;">
+            <div style="padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <button id="btn-change-password" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; padding: 0.4rem; color: var(--text-muted); border-color: var(--border-color);"><i class='bx bx-key'></i> Alterar Senha</button>
                 <button id="btn-logout" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; padding: 0.4rem; color: var(--danger); border-color: var(--danger);"><i class='bx bx-log-out'></i> Sair da Conta</button>
             </div>
         </aside>
@@ -1561,22 +1562,52 @@
     <!-- Login Overlay -->
     <div id="login-overlay" class="modal-overlay">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div class="logo-container" style="justify-content: center; margin-bottom: 2rem;">
+            <div class="logo-container" style="justify-content: center; margin-bottom: 1.5rem;">
                 <i class='bx bx-lock-alt logo-icon' style="font-size: 3rem;"></i>
             </div>
-            <h2 style="margin-bottom: 1rem;">Acesso Restrito</h2>
-            <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Por favor, insira a senha para acessar o
-                Controle de Vendas Isapel.</p>
+            <h2 style="margin-bottom: 0.5rem;">Acesso Restrito</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Insira seu usuário e senha para acessar o Controle de Vendas Isapel.</p>
             <form id="login-form">
-                <div class="form-group">
-                    <input type="password" id="login-password" required placeholder="Digite a senha..."
-                        style="text-align: center; font-size: 1.1rem; letter-spacing: 2px;">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <input type="text" id="login-username" required placeholder="Nome do Usuário"
+                        style="text-align: center; font-size: 1.1rem; padding: 0.6rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-sidebar); color: var(--text-main); width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <input type="password" id="login-password" required placeholder="Senha de Acesso"
+                        style="text-align: center; font-size: 1.1rem; padding: 0.6rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-sidebar); color: var(--text-main); width: 100%;">
                 </div>
                 <p id="login-error"
-                    style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;">Senha
-                    incorreta. Tente novamente.</p>
+                    style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;">Usuário ou senha incorretos. Tente novamente.</p>
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Entrar <i
                         class='bx bx-right-arrow-alt'></i></button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="change-password-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 400px; position: relative;">
+            <button id="close-change-password" class="icon-btn" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class='bx bx-x'></i></button>
+            <div class="logo-container" style="justify-content: center; margin-bottom: 1.5rem;">
+                <i class='bx bx-key logo-icon' style="font-size: 2.5rem; color: var(--primary);"></i>
+            </div>
+            <h3 style="margin-bottom: 1rem; text-align: center;">Alterar Senha</h3>
+            <form id="change-password-form">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="cp-current-password" style="display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-muted);">Senha Atual</label>
+                    <input type="password" id="cp-current-password" required placeholder="Sua senha atual..." style="width: 100%; padding: 0.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-sidebar); color: var(--text-main);">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="cp-new-password" style="display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-muted);">Nova Senha</label>
+                    <input type="password" id="cp-new-password" required placeholder="Nova senha (min. 4 caracteres)..." style="width: 100%; padding: 0.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-sidebar); color: var(--text-main);">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="cp-confirm-password" style="display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: var(--text-muted);">Confirmar Nova Senha</label>
+                    <input type="password" id="cp-confirm-password" required placeholder="Repita a nova senha..." style="width: 100%; padding: 0.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color); background: var(--bg-sidebar); color: var(--text-main);">
+                </div>
+                <p id="cp-error" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center;"></p>
+                <p id="cp-success" style="color: var(--success); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center;"></p>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Salvar Nova Senha</button>
             </form>
         </div>
     </div>

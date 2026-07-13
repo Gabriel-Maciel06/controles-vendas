@@ -1,7 +1,9 @@
 /**
  * Data Management Module - Cloud Sync
  */
-const API_BASE_URL = "http://20.85.228.35:8000/api";
+const API_BASE_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") 
+    ? "http://localhost:8000/api" 
+    : "http://20.85.228.35:8000/api";
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',

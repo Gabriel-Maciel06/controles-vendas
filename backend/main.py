@@ -90,6 +90,47 @@ def startup_event():
                 pass  # Coluna já existe, ignorar
                 
         print("Migrations concluídas. Servidor pronto!")
+
+        # Popular usuários padrão no banco de dados
+        from sqlalchemy.orm import sessionmaker
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        db = SessionLocal()
+        try:
+            count = db.query(models.User).count()
+            if count == 0:
+                print("Criando usuários padrão no banco de dados...")
+                def sha256_hash(pw: str) -> str:
+                    return hashlib.sha256(pw.encode()).hexdigest()
+                
+                default_users = [
+                    {"username": "Maciel", "profile": "default", "password": os.getenv("APP_PASSWORD_DEFAULT") or "maciel123"},
+                    {"username": "mamae", "profile": "mamae", "password": os.getenv("APP_PASSWORD_MAMAE") or "mamae"},
+                    {"username": "karine", "profile": "karine", "password": os.getenv("APP_PASSWORD_KARINE") or "Karine1234"},
+                    {"username": "caio", "profile": "caio", "password": os.getenv("APP_PASSWORD_CAIO") or "Caio1234"},
+                    {"username": "fernanda", "profile": "fernanda", "password": os.getenv("APP_PASSWORD_FERNANDA") or "Fernanda1234"},
+                    {"username": "mateus", "profile": "mateus", "password": os.getenv("APP_PASSWORD_MATEUS") or "Mateus1234"},
+                    {"username": "Albert", "profile": "albert", "password": "Albert123"},
+                    {"username": "Gabriel", "profile": "gabriel", "password": "Gabriel123"},
+                    {"username": "Igor", "profile": "igor", "password": "Igor123"},
+                    {"username": "Almeida", "profile": "almeida", "password": "Almeida123"},
+                    {"username": "Hugo", "profile": "hugo", "password": "Hugo123"},
+                ]
+                
+                for u in default_users:
+                    user = models.User(
+                        username=u["username"],
+                        profile=u["profile"],
+                        password_hash=sha256_hash(u["password"]),
+                        createdAt=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    )
+                    db.add(user)
+                db.commit()
+                print("Usuários padrão criados no banco!")
+        except Exception as err_users:
+            print(f"Erro ao inicializar tabela de usuários: {err_users}")
+        finally:
+            db.close()
+            
     except Exception as e:
         print(f"ERRO no startup (servidor sobe mesmo assim): {e}")
         # Não re-raise — permite o servidor subir mesmo com erro de banco
@@ -112,30 +153,56 @@ def db_check(db: Session = Depends(get_db)):
 
 # --- AUTH ENDPOINT ---
 class LoginRequest(BaseModel):
+    username: str
     password: str
 
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+
 @app.post("/api/login")
-def login(req: LoginRequest):
+def login(req: LoginRequest, db: Session = Depends(get_db)):
+    username = req.username.strip()
     password = req.password.strip()
     from auth import create_token
 
-    # Lê as senhas com fallback seguro se não estiverem nas variáveis de ambiente
-    profiles = [
-        { "env": "APP_PASSWORD_DEFAULT",  "profile": "default",  "fallback": "maciel123" },
-        { "env": "APP_PASSWORD_MAMAE",    "profile": "mamae",    "fallback": "mamae" },
-        { "env": "APP_PASSWORD_KARINE",   "profile": "karine",   "fallback": "Karine1234" },
-        { "env": "APP_PASSWORD_CAIO",     "profile": "caio",     "fallback": "Caio1234" },
-        { "env": "APP_PASSWORD_FERNANDA", "profile": "fernanda", "fallback": "Fernanda1234" },
-        { "env": "APP_PASSWORD_MATEUS",   "profile": "mateus",   "fallback": "Mateus1234" },
-    ]
+    # Busca usuário no banco (case insensitive)
+    db_users = db.query(models.User).all()
+    user = None
+    for u in db_users:
+        if u.username.lower().strip() == username.lower().strip():
+            user = u
+            break
 
-    for p in profiles:
-        pw = os.getenv(p["env"]) or p.get("fallback")
-        if pw and hmac.compare_digest(password, pw):
-            token = create_token(p["profile"])
-            return {"ok": True, "profile": p["profile"], "token": token}
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
 
-    raise HTTPException(status_code=401, detail="Senha incorreta ou perfil não configurado")
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    if not hmac.compare_digest(user.password_hash, hashed_password):
+        raise HTTPException(status_code=401, detail="Senha incorreta")
+
+    token = create_token(user.username, user.profile)
+    return {"ok": True, "profile": user.profile, "username": user.username, "token": token}
+
+@app.post("/api/change-password")
+def change_password(req: ChangePasswordRequest, username: str = Depends(get_current_username), db: Session = Depends(get_db)):
+    current_password = req.currentPassword.strip()
+    new_password = req.newPassword.strip()
+    
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter no mínimo 4 caracteres")
+        
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        
+    current_hashed = hashlib.sha256(current_password.encode()).hexdigest()
+    if not hmac.compare_digest(user.password_hash, current_hashed):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+        
+    user.password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+    db.commit()
+    return {"ok": True, "message": "Senha alterada com sucesso!"}
 
 # --- Pydantic Schemas for Validation ---
 class SaleBase(BaseModel):
@@ -354,7 +421,7 @@ class ImportFacilitaReq(BaseModel):
     prospects: List[ProspectBase] = []
     profile: str = "default"
 
-from auth import get_current_user
+from auth import get_current_user, get_current_username
 
 # --- API Endpoints ---
 

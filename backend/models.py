@@ -1,6 +1,14 @@
 from sqlalchemy import Column, Integer, String, Float
 from database import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    username = Column(String, primary_key=True, index=True)
+    profile = Column(String)
+    password_hash = Column(String)
+    createdAt = Column(String, nullable=True)
+
 class Sale(Base):
     __tablename__ = "sales"
 
