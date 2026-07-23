@@ -12,7 +12,7 @@ if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgres://")
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 if not SQLALCHEMY_DATABASE_URL:
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./crm_vendas.db"
+    SQLALCHEMY_DATABASE_URL = "postgresql://postgres.xpjhpskjetpcglkxdjag:cEnpi0-hunnec-hizzip@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
