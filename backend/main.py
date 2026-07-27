@@ -107,7 +107,6 @@ def startup_event():
                 
                 default_users = [
                     {"username": "Maciel", "profile": "default", "password": os.getenv("APP_PASSWORD_DEFAULT") or "maciel0602"},
-                    {"username": "mamae", "profile": "mamae", "password": os.getenv("APP_PASSWORD_MAMAE") or "mamae"},
                     {"username": "karine", "profile": "karine", "password": os.getenv("APP_PASSWORD_KARINE") or "Karine1234"},
                     {"username": "caio", "profile": "caio", "password": os.getenv("APP_PASSWORD_CAIO") or "Caio1234"},
                     {"username": "fernanda", "profile": "fernanda", "password": os.getenv("APP_PASSWORD_FERNANDA") or "Fernanda1234"},
