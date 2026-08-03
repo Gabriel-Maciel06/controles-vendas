@@ -77,6 +77,9 @@ def startup_event():
             'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingUpdatedAt" VARCHAR;',
             'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "inactiveStatus" VARCHAR;',
             'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastImportedSessionId" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastPurchaseDate" VARCHAR;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "totalPurchased" FLOAT DEFAULT 0.0;',
+            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "purchaseCount" INTEGER DEFAULT 0;',
             'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "reactivationStatus" VARCHAR;',
         ]
 
