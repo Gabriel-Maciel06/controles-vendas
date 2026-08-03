@@ -28,6 +28,15 @@ const AppModule = {
 
         this.initTopbarFeatures();
         this.initMobileMenu();
+
+        // Se a view ativa na tela for crm, crm-ativo ou crm-inativo, re-inicializa no perfil correto
+        const activeSection = document.querySelector('.view-section:not(.hidden)');
+        if (activeSection && activeSection.id) {
+            const currentViewId = activeSection.id.replace('view-', '');
+            if (['crm', 'crm-ativo', 'crm-inativo'].includes(currentViewId) && window.CRMModule) {
+                window.CRMModule.init(currentViewId);
+            }
+        }
     },
 
     checkAuth() {

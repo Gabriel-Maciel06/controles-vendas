@@ -503,13 +503,15 @@ const CRMModule = {
         // Pegar o registro mais recente por cliente
         const latest = {};
         all.forEach(c => {
-            const name = c.name || c.client;
-            const date = c.lastContactDate || c.contactDate || '';
-            if (!latest[name] || date > (latest[name].lastContactDate || '')) latest[name] = c;
+            const name = (c.name || c.client || '').trim().toUpperCase();
+            if (!name) return;
+            const date = c.lastPurchaseDate || c.lastContactDate || (c.createdAt ? c.createdAt.substring(0, 10) : '');
+            if (!latest[name] || date > (latest[name].lastPurchaseDate || latest[name].lastContactDate || '')) {
+                latest[name] = c;
+            }
         });
 
         this.allAlerts = Object.values(latest);
-
         this.applyFilters(false); // Retain pagination on reload
     },
 
@@ -520,19 +522,17 @@ const CRMModule = {
         const query      = (this.dom.search?.value || '').toLowerCase().trim();
         const tempObj    = document.getElementById('crm-filter-temperature');
         const originObj  = document.getElementById('crm-filter-origin');
-        const sortObj    = document.getElementById('crm-filter-sort');
 
         const temperature = tempObj ? tempObj.value : '';
         const originFilter= originObj ? originObj.value : '';
-        const sortMode    = sortObj ? sortObj.value : 'priority';
 
         const today      = new Date().toISOString().split('T')[0];
-        const weekEnd    = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
-        const weekEndStr = weekEnd.toISOString().split('T')[0];
 
         // Aplica filtro fixo de view (ORIGIN_FILTERS)
         const viewFilter = this.ORIGIN_FILTERS[this.activeView] || (() => true);
         let filtered = this.allAlerts.filter(viewFilter);
+
+        const isDedicatedView = this.activeView === 'crm-ativo' || this.activeView === 'crm-inativo';
 
         filtered = filtered.filter(c => {
             const name  = (c.name || c.client || '').toLowerCase();
@@ -541,17 +541,22 @@ const CRMModule = {
             // Busca por nome ou telefone
             if (query && !name.includes(query) && !phone.includes(query)) return false;
 
-            // Filtro de origin (Inativo, Ativo, Prospec, Maps...)
-            // Cuidado: alguns clientes legados podem ter 'origin' vazio. 
-            // O source costuma guardar Inativo também se origin falhar... vamos testar os 2
-            if (originFilter) {
-                const cOrigin = c.origin || '';
-                const cSource = c.source || '';
-                if (cOrigin !== originFilter && cSource !== originFilter) return false;
+            // Filtro de origem/status (apenas se não estiver em view dedicada)
+            if (!isDedicatedView && originFilter) {
+                const cStatus = (c.status || '').toLowerCase();
+                const cOrigin = (c.origin || '').toLowerCase();
+                const cSource = (c.source || '').toLowerCase();
+                const fLow    = originFilter.toLowerCase();
+
+                if (fLow === 'ativo' || fLow === 'inativo') {
+                    if (cStatus !== fLow) return false;
+                } else {
+                    if (cOrigin !== fLow && cSource !== fLow) return false;
+                }
             }
 
             // Filtro de temperatura
-            if (temperature && (c.temperature || 'Frio') !== temperature) return false;
+            if (temperature && (c.temperature || '').toLowerCase() !== temperature.toLowerCase()) return false;
 
             return true;
         });
@@ -859,7 +864,7 @@ const CRMModule = {
         alerts.forEach(alert => {
             const name       = alert.name || alert.client || '—';
             const phone      = alert.phone || '';
-            const lastDate   = alert.lastContactDate || alert.contactDate || '';
+            const lastDate   = alert.lastPurchaseDate || alert.lastContactDate || alert.contactDate || (alert.createdAt ? alert.createdAt.substring(0, 10) : '');
             const lastFmt    = lastDate   ? lastDate.split('-').reverse().join('/')   : '—';
             const nextFollow = alert.nextFollowUp || '';
             const nextFmt    = nextFollow ? nextFollow.split('-').reverse().join('/') : '—';
@@ -1095,5 +1100,7 @@ const CRMModule = {
 window.CRMModule = CRMModule;
 
 document.addEventListener('DataStoreReady', () => {
-    CRMModule.init();
+    const activeSection = document.querySelector('.view-section:not(.hidden)');
+    const currentViewId = activeSection ? activeSection.id.replace('view-', '') : 'crm';
+    CRMModule.init(currentViewId);
 });
