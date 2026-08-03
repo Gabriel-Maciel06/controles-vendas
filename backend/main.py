@@ -8,7 +8,7 @@ import hmac
 import secrets
 import io
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
@@ -247,11 +247,13 @@ class CustomerBase(BaseModel):
     origin: str = None
     temperature: str = None
     region: str = None
-    city: str = None
-    inactiveStatus: str = None # "Novo" ou "Antigo"
-    lastImportedSessionId: str = None
+    lastPurchaseDate: Optional[str] = None
+    totalPurchased: Optional[float] = 0.0
+    purchaseCount: Optional[int] = 0
+    inactiveStatus: Optional[str] = None # "Novo" ou "Antigo"
+    lastImportedSessionId: Optional[str] = None
     createdAt: str
-    updatedAt: str = None
+    updatedAt: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -541,6 +543,8 @@ def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Se
     db_sale = models.Sale(**sale_data)
     db.add(db_sale)
 
+    sale_date_str = sale.saleDate or (sale.createdAt[:10] if sale.createdAt else datetime.now().strftime("%Y-%m-%d"))
+
     # Auto-cria cliente ativo ou atualiza se já existir (pelo nome normalizado)
     db_cust = db.query(models.Customer).filter(
         models.Customer.name == sale.client,
@@ -550,6 +554,10 @@ def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Se
     if db_cust:
         db_cust.status = "Ativo"
         db_cust.temperature = "Pós venda"
+        db_cust.lastPurchaseDate = sale_date_str
+        db_cust.lastContactDate = sale_date_str
+        db_cust.purchaseCount = (db_cust.purchaseCount or 0) + 1
+        db_cust.totalPurchased = (db_cust.totalPurchased or 0.0) + (sale.value or 0.0)
         db_cust.updatedAt = sale.createdAt
     else:
         new_cust = models.Customer(
@@ -559,7 +567,10 @@ def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Se
             company="",
             phone="",
             status="Ativo",
-            lastContactDate=sale.createdAt[:10] if sale.createdAt else "",
+            lastPurchaseDate=sale_date_str,
+            lastContactDate=sale_date_str,
+            totalPurchased=sale.value or 0.0,
+            purchaseCount=1,
             nextFollowUp="",
             temperature="Pós venda",
             origin="Vendas",
@@ -602,7 +613,32 @@ def delete_sale(sale_id: str, profile: str = Depends(get_current_user), db: Sess
 # --- CUSTOMERS ---
 @app.get("/api/customers", response_model=List[CustomerBase])
 def get_customers(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Customer).filter(models.Customer.profile == profile).all()
+    customers = db.query(models.Customer).filter(models.Customer.profile == profile).all()
+    today = datetime.now().date()
+    updated = False
+    
+    for c in customers:
+        p_date_str = c.lastPurchaseDate or c.lastContactDate or (c.createdAt[:10] if c.createdAt else None)
+        if p_date_str:
+            try:
+                p_date = datetime.strptime(p_date_str[:10], "%Y-%m-%d").date()
+                days_since = (today - p_date).days
+                # Regra dos 2 meses (60 dias sem compra => Inativo)
+                if days_since >= 60:
+                    if c.status != "Inativo":
+                        c.status = "Inativo"
+                        updated = True
+                else:
+                    if c.status == "Inativo" and c.lastPurchaseDate:
+                        c.status = "Ativo"
+                        updated = True
+            except Exception:
+                pass
+                
+    if updated:
+        db.commit()
+        
+    return customers
 
 @app.post("/api/customers", response_model=CustomerBase)
 def create_customer(customer: CustomerBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -49,7 +49,9 @@ class Customer(Base):
     origin = Column(String, nullable=True)
     temperature = Column(String, nullable=True)
     region = Column(String, nullable=True)
-    city = Column(String, nullable=True)
+    lastPurchaseDate = Column(String, nullable=True)
+    totalPurchased = Column(Float, default=0.0)
+    purchaseCount = Column(Integer, default=0)
     createdAt = Column(String, nullable=True)
     updatedAt = Column(String, nullable=True)
 
