@@ -8,14 +8,10 @@ const CRMModule = {
     filteredAlerts: [],
     currentPage: 1,
     itemsPerPage: 20,
-    activeView: 'crm', // view atual ativa
-
-    // Filtros de origin por view
+    activeView: 'crm', // view atual ati    // Filtros de origin por view
     ORIGIN_FILTERS: {
-        'crm-google':  c => (c.origin || '') === 'Google',
         'crm-ativo':   c => (c.origin || '') === 'Inativo' && (c.temperature || '') !== 'Primeiro contato',
         'crm-inativo': c => (c.origin || '') === 'Inativo' && (!c.temperature || c.temperature === 'Primeiro contato' || c.temperature === 'Frio'),
-        'crm-maps':    c => (c.origin || '') === 'Maps',
         'crm':         () => true,
     },
 
@@ -29,21 +25,15 @@ const CRMModule = {
             if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
             
             // Configurações padrão por view
-            if (viewId === 'crm-google') {
-                this.selectOrigin('Google');
-                this.selectTemp('Quente');
-            } else if (viewId === 'crm-ativo') {
+            if (viewId === 'crm-ativo') {
                 this.selectOrigin('Inativo');
                 this.selectTemp('Pós venda');
             } else if (viewId === 'crm-inativo') {
                 this.selectOrigin('Inativo');
                 this.selectTemp('Primeiro contato');
-            } else if (viewId === 'crm-maps') {
-                this.selectOrigin('Maps');
-                this.selectTemp('Frio');
             } else {
                 this.selectOrigin('');
-                this.selectTemp('Primeiro contato');
+            }             this.selectTemp('Primeiro contato');
             }
             
             this.selectDays(15);
@@ -636,10 +626,8 @@ const CRMModule = {
     // ── Despachador de render por view ──
     renderViewSpecific(viewId, customers) {
         switch(viewId) {
-            case 'crm-google':  return this.renderGoogleCards(customers);
             case 'crm-ativo':   return this.renderAtivoTable(customers);
             case 'crm-inativo': return this.renderInativoTable(customers);
-            case 'crm-maps':    return this.renderMapsGrouped(customers);
             default:            return this.renderTable(customers);
         }
     },

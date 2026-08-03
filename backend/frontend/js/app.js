@@ -313,17 +313,13 @@ const AppModule = {
                             window.KanbanModule.render();
                         }
                         // CRM VIEWS — filtered by origin
-                        const crmViews = ['crm', 'crm-google', 'crm-ativo', 'crm-inativo', 'crm-maps'];
+                        const crmViews = ['crm', 'crm-ativo', 'crm-inativo'];
                         if (crmViews.includes(targetId) && window.CRMModule) {
                             window.CRMModule.init(targetId);
                         }
                         // PROSPEC VIEW
                         if (targetId === 'crm-prospec' && window.ProspecModule) {
                             window.ProspecModule.init();
-                        }
-                        // ANALYTICS VIEW
-                        if (targetId === 'analytics' && window.AnalyticsModule) {
-                            window.AnalyticsModule.render();
                         }
                     } else {
                         section.classList.remove('active');
