@@ -127,6 +127,65 @@ def startup_event():
                     )
                     db.add(user)
                 db.commit()
+
+            # Auto-sincronizar Vendas existentes para a tabela de Clientes (Ativos/Inativos)
+            try:
+                all_sales = db.query(models.Sale).all()
+                today = datetime.now().date()
+                sales_by_client = {}
+                for s in all_sales:
+                    c_name = (s.client or "").strip().upper()
+                    if not c_name: continue
+                    key = (s.profile or "default", c_name)
+                    if key not in sales_by_client:
+                        sales_by_client[key] = []
+                    sales_by_client[key].append(s)
+                    
+                for (prof, c_name), c_sales in sales_by_client.items():
+                    total_val = sum(s.value or 0.0 for s in c_sales)
+                    p_count = len(c_sales)
+                    valid_dates = []
+                    for s in c_sales:
+                        d_str = s.saleDate or (s.createdAt[:10] if s.createdAt else None)
+                        if d_str:
+                            try:
+                                d_obj = datetime.strptime(d_str[:10], "%Y-%m-%d").date()
+                                valid_dates.append((d_obj, d_str[:10]))
+                            except Exception: pass
+                    
+                    latest_date_str = max(valid_dates, key=lambda x: x[0])[1] if valid_dates else datetime.now().strftime("%Y-%m-%d")
+                    latest_date_obj = max(valid_dates, key=lambda x: x[0])[0] if valid_dates else today
+                    days_since = (today - latest_date_obj).days
+                    status = "Inativo" if days_since >= 60 else "Ativo"
+                    
+                    cust = db.query(models.Customer).filter(models.Customer.name == c_name, models.Customer.profile == prof).first()
+                    if not cust:
+                        cust = models.Customer(
+                            id=f"cli_auto_sync_{abs(hash(c_name))%1000000}",
+                            profile=prof,
+                            name=c_name,
+                            company="",
+                            phone="",
+                            status=status,
+                            lastPurchaseDate=latest_date_str,
+                            lastContactDate=latest_date_str,
+                            totalPurchased=total_val,
+                            purchaseCount=p_count,
+                            temperature="Pós venda" if status == "Ativo" else "Frio",
+                            origin="Vendas",
+                            source="Venda",
+                            createdAt=latest_date_str,
+                            updatedAt=latest_date_str
+                        )
+                        db.add(cust)
+                    else:
+                        cust.status = status
+                        cust.lastPurchaseDate = latest_date_str
+                        cust.totalPurchased = total_val
+                        cust.purchaseCount = p_count
+                db.commit()
+            except Exception as sync_err:
+                print(f"Erro na auto-sync de vendas para clientes: {sync_err}")
                 print("Usuários padrão criados no banco!")
         except Exception as err_users:
             print(f"Erro ao inicializar tabela de usuários: {err_users}")
