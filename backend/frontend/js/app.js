@@ -49,20 +49,26 @@ const AppModule = {
 
         // Já autenticado nesta sessão — carrega dados direto
         if (sessionStorage.getItem('maciel_auth') === 'true') {
-            overlay.style.display = 'none';
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.classList.add('hidden');
+            }
             this.applyProfileTheme();
             DataStore.init(); // Token ainda válido na sessão — carrega dados
             return;
         }
 
+        if (!form || form._bound) return;
+        form._bound = true;
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const userVal = usernameInput ? usernameInput.value.trim() : '';
-            const passVal = passInput.value;
+            const passVal = passInput.value ? passInput.value.trim() : '';
 
             // UI: mostra loading
             if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = 'Verificando... <i class="bx bx-loader-alt bx-spin"></i>'; }
-            errorMsg.style.display = 'none';
+            if (errorMsg) errorMsg.style.display = 'none';
 
             try {
                 const res = await fetch(`${API_BASE_URL}/login`, {
@@ -73,27 +79,36 @@ const AppModule = {
 
                 if (res.ok) {
                     const data = await res.json();
-                    sessionStorage.setItem('maciel_auth',      'true');
-                    sessionStorage.setItem('maciel_profile',   data.profile || 'default');
-                    sessionStorage.setItem('maciel_username',  data.username || 'Vendedor');
-                    sessionStorage.setItem('maciel_token',     data.token   || '');
+                    sessionStorage.setItem('maciel_auth',        'true');
+                    sessionStorage.setItem('maciel_profile',     data.profile || 'default');
+                    sessionStorage.setItem('maciel_username',    data.username || 'Vendedor');
+                    sessionStorage.setItem('maciel_token',       data.token   || '');
                     sessionStorage.setItem('_maciel_session_key', passVal); // Permite renovação automática de token
-                    overlay.style.display = 'none';
+                    
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                        overlay.classList.add('hidden');
+                    }
                     this.applyProfileTheme();
-                    // Recarrega os dados do perfil correto, limpando cache do perfil anterior
+                    // Recarrega os dados do perfil correto
                     await DataStore.init();
                 } else {
                     const errData = await res.json().catch(() => ({}));
-                    errorMsg.textContent = errData.detail || 'Usuário ou senha incorretos. Tente novamente.';
-                    errorMsg.style.display = 'block';
-                    passInput.value = '';
-                    passInput.focus();
+                    if (errorMsg) {
+                        errorMsg.textContent = errData.detail || 'Usuário ou senha incorretos. Tente novamente.';
+                        errorMsg.style.display = 'block';
+                    }
+                    if (passInput) {
+                        passInput.value = '';
+                        passInput.focus();
+                    }
                 }
             } catch (err) {
-                // Backend offline — fallback local temporário para não travar o sistema
-                console.warn('Backend offline, usando fallback local:', err.message);
-                errorMsg.textContent = 'Servidor indisponível. Tente novamente em instantes.';
-                errorMsg.style.display = 'block';
+                console.warn('Erro ao conectar com o backend:', err.message);
+                if (errorMsg) {
+                    errorMsg.textContent = 'Servidor indisponível. Tente novamente em instantes.';
+                    errorMsg.style.display = 'block';
+                }
             } finally {
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Entrar <i class="bx bx-right-arrow-alt"></i>'; }
             }
