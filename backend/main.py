@@ -81,6 +81,8 @@ def startup_event():
             'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "totalPurchased" FLOAT DEFAULT 0.0;',
             'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "purchaseCount" INTEGER DEFAULT 0;',
             'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "reactivationStatus" VARCHAR;',
+            'ALTER TABLE prospects ADD COLUMN IF NOT EXISTS "contacted" VARCHAR DEFAULT \'Não\';',
+            'ALTER TABLE prospects ADD COLUMN IF NOT EXISTS "rating" VARCHAR;',
         ]
 
         is_postgres = "postgres" in str(engine.url)
@@ -367,21 +369,36 @@ class ProspectBase(BaseModel):
     id: str
     profile: str = "default"
     razaoSocial: str
-    cnpj: str = None
+    cnpj: Optional[str] = None
     phone: str
     city: str
     region: str
     porte: str
-    instagram: str = None
-    notes: str = None
+    instagram: Optional[str] = None
+    notes: Optional[str] = None
     status: str = "Novo"
-    crmCustomerId: str = None
-    sentToCrmAt: str = None
+    contacted: Optional[str] = "Não"
+    rating: Optional[str] = None
+    crmCustomerId: Optional[str] = None
+    sentToCrmAt: Optional[str] = None
     createdAt: str
-    updatedAt: str = None
+    updatedAt: Optional[str] = None
 
     class Config:
         orm_mode = True
+
+class ProspectUpdate(BaseModel):
+    razaoSocial: Optional[str] = None
+    cnpj: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
+    porte: Optional[str] = None
+    instagram: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+    contacted: Optional[str] = None
+    rating: Optional[str] = None
 
 # --- Schemas de Atualização (Proteção contra Mass Assignment) ---
 class SaleUpdate(BaseModel):
@@ -1025,6 +1042,20 @@ def create_prospect(prospect: ProspectBase, profile: str = Depends(get_current_u
     prospect.profile = profile
     db_pros = models.Prospect(**prospect.dict())
     db.add(db_pros)
+    db.commit()
+    db.refresh(db_pros)
+    return db_pros
+
+@app.put("/api/prospects/{prospect_id}", response_model=ProspectBase)
+def update_prospect(prospect_id: str, prospect: ProspectUpdate, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    db_pros = db.query(models.Prospect).filter(models.Prospect.id == prospect_id, models.Prospect.profile == profile).first()
+    if not db_pros:
+        raise HTTPException(status_code=404, detail="Prospect not found or unauthorized")
+    
+    for key, value in prospect.dict(exclude_unset=True).items():
+        setattr(db_pros, key, value)
+    
+    db_pros.updatedAt = datetime.now().isoformat()
     db.commit()
     db.refresh(db_pros)
     return db_pros

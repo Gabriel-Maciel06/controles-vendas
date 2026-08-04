@@ -24,7 +24,7 @@
     <!-- Leaflet CSS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2.0">
 </head>
 
 <body>
@@ -214,23 +214,25 @@
                     <!-- KPI Cards Row -->
                     <div class="kpi-grid">
                         <div class="kpi-card">
-                            <div class="kpi-icon" style="color: var(--primary); background: var(--primary-light);"><i
-                                    class='bx bx-search-alt'></i></div>
+                            <div class="kpi-icon" style="color: var(--primary); background: var(--primary-dim);">
+                                <i class='bx bx-search-alt'></i>
+                            </div>
                             <div class="kpi-info">
                                 <h3>Google</h3>
                                 <p id="kpi-google-count">0</p>
                             </div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-icon" style="color: var(--accent); background: rgba(16, 185, 129, 0.15);"><i
-                                    class     ='bx bx-user-check'></i></div>
+                            <div class="kpi-icon" style="color: var(--accent); background: var(--accent-dim);">
+                                <i class='bx bx-user-check'></i>
+                            </div>
                             <div class="kpi-info">
                                 <h3>Reativação</h3>
                                 <p id="kpi-reativacao-count">0</p>
                             </div>
                         </div>
                         <div class="kpi-card">
-                            <div class="kpi-icon" style="color: var(--warning); background: rgba(245, 158, 11, 0.15);">
+                            <div class="kpi-icon" style="color: var(--warning); background: rgba(255, 184, 0, 0.12);">
                                 <i class='bx bx-star'></i>
                             </div>
                             <div class="kpi-info">
@@ -239,7 +241,9 @@
                             </div>
                         </div>
                         <div class="kpi-card highlight">
-                            <div class="kpi-icon"><i class='bx bx-money'></i></div>
+                            <div class="kpi-icon" style="color: var(--danger); background: var(--danger-dim);">
+                                <i class='bx bx-money'></i>
+                            </div>
                             <div class="kpi-info">
                                 <h3>Comissão Total</h3>
                                 <p id="kpi-total-commission">R$ 0,00</p>
@@ -567,30 +571,29 @@
 
                 <!-- View: Kanban / Funil de Vendas -->
                 <section id="view-kanban" class="view-section hidden">
-                    <div style="padding:0 0 1rem;">
+                    <div style="max-width:1400px;margin:0 auto;">
 
-                        <!-- Header com legenda e botão atualizar -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1.2rem;">
+                        <!-- Header -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
                             <div>
-                                <h2 style="margin:0;font-size:1.1rem;color:var(--text-main);">🗂 Funil de Vendas</h2>
-                                <p style="margin:0.2rem 0 0;font-size:0.8rem;color:var(--text-muted);">Arraste os cards entre colunas ou use o menu ↪ dentro de cada card</p>
+                                <h2 style="margin:0;font-size:1.05rem;color:var(--text-main);font-weight:700;">🗂 Funil de Vendas</h2>
+                                <p style="margin:0.15rem 0 0;font-size:0.75rem;color:var(--text-muted);">Arraste os cards entre colunas ou clique em ↪ para mover</p>
                             </div>
-                            <button onclick="KanbanModule.render()" class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                            <button onclick="KanbanModule.render()" class="btn btn-outline" style="font-size:0.78rem;padding:0.35rem 0.8rem;">
                                 <i class='bx bx-refresh'></i> Atualizar
                             </button>
                         </div>
 
                         <!-- Filtro por origem + busca -->
-                        <div style="margin-bottom: 1.2rem; display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
-                            <div style="position:relative; flex:1; min-width:200px; max-width:320px;">
-                                <i class='bx bx-search' style="position:absolute; left:0.7rem; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:1rem;"></i>
-                                <input id="kanban-search" type="text" placeholder="Buscar cliente no funil..."
+                        <div style="margin-bottom:1rem;display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;justify-content:center;">
+                            <div style="position:relative;flex:1;min-width:180px;max-width:280px;">
+                                <i class='bx bx-search' style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.9rem;"></i>
+                                <input id="kanban-search" type="text" placeholder="Buscar cliente..."
                                     oninput="KanbanModule.render()"
-                                    style="width:100%; padding:0.4rem 0.8rem 0.4rem 2.2rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem; outline:none; box-sizing:border-box;">
+                                    style="width:100%;padding:0.4rem 0.7rem 0.4rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;box-sizing:border-box;">
                             </div>
-                            <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Origem:</span>
-                            <select id="kanban-filter-origin" onchange="KanbanModule.render()" style="padding:0.4rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:var(--bg-surface); color:var(--text-main); font-size:0.85rem; outline:none; cursor:pointer;">
-                                <option value="">Todos os Leads</option>
+                            <select id="kanban-filter-origin" onchange="KanbanModule.render()" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;cursor:pointer;">
+                                <option value="">Todos</option>
                                 <option value="Google">🌐 Google</option>
                                 <option value="Inativo">⏸ Inativos</option>
                                 <option value="Maps">🗺 Maps</option>
@@ -598,31 +601,23 @@
                             </select>
                         </div>
 
-                        <!-- Painel de Métricas do Funil -->
-                        <div id="kanban-metrics" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                        <!-- Painel de Métricas (oculto pelo JS — integrado nos headers) -->
+                        <div id="kanban-metrics" style="display:none;"></div>
+
+                        <!-- Board Kanban — Centralizado via CSS -->
+                        <div id="kanban-board">
                             <!-- Renderizado via JS -->
                         </div>
-
-                        <!-- Board Kanban -->
-                        <div id="kanban-board"
-                             style="display:flex;gap:0.8rem;overflow-x:auto;align-items:flex-start;padding-bottom:1rem;">
-                            <!-- Renderizado via JS -->
-                        </div>
-
-                        <!-- Dica mobile -->
-                        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem;opacity:0.6;">
-                            💡 No celular use o menu ↪ dentro de cada card para mover entre etapas
-                        </p>
 
                         <!-- Lixeira Section -->
-                        <div style="margin-top:2rem;text-align:center;">
-                            <button id="btn-toggle-lixeira" class="btn btn-outline" style="font-size:0.8rem;padding:0.4rem 1rem;border-color:rgba(255,255,255,0.1);color:var(--text-muted);" onclick="KanbanModule.toggleLixeira()">
+                        <div style="margin-top:1.5rem;text-align:center;">
+                            <button id="btn-toggle-lixeira" class="btn btn-outline" style="font-size:0.75rem;padding:0.35rem 0.8rem;border-color:rgba(255,255,255,0.08);color:var(--text-muted);" onclick="KanbanModule.toggleLixeira()">
                                 🗑 Lixeira (<span id="lixeira-count">0</span>)
                             </button>
                         </div>
-                        <div id="lixeira-container" style="display:none;margin-top:1rem;background:rgba(0,0,0,0.2);border:1px dashed rgba(255,255,255,0.1);border-radius:10px;padding:1rem;">
-                            <h3 style="font-size:0.95rem;color:var(--text-muted);margin-bottom:1rem;text-align:center;">Contatos Maps Descartados</h3>
-                            <div id="lixeira-cards" style="display:flex;gap:0.8rem;overflow-x:auto;padding-bottom:0.5rem;">
+                        <div id="lixeira-container" style="display:none;margin-top:0.8rem;background:rgba(0,0,0,0.15);border:1px dashed rgba(255,255,255,0.08);border-radius:10px;padding:0.8rem;">
+                            <h3 style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem;text-align:center;">Contatos Descartados</h3>
+                            <div id="lixeira-cards" style="display:flex;gap:0.6rem;overflow-x:auto;padding-bottom:0.5rem;">
                                 <!-- Lixeira cards rendered via JS -->
                             </div>
                         </div>

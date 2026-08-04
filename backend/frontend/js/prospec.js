@@ -1,5 +1,5 @@
 /**
- * Prospec (Prospecção) Module
+ * Prospec (Prospecção) Module - Excel Spreadsheet Style
  */
 
 const REGIOES = {
@@ -24,8 +24,18 @@ const REGIOES = {
     "Santa Catarina": []
 };
 
+const RATING_COLORS = {
+    'Boa': { bg: 'rgba(37,211,102,0.15)', color: '#25D366', label: '🟢 Boa' },
+    'Média': { bg: 'rgba(239,159,39,0.15)', color: '#EF9F27', label: '🟡 Média' },
+    'Ruim': { bg: 'rgba(226,75,74,0.15)', color: '#E24B4A', label: '🔴 Ruim' },
+    'Péssima': { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa', label: '🟣 Péssima' }
+};
+
 const ProspecModule = {
     prospects: [],
+    filteredProspects: [],
+    currentPage: 1,
+    itemsPerPage: 20,
     
     init() {
         this.cacheDOM();
@@ -46,35 +56,37 @@ const ProspecModule = {
             notes: document.getElementById('prospec-notes'),
             listBody: document.getElementById('prospec-table-body'),
             totalCount: document.getElementById('prospec-total-count'),
-            newCount: document.getElementById('prospec-new-count'),
-            sentCount: document.getElementById('prospec-sent-count'),
+            contactedCount: document.getElementById('prospec-contacted-count'),
+            pendingCount: document.getElementById('prospec-pending-count'),
             filterCity: document.getElementById('prospec-filter-city'),
-            filterPorte: document.getElementById('prospec-filter-porte'),
-            filterStatus: document.getElementById('prospec-filter-status'),
-            search: document.getElementById('prospec-search')
+            filterContacted: document.getElementById('prospec-filter-contacted'),
+            filterRating: document.getElementById('prospec-filter-rating'),
+            search: document.getElementById('prospec-search'),
+            pagination: document.getElementById('prospec-pagination')
         };
     },
 
     bindEvents() {
         if (this._eventsBound) return;
         
-        if(this.dom.form) {
+        if (this.dom.form) {
             this.dom.form.addEventListener('submit', (e) => this.saveProspect(e));
         }
 
-        if(this.dom.city) {
+        if (this.dom.city) {
             this.dom.city.addEventListener('input', () => this.autoFillRegion());
         }
 
-        if(this.dom.filterCity) this.dom.filterCity.addEventListener('change', () => this.renderList());
-        if(this.dom.filterPorte) this.dom.filterPorte.addEventListener('change', () => this.renderList());
-        if(this.dom.filterStatus) this.dom.filterStatus.addEventListener('change', () => this.renderList());
-        if(this.dom.search) this.dom.search.addEventListener('input', () => this.renderList());
+        if (this.dom.filterCity) this.dom.filterCity.addEventListener('change', () => { this.currentPage = 1; this.renderList(); });
+        if (this.dom.filterContacted) this.dom.filterContacted.addEventListener('change', () => { this.currentPage = 1; this.renderList(); });
+        if (this.dom.filterRating) this.dom.filterRating.addEventListener('change', () => { this.currentPage = 1; this.renderList(); });
+        if (this.dom.search) this.dom.search.addEventListener('input', () => { this.currentPage = 1; this.renderList(); });
         
         this._eventsBound = true;
     },
 
     autoFillRegion() {
+        if (!this.dom.city || !this.dom.region) return;
         const city = this.dom.city.value.trim();
         if (!city) {
             this.dom.region.value = "";
@@ -89,13 +101,7 @@ const ProspecModule = {
             }
         }
         
-        if (foundRegion) {
-            this.dom.region.value = foundRegion;
-            this.dom.region.style.borderColor = "var(--primary)";
-        } else {
-            this.dom.region.value = "Outra";
-            this.dom.region.style.borderColor = "";
-        }
+        this.dom.region.value = foundRegion || "Outra";
     },
 
     async loadProspects() {
@@ -104,11 +110,11 @@ const ProspecModule = {
             const res = await fetch(`${API_BASE_URL}/prospects?profile=${profile}`, {
                 headers: getAuthHeaders()
             });
-            if(res.ok) {
+            if (res.ok) {
                 this.prospects = await res.json();
                 this.updateFilters();
-                this.renderList();
                 this.updateIndicators();
+                this.renderList();
             }
         } catch (e) {
             console.error("Erro ao carregar prospectos", e);
@@ -131,43 +137,64 @@ const ProspecModule = {
         });
     },
 
+    updateIndicators() {
+        const total = this.prospects.length;
+        const contacted = this.prospects.filter(p => p.contacted === 'Sim').length;
+        const pending = total - contacted;
+
+        if (this.dom.totalCount) this.dom.totalCount.innerText = total;
+        if (this.dom.contactedCount) this.dom.contactedCount.innerText = contacted;
+        if (this.dom.pendingCount) this.dom.pendingCount.innerText = pending;
+    },
+
+    changePage(delta) {
+        this.currentPage += delta;
+        this.renderCurrentPage();
+    },
+
+    async updateProspectField(id, data) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/prospects/${id}`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                const idx = this.prospects.findIndex(p => p.id === id);
+                if (idx > -1) {
+                    this.prospects[idx] = { ...this.prospects[idx], ...updated };
+                }
+                this.updateIndicators();
+            } else {
+                console.error("Erro ao salvar campo de prospecto");
+            }
+        } catch (e) {
+            console.error("Erro na requisição PUT de prospecto:", e);
+        }
+    },
+
     async saveProspect(e) {
         e.preventDefault();
         if (this._submitting) return;
         this._submitting = true;
         
         const btnSubmit = this.dom.form.querySelector('button[type="submit"]');
-        const originalText = btnSubmit.innerHTML;
-        btnSubmit.innerHTML = 'Salvando... <i class="bx bx-loader-alt bx-spin"></i>';
-        btnSubmit.disabled = true;
+        const originalText = btnSubmit ? btnSubmit.innerHTML : '';
+        if (btnSubmit) {
+            btnSubmit.innerHTML = 'Salvando... <i class="bx bx-loader-alt bx-spin"></i>';
+            btnSubmit.disabled = true;
+        }
         
         const razaoSocial = this.dom.razaoSocial.value.trim().toUpperCase();
-        const cnpj = this.dom.cnpj.value.trim();
+        const cnpj = this.dom.cnpj ? this.dom.cnpj.value.trim() : '';
         const phone = this.dom.phone.value.trim();
         const city = this.dom.city.value.trim();
-        const region = this.dom.region.value.trim();
-        const porte = this.dom.porte.value;
-        const instagram = this.dom.instagram.value.trim();
-        const notes = this.dom.notes.value.trim();
-
-        // Check duplicated CNPJ
-        if (cnpj) {
-            const dup = this.prospects.find(p => p.cnpj === cnpj);
-            if (dup) {
-                if(!confirm(`⚠️ Este CNPJ já está cadastrado como [${dup.razaoSocial}]. Deseja continuar mesmo assim?`)) {
-                    return;
-                }
-            } else {
-                // Check in CRM customers as well if loaded
-                const customers = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
-                const crmDup = customers.find(c => c.cnpj === cnpj);
-                if (crmDup) {
-                    if(!confirm(`⚠️ Este CNPJ já está no seu CRM como [${crmDup.name || crmDup.company}]. Deseja continuar mesmo assim?`)) {
-                        return;
-                    }
-                }
-            }
-        }
+        const region = this.dom.region ? this.dom.region.value.trim() : '';
+        const porte = this.dom.porte ? this.dom.porte.value : 'Médio';
+        const instagram = this.dom.instagram ? this.dom.instagram.value.trim() : '';
+        const notes = this.dom.notes ? this.dom.notes.value.trim() : '';
 
         const profile = sessionStorage.getItem('maciel_profile') || 'default';
         const now = new Date().toISOString();
@@ -184,6 +211,8 @@ const ProspecModule = {
             instagram,
             notes,
             status: 'Novo',
+            contacted: 'Não',
+            rating: null,
             createdAt: now,
             updatedAt: now
         };
@@ -195,18 +224,18 @@ const ProspecModule = {
                 body: JSON.stringify(prospectData)
             });
 
-            if(res.ok) {
+            if (res.ok) {
                 const saved = await res.json();
                 this.prospects.unshift(saved);
                 this.dom.form.reset();
-                this.updateFilters();
-                this.renderList();
-                this.updateIndicators();
                 
-                // Update map in dashboard if loaded
-                if (window.DashboardModule && DashboardModule.updateProspecMap) {
-                    DashboardModule.updateProspecMap(this.prospects);
-                }
+                const modal = document.getElementById('prospec-add-modal');
+                if (modal) modal.classList.add('hidden');
+
+                this.updateFilters();
+                this.updateIndicators();
+                this.renderList();
+                alert('✅ Prospecto cadastrado com sucesso!');
             } else {
                 alert('Erro ao salvar prospecto.');
             }
@@ -215,16 +244,15 @@ const ProspecModule = {
             alert('Erro de conexão.');
         } finally {
             this._submitting = false;
-            const btnSubmit = this.dom.form.querySelector('button[type="submit"]');
             if (btnSubmit) {
-                btnSubmit.innerHTML = '<i class="bx bx-plus"></i> Cadastrar Prospecção';
+                btnSubmit.innerHTML = originalText;
                 btnSubmit.disabled = false;
             }
         }
     },
 
     async sendToCrm(id) {
-        if(!confirm('Deseja enviar este estabelecimento para o CRM?')) return;
+        if (!confirm('Deseja enviar este estabelecimento para o CRM?')) return;
 
         try {
             const res = await fetch(`${API_BASE_URL}/prospects/${id}/send-to-crm`, {
@@ -232,10 +260,10 @@ const ProspecModule = {
                 headers: getAuthHeaders()
             });
 
-            if(res.ok) {
+            if (res.ok) {
                 const result = await res.json();
                 const pIndex = this.prospects.findIndex(p => p.id === id);
-                if(pIndex > -1) {
+                if (pIndex > -1) {
                     this.prospects[pIndex].status = 'Enviado';
                     this.prospects[pIndex].crmCustomerId = result.customerId;
                     this.prospects[pIndex].sentToCrmAt = new Date().toISOString();
@@ -243,11 +271,10 @@ const ProspecModule = {
                 this.renderList();
                 this.updateIndicators();
                 
-                // Refresh CRM customers list
                 if (window.CRMModule) {
-                    CRMModule.loadCustomers(true);
+                    CRMModule.loadAlerts();
                 }
-                alert('Sucesso! O cliente foi enviado para o Kanban do seu CRM como "Frio".');
+                alert('✅ Sucesso! Enviado para o CRM como cliente em prospecção.');
             } else {
                 const err = await res.json();
                 alert(err.detail || 'Erro ao enviar para CRM.');
@@ -259,7 +286,7 @@ const ProspecModule = {
     },
 
     async deleteProspect(id) {
-        if(!confirm('Tem certeza que deseja excluir esta prospecção permanentemente?')) return;
+        if (!confirm('Tem certeza que deseja excluir esta prospecção permanentemente?')) return;
 
         try {
             const res = await fetch(`${API_BASE_URL}/prospects/${id}`, {
@@ -267,11 +294,11 @@ const ProspecModule = {
                 headers: getAuthHeaders()
             });
 
-            if(res.ok) {
+            if (res.ok) {
                 this.prospects = this.prospects.filter(p => p.id !== id);
                 this.updateFilters();
-                this.renderList();
                 this.updateIndicators();
+                this.renderList();
             }
         } catch (e) {
             console.error(e);
@@ -279,78 +306,212 @@ const ProspecModule = {
         }
     },
 
-    updateIndicators() {
-        if (this.dom.totalCount) this.dom.totalCount.innerText = this.prospects.length;
-        if (this.dom.newCount) this.dom.newCount.innerText = this.prospects.filter(p => p.status === 'Novo').length;
-        if (this.dom.sentCount) this.dom.sentCount.innerText = this.prospects.filter(p => p.status === 'Enviado').length;
-    },
-
     renderList() {
-        if (!this.dom.listBody) return;
-
         let filtered = [...this.prospects];
         
         if (this.dom.filterCity && this.dom.filterCity.value) {
             filtered = filtered.filter(p => p.city === this.dom.filterCity.value);
         }
-        
-        if (this.dom.filterPorte && this.dom.filterPorte.value) {
-            filtered = filtered.filter(p => p.porte === this.dom.filterPorte.value);
+
+        if (this.dom.filterContacted && this.dom.filterContacted.value) {
+            const val = this.dom.filterContacted.value;
+            filtered = filtered.filter(p => (p.contacted || 'Não') === val);
         }
-        
-        if (this.dom.filterStatus && this.dom.filterStatus.value) {
-            filtered = filtered.filter(p => p.status === this.dom.filterStatus.value);
+
+        if (this.dom.filterRating && this.dom.filterRating.value) {
+            filtered = filtered.filter(p => p.rating === this.dom.filterRating.value);
         }
 
         if (this.dom.search && this.dom.search.value) {
-            const s = this.dom.search.value.toLowerCase();
+            const s = this.dom.search.value.toLowerCase().trim();
             filtered = filtered.filter(p => 
                 (p.razaoSocial && p.razaoSocial.toLowerCase().includes(s)) ||
                 (p.phone && p.phone.includes(s)) ||
-                (p.city && p.city.toLowerCase().includes(s))
+                (p.city && p.city.toLowerCase().includes(s)) ||
+                (p.notes && p.notes.toLowerCase().includes(s))
             );
         }
 
-        // Sort by date created desc
-        filtered.sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+        // Ordenar: Primeiro os com rating ou anotados, depois por id/data
+        filtered.sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
-        if (!filtered.length) {
-            this.dom.listBody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhuma prospecção encontrada.</td></tr>`;
+        this.filteredProspects = filtered;
+        this.renderCurrentPage();
+    },
+
+    renderCurrentPage() {
+        if (!this.dom.listBody) return;
+
+        const total = this.filteredProspects.length;
+        const totalPages = Math.ceil(total / this.itemsPerPage) || 1;
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+        if (this.currentPage < 1) this.currentPage = 1;
+
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        const end = Math.min(start + this.itemsPerPage, total);
+        const sliced = this.filteredProspects.slice(start, end);
+
+        if (!sliced.length) {
+            this.dom.listBody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Nenhuma prospecção encontrada.</td></tr>`;
+            if (this.dom.pagination) this.dom.pagination.innerHTML = '';
             return;
         }
 
-        this.dom.listBody.innerHTML = filtered.map(p => {
-            const isSent = p.status === 'Enviado';
-            const statusHtml = isSent 
-                ? `<span style="background:rgba(29,158,117,0.15);color:#1D9E75;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">✅ Enviado CRM em ${p.sentToCrmAt ? new Date(p.sentToCrmAt).toLocaleDateString('pt-BR') : ''}</span>`
-                : `<span style="background:rgba(83,74,183,0.15);color:#a59bf4;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">🟢 Novo</span>`;
+        this.dom.listBody.innerHTML = sliced.map(p => {
+            const cleanPhone = (p.phone || '').replace(/\D/g, '');
+            const wappUrl = cleanPhone ? `https://wa.me/55${cleanPhone}` : '#';
+            const initial = (p.razaoSocial || 'P').charAt(0).toUpperCase();
+
+            const isContacted = (p.contacted || 'Não') === 'Sim';
+            const contactedStyle = isContacted 
+                ? 'background:rgba(37,211,102,0.12);color:#25D366;border:1px solid rgba(37,211,102,0.3);font-weight:700;'
+                : 'background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);';
+
+            const rating = p.rating || '';
+            const rInfo = RATING_COLORS[rating] || { bg: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', label: '— Sem nota' };
 
             return `
-            <tr>
-                <td>
-                    <div style="font-weight:600;color:var(--text-main);">${p.razaoSocial}</div>
-                    <div style="font-size:0.8rem;color:var(--text-muted);">${p.city} · ${p.porte}</div>
+            <tr id="prosp-row-${p.id}" style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                <!-- Cliente / Nome -->
+                <td style="padding:0.75rem 0.6rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#818cf8;flex-shrink:0;">${initial}</div>
+                        <div>
+                            <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;line-height:1.2;">${this.escapeHTML(p.razaoSocial)}</div>
+                            ${p.cnpj ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">CNPJ: ${this.escapeHTML(p.cnpj)}</div>` : ''}
+                        </div>
+                    </div>
                 </td>
-                <td>
-                    <div style="font-size:0.9rem;color:var(--text-main);"><i class='bx bx-phone'></i> ${p.phone}</div>
-                    ${p.instagram ? `<div style="font-size:0.8rem;color:var(--accent);"><i class='bx bxl-instagram'></i> ${p.instagram}</div>` : ''}
+
+                <!-- Telefone / WhatsApp Direct Link -->
+                <td style="padding:0.75rem 0.6rem;">
+                    ${cleanPhone ? `
+                        <a href="${wappUrl}" target="_blank" rel="noopener" 
+                           title="Clique para iniciar conversa no WhatsApp" 
+                           style="display:inline-flex;align-items:center;gap:0.35rem;color:#25D366;font-weight:600;font-size:0.84rem;text-decoration:none;background:rgba(37,211,102,0.08);padding:0.3rem 0.6rem;border-radius:8px;border:1px solid rgba(37,211,102,0.2);transition:all 0.2s;"
+                           onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.08)'">
+                            <i class='bx bxl-whatsapp' style="font-size:1.05rem;"></i> ${this.escapeHTML(p.phone)}
+                        </a>
+                    ` : '<span style="font-size:0.78rem;color:rgba(255,255,255,0.2);">sem telefone</span>'}
                 </td>
-                <td>${statusHtml}</td>
-                <td style="text-align:right;">
-                    ${!isSent ? `<button class="btn btn-sm btn-outline" style="color:var(--accent);border-color:var(--accent);margin-right:0.5rem;" onclick="ProspecModule.sendToCrm('${p.id}')"><i class='bx bx-send'></i> Enviar CRM</button>` : ''}
-                    <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:transparent;" onclick="ProspecModule.deleteProspect('${p.id}')"><i class='bx bx-trash'></i></button>
+
+                <!-- Já Falou? (Interactive Select) -->
+                <td style="padding:0.75rem 0.6rem;text-align:center;">
+                    <select onchange="ProspecModule.updateProspectField('${p.id}', { contacted: this.value }); ProspecModule.updateRowStyle('${p.id}', this.value)"
+                            style="padding:0.3rem 0.5rem;border-radius:8px;font-size:0.78rem;outline:none;cursor:pointer;${contactedStyle}">
+                        <option value="Não" ${!isContacted ? 'selected' : ''}>⚪ Não Falou</option>
+                        <option value="Sim" ${isContacted ? 'selected' : ''}>🟢 Já Falou</option>
+                    </select>
+                </td>
+
+                <!-- Avaliação do Atendimento (Color Dropdown) -->
+                <td style="padding:0.75rem 0.6rem;text-align:center;">
+                    <select onchange="ProspecModule.updateProspectField('${p.id}', { rating: this.value }); ProspecModule.updateRatingStyle('${p.id}', this.value)"
+                            id="rating-sel-${p.id}"
+                            style="padding:0.3rem 0.55rem;border-radius:8px;font-size:0.78rem;outline:none;cursor:pointer;background:${rInfo.bg};color:${rInfo.color};border:1px solid ${rInfo.color}44;font-weight:600;">
+                        <option value="" ${!rating ? 'selected' : ''} style="background:#1e1e24;color:#fff;">— Selecionar</option>
+                        <option value="Boa" ${rating === 'Boa' ? 'selected' : ''} style="background:#1e1e24;color:#25D366;">🟢 Boa</option>
+                        <option value="Média" ${rating === 'Média' ? 'selected' : ''} style="background:#1e1e24;color:#EF9F27;">🟡 Média</option>
+                        <option value="Ruim" ${rating === 'Ruim' ? 'selected' : ''} style="background:#1e1e24;color:#E24B4A;">🔴 Ruim</option>
+                        <option value="Péssima" ${rating === 'Péssima' ? 'selected' : ''} style="background:#1e1e24;color:#a78bfa;">🟣 Péssima</option>
+                    </select>
+                </td>
+
+                <!-- Cidade / Região -->
+                <td style="padding:0.75rem 0.6rem;">
+                    <div style="font-size:0.83rem;color:var(--text-main);font-weight:500;">${this.escapeHTML(p.city || '—')}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);">${this.escapeHTML(p.region || '—')}</div>
+                </td>
+
+                <!-- Anotações da Conversa (Editable Inline) -->
+                <td style="padding:0.75rem 0.6rem;">
+                    <input type="text" value="${this.escapeAttr(p.notes || '')}" placeholder="Digite anotações rápidas..."
+                           onchange="ProspecModule.updateProspectField('${p.id}', { notes: this.value })"
+                           style="width:100%;padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
+                           onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'">
+                </td>
+
+                <!-- Ações -->
+                <td style="padding:0.75rem 0.6rem;text-align:center;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:0.3rem;">
+                        <button onclick="ProspecModule.sendToCrm('${p.id}')" title="Enviar para CRM"
+                                style="width:30px;height:30px;border-radius:7px;border:none;background:rgba(29,158,117,0.12);color:#1D9E75;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"
+                                onmouseover="this.style.background='rgba(29,158,117,0.25)'" onmouseout="this.style.background='rgba(29,158,117,0.12)'">
+                            <i class='bx bx-send'></i>
+                        </button>
+                        <button onclick="ProspecModule.deleteProspect('${p.id}')" title="Excluir"
+                                style="width:30px;height:30px;border-radius:7px;border:none;background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                            <i class='bx bx-trash'></i>
+                        </button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
+
+        this.renderPagination(total, start, end);
+    },
+
+    updateRowStyle(id, contactedVal) {
+        const row = document.getElementById(`prosp-row-${id}`);
+        if (!row) return;
+        const sel = row.querySelectorAll('select')[0];
+        if (!sel) return;
+        if (contactedVal === 'Sim') {
+            sel.style.cssText = 'padding:0.3rem 0.5rem;border-radius:8px;font-size:0.78rem;outline:none;cursor:pointer;background:rgba(37,211,102,0.12);color:#25D366;border:1px solid rgba(37,211,102,0.3);font-weight:700;';
+        } else {
+            sel.style.cssText = 'padding:0.3rem 0.5rem;border-radius:8px;font-size:0.78rem;outline:none;cursor:pointer;background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);';
+        }
+    },
+
+    updateRatingStyle(id, ratingVal) {
+        const sel = document.getElementById(`rating-sel-${id}`);
+        if (!sel) return;
+        const rInfo = RATING_COLORS[ratingVal] || { bg: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' };
+        sel.style.background = rInfo.bg;
+        sel.style.color = rInfo.color;
+        sel.style.borderColor = rInfo.color + '44';
+    },
+
+    renderPagination(total, start, end) {
+        if (!this.dom.pagination) return;
+        if (total === 0) {
+            this.dom.pagination.innerHTML = '';
+            return;
+        }
+
+        const prevDisabled = this.currentPage === 1 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : '';
+        const nextDisabled = end >= total ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : '';
+
+        this.dom.pagination.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.8rem 0.5rem;font-size:0.8rem;color:var(--text-muted);">
+                <div>Mostrando <strong>${start + 1}–${end}</strong> de <strong>${total}</strong> prospectos</div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-outline" onclick="ProspecModule.changePage(-1)" ${prevDisabled} style="padding:0.4rem 0.8rem;font-size:0.8rem;">&larr; Anterior</button>
+                    <button class="btn btn-outline" onclick="ProspecModule.changePage(1)" ${nextDisabled} style="padding:0.4rem 0.8rem;font-size:0.8rem;">Próximo &rarr;</button>
+                </div>
+            </div>
+        `;
+    },
+
+    escapeHTML(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, match => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[match]));
+    },
+
+    escapeAttr(str) {
+        if (!str) return '';
+        return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 };
 
 window.ProspecModule = ProspecModule;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar quando a aba for carregada
     const checkAppInterval = setInterval(() => {
-        if(window.DataStore) {
+        if (window.DataStore) {
             clearInterval(checkAppInterval);
             ProspecModule.init();
         }

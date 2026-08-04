@@ -107,6 +107,8 @@ class Prospect(Base):
     instagram = Column(String, nullable=True)
     notes = Column(String, nullable=True)
     status = Column(String, default="Novo")
+    contacted = Column(String, default="Não") # "Sim" ou "Não"
+    rating = Column(String, nullable=True)    # "Boa", "Média", "Ruim", "Péssima"
     crmCustomerId = Column(String, nullable=True)
     sentToCrmAt = Column(String, nullable=True)
     createdAt = Column(String)
