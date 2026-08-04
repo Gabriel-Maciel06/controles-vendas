@@ -288,38 +288,11 @@ const AppModule = {
 
     initNavigation() {
         const navItems = document.querySelectorAll('.nav-item');
-        const viewSections = document.querySelectorAll('.view-section');
-        const pageTitleEl = document.getElementById('current-page-title');
-
         navItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-
-                // Get target view ID
                 const targetId = item.getAttribute('data-target');
-                if (!targetId) return;
-
-                // Update active state on nav items
-                navItems.forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-
-                // Update page title
-                const titleSpan = item.querySelector('span');
-                if (titleSpan && pageTitleEl) {
-                    pageTitleEl.innerText = titleSpan.innerText;
-                }
-
-                // Show target view, hide others
-                viewSections.forEach(section => {
-                    if (section.id === `view-${targetId}`) {
-                        section.classList.remove('hidden');
-                        section.classList.add('active');
-                        this.renderView(targetId);
-                    } else {
-                        section.classList.remove('active');
-                        section.classList.add('hidden');
-                    }
-                });
+                if (targetId) window.switchView(targetId);
             });
         });
     },
@@ -567,7 +540,38 @@ const AppModule = {
     }
 };
 
-window.AppModule = AppModule;
+window.switchView = function(targetId) {
+    if (!targetId) return;
+
+    const navItems = document.querySelectorAll('.nav-item');
+    const viewSections = document.querySelectorAll('.view-section');
+    const pageTitleEl = document.getElementById('current-page-title');
+
+    // Update active state on nav items
+    navItems.forEach(nav => {
+        if (nav.getAttribute('data-target') === targetId) {
+            nav.classList.add('active');
+            const titleSpan = nav.querySelector('span');
+            if (titleSpan && pageTitleEl) pageTitleEl.innerText = titleSpan.innerText;
+        } else {
+            nav.classList.remove('active');
+        }
+    });
+
+    // Show target view, hide others
+    viewSections.forEach(section => {
+        if (section.id === `view-${targetId}`) {
+            section.classList.remove('hidden');
+            section.classList.add('active');
+            if (window.AppModule && window.AppModule.renderView) {
+                window.AppModule.renderView(targetId);
+            }
+        } else {
+            section.classList.remove('active');
+            section.classList.add('hidden');
+        }
+    });
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     AppModule.init();
@@ -575,4 +579,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('DataStoreReady', () => {
     AppModule.onDataReady();
+});
+
+// Event delegation de segurança para garantir clique em qualquer nav-item a qualquer momento
+document.addEventListener('click', (e) => {
+    const navItem = e.target.closest('.nav-item');
+    if (navItem) {
+        e.preventDefault();
+        const targetId = navItem.getAttribute('data-target');
+        if (targetId) window.switchView(targetId);
+    }
 });
