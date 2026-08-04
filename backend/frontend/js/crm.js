@@ -7,6 +7,7 @@ const CRMModule = {
     allAlerts: [], // guarda todos os clientes para filtrar localmente
     filteredAlerts: [],
     currentPage: 1,
+    itemsPerPage: 20,
     // Filtros por view de status do cliente (Ativo vs Inativo)
     ORIGIN_FILTERS: {
         'crm-ativo':   c => (c.status || 'Ativo') === 'Ativo',
@@ -32,7 +33,7 @@ const CRMModule = {
                 this.selectTemp('Primeiro contato');
             } else {
                 this.selectOrigin('');
-            }             this.selectTemp('Primeiro contato');
+                this.selectTemp('Primeiro contato');
             }
             
             this.selectDays(15);
@@ -522,11 +523,16 @@ const CRMModule = {
         const query      = (this.dom.search?.value || '').toLowerCase().trim();
         const tempObj    = document.getElementById('crm-filter-temperature');
         const originObj  = document.getElementById('crm-filter-origin');
+        const sortObj    = document.getElementById('crm-filter-sort');
 
         const temperature = tempObj ? tempObj.value : '';
         const originFilter= originObj ? originObj.value : '';
+        const sortMode    = sortObj ? sortObj.value : 'priority';
 
         const today      = new Date().toISOString().split('T')[0];
+        const weekEnd    = new Date();
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        const weekEndStr = weekEnd.toISOString().split('T')[0];
 
         // Aplica filtro fixo de view (ORIGIN_FILTERS)
         const viewFilter = this.ORIGIN_FILTERS[this.activeView] || (() => true);
