@@ -578,12 +578,14 @@ window.switchView = function(targetId) {
         if (section.id === `view-${targetId}`) {
             section.classList.remove('hidden');
             section.classList.add('active');
+            section.style.display = 'block';
             if (window.AppModule && window.AppModule.renderView) {
                 window.AppModule.renderView(targetId);
             }
         } else {
             section.classList.remove('active');
             section.classList.add('hidden');
+            section.style.display = 'none';
         }
     });
 };

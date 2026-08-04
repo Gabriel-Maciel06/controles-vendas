@@ -107,9 +107,7 @@ const ProspecModule = {
     async loadProspects() {
         try {
             const profile = sessionStorage.getItem('maciel_profile') || 'default';
-            const res = await fetch(`${API_BASE_URL}/prospects?profile=${profile}`, {
-                headers: getAuthHeaders()
-            });
+            const res = await fetchWithAuth(`${API_BASE_URL}/prospects?profile=${profile}`);
             if (res.ok) {
                 this.prospects = await res.json();
                 this.updateFilters();
