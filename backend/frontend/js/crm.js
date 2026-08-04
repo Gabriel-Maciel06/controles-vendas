@@ -17,28 +17,109 @@ const CRMModule = {
 
     init(viewId = 'crm') {
         this.activeView = viewId;
-        this.mountForm(); // Novo: Monta o formulário na view ativa
-        this.cacheDOM();
-        
-        if (this.dom.form) {
-            this.bindEvents();
-            if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
-            
-            // Configurações padrão por view
-            if (viewId === 'crm-ativo') {
-                this.selectOrigin('Inativo');
-                this.selectTemp('Pós venda');
-            } else if (viewId === 'crm-inativo') {
-                this.selectOrigin('Inativo');
-                this.selectTemp('Primeiro contato');
-            } else {
-                this.selectOrigin('');
-                this.selectTemp('Primeiro contato');
+
+        if (viewId === 'crm-ativo') {
+            // Ativo tem formulário próprio inline de vendas — pula o form compartilhado
+            this.cacheDOM();
+            this.bindAtivoForm();
+        } else {
+            this.mountForm();
+            this.cacheDOM();
+
+            if (this.dom.form) {
+                this.bindEvents();
+                if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+
+                if (viewId === 'crm-inativo') {
+                    this.selectOrigin('Inativo');
+                    this.selectTemp('Primeiro contato');
+                } else {
+                    this.selectOrigin('');
+                    this.selectTemp('Primeiro contato');
+                }
+
+                this.selectDays(15);
             }
-            
-            this.selectDays(15);
         }
         this.loadAlerts();
+    },
+
+    // ── Formulário dedicado de vendas para a aba Ativos ──
+    bindAtivoForm() {
+        const form = document.getElementById('crm-ativo-form');
+        if (!form || form._bound) return;
+
+        const dateInput = document.getElementById('ativo-date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleAtivoSubmit();
+        });
+        form._bound = true;
+    },
+
+    async handleAtivoSubmit() {
+        if (this._submittingAtivo) return;
+        this._submittingAtivo = true;
+
+        const clientInput = document.getElementById('ativo-client');
+        const valueInput  = document.getElementById('ativo-value');
+        const dateInput   = document.getElementById('ativo-date');
+        const btn         = document.querySelector('#crm-ativo-form button[type="submit"]');
+        const originalText = btn.innerHTML;
+
+        const clientName = (clientInput.value || '').trim().toUpperCase();
+        const saleValue  = parseFloat(valueInput.value);
+        const saleDate   = dateInput.value || new Date().toISOString().split('T')[0];
+
+        if (!clientName) { alert('Preencha o nome do cliente.'); this._submittingAtivo = false; return; }
+        if (!saleValue || saleValue <= 0) { alert('Preencha o valor da venda.'); this._submittingAtivo = false; return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Salvando...';
+
+        try {
+            // Cria registro de venda (backend auto-cria/atualiza o cliente como Ativo)
+            const sale = {
+                client:      clientName,
+                value:       saleValue,
+                saleDate:    saleDate,
+                invoiceDate: saleDate,
+                type:        'Venda',
+                boxes20056:  0,
+                commission:  0,
+                createdAt:   new Date().toISOString(),
+            };
+
+            await DataStore.add(STORAGE_KEYS.SALES, sale);
+
+            // Re-busca clientes do servidor (a venda auto-criou/atualizou o Customer)
+            const profile = sessionStorage.getItem('maciel_profile') || 'default';
+            const custRes = await fetchWithAuth(`${API_BASE_URL}/customers?profile=${profile}`);
+            if (custRes.ok) {
+                DataStore.cache.crm_customers = await custRes.json();
+            }
+
+            // Limpa formulário
+            clientInput.value = '';
+            valueInput.value  = '';
+            dateInput.value   = new Date().toISOString().split('T')[0];
+
+            alert('✅ Venda registrada! Cliente adicionado aos Ativos.');
+
+            this.loadAlerts();
+            if (typeof DashboardModule !== 'undefined') DashboardModule.update();
+        } catch (error) {
+            console.error('Erro ao registrar venda:', error);
+            alert('⚠️ Erro ao salvar: ' + error.message);
+        } finally {
+            this._submittingAtivo = false;
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     },
 
     mountForm() {
@@ -675,9 +756,52 @@ const CRMModule = {
         });
     },
 
-    // ── Ativo: tabela padrão ──
+    // ── Ativo: tabela com nome e valor ──
     renderAtivoTable(customers) {
-        this.renderTable(customers);
+        const body = document.getElementById('crm-ativo-body');
+        if (!body) { if (this.dom.alertsBody) this.renderTable(customers); return; }
+        body.innerHTML = '';
+
+        if (!customers.length) {
+            body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente ativo. Registre uma venda acima!</td></tr>';
+            return;
+        }
+
+        customers.forEach(c => {
+            const name    = c.name || c.client || '—';
+            const total   = c.totalPurchased || 0;
+            const lastStr = c.lastPurchaseDate || c.lastContactDate || '';
+            const lastFmt = lastStr ? lastStr.substring(0,10).split('-').reverse().join('/') : '—';
+            const count   = c.purchaseCount || 0;
+            const initial = name.charAt(0).toUpperCase();
+            const phone   = c.phone || '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;align-items:center;gap:0.65rem;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:rgba(29,158,117,0.18);display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;color:#1D9E75;flex-shrink:0;">${initial}</div>
+                        <div>
+                            <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;">${this.escapeHTML(name)}</div>
+                            ${phone ? '<div style="font-size:0.72rem;color:#25D366;margin-top:1px;">' + this.escapeHTML(phone) + '</div>' : ''}
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:0.75rem 0.5rem;font-weight:700;color:var(--accent);font-size:0.9rem;">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                <td style="padding:0.75rem 0.5rem;font-size:0.82rem;color:var(--text-muted);">${lastFmt}</td>
+                <td style="padding:0.75rem 0.5rem;text-align:center;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(99,102,241,0.12);color:#818cf8;font-size:0.8rem;font-weight:700;">${count}</span>
+                </td>
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;gap:0.28rem;">
+                        <button onclick="CRMModule.openEditModal('${c.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
+                        ${phone ? `<button onclick="window.open('https://wa.me/55${phone.replace(/\\D/g, '')}', '_blank')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>` : ''}
+                        <button onclick="CRMModule.deleteContact('${c.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
     },
 
     // ── Inativo: dias sem comprar + ticket médio ──

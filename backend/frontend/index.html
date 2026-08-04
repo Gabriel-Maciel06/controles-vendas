@@ -1247,8 +1247,39 @@
                 <!-- View: CRM Ativos -->
                 <section id="view-crm-ativo" class="view-section hidden" data-origin="Ativo">
                     <div class="dashboard-grid">
-                        <div class="panel form-panel crm-form-mount"></div>
-                        
+                        <!-- Formulário simples de venda -->
+                        <div class="panel form-panel">
+                            <div class="panel-header">
+                                <h2>💰 Registrar Venda</h2>
+                            </div>
+                            <form id="crm-ativo-form" style="padding:1.5rem;display:flex;flex-direction:column;gap:1.2rem;">
+                                <div>
+                                    <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">CLIENTE / ESTABELECIMENTO *</label>
+                                    <input type="text" id="ativo-client" placeholder="Nome do cliente" required
+                                        style="width:100%;padding:0.65rem 0.85rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
+                                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                                </div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                                    <div>
+                                        <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">VALOR (R$) *</label>
+                                        <input type="number" id="ativo-value" placeholder="0,00" step="0.01" min="0" required
+                                            style="width:100%;padding:0.65rem 0.85rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
+                                            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                                    </div>
+                                    <div>
+                                        <label style="display:block;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;">DATA DA VENDA</label>
+                                        <input type="date" id="ativo-date"
+                                            style="width:100%;padding:0.65rem 0.85rem;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
+                                            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width:100%;padding:0.85rem;font-size:0.95rem;font-weight:700;border-radius:12px;margin-top:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                                    <i class='bx bx-cart-add' style="font-size:1.15rem;"></i> Registrar Venda
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Tabela de clientes ativos -->
                         <div class="panel list-panel">
                             <div class="panel-header">
                                 <h2>✅ Clientes Ativos</h2>
@@ -1257,13 +1288,13 @@
                             <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
                                 <div style="flex:1;min-width:160px;position:relative;">
                                     <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
-                                    <input type="text" id="crm-ativo-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                                    <input type="text" id="crm-ativo-search" placeholder="Buscar cliente..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
                                 </div>
                             </div>
                             <div class="table-container">
                                 <table class="app-table">
                                     <thead><tr>
-                                        <th>Cliente</th><th>Status</th><th>Último Contato</th><th>Anotações</th><th>Próx. Follow-up</th><th>Ações</th>
+                                        <th>Cliente</th><th>Valor Total</th><th>Última Compra</th><th>Compras</th><th>Ações</th>
                                     </tr></thead>
                                     <tbody id="crm-ativo-body"></tbody>
                                 </table>
