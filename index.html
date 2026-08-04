@@ -56,10 +56,6 @@
 
                 <!-- CLIENTES -->
                 <div class="nav-group-label">CLIENTES</div>
-                <a href="#crm-google" class="nav-item" data-target="crm-google">
-                    <i class='bx bx-globe'></i>
-                    <span>Google</span>
-                </a>
                 <a href="#crm-ativo" class="nav-item" data-target="crm-ativo">
                     <i class='bx bx-check-circle'></i>
                     <span>Ativos</span>
@@ -71,10 +67,6 @@
                 <a href="#crm-prospec" class="nav-item" data-target="crm-prospec">
                     <i class='bx bx-search-alt'></i>
                     <span>Prospecção</span>
-                </a>
-                <a href="#crm-maps" class="nav-item" data-target="crm-maps">
-                    <i class='bx bx-map-pin'></i>
-                    <span>Maps</span>
                 </a>
 
                 <!-- FUNIL -->
@@ -94,35 +86,18 @@
                     <i class='bx bx-check-square'></i>
                     <span>Lembretes</span>
                 </a>
-                <a href="#whatsapp" class="nav-item" data-target="whatsapp">
-                    <i class='bx bx-chat'></i>
-                    <span>WhatsApp</span>
-                </a>
-                <a href="#import" class="nav-item hidden" id="nav-import" data-target="import">
-                    <i class='bx bx-import'></i>
-                    <span>Importar Base</span>
-                </a>
-
-                <a href="reactivations.html" class="nav-item" target="_self">
-                    <i class='bx bx-trending-up' style="color:#0ea5e9;"></i>
-                    <span style="font-weight: 600; color: #0ea5e9;">Reativações (Novo)</span>
-                </a>
-
-                <a href="#analytics" class="nav-item" data-target="analytics">
-                    <i class='bx bx-analyse' style="color:#818cf8;"></i>
-                    <span>Analytics</span>
-                </a>
             </nav>
 
             <div class="user-profile">
-                <div class="avatar">VP</div>
+                <div class="avatar" id="user-avatar-initials">VP</div>
                 <div class="user-info">
-                    <span class="user-name">Vendedor</span>
-                    <span class="user-role">Comercial</span>
+                    <span class="user-name" id="user-display-name">Vendedor</span>
+                    <span class="user-role" id="user-display-role">Comercial</span>
                 </div>
             </div>
-            <div style="padding: 0 1rem 1rem 1rem;">
-                <button id="btn-logout" class="btn btn-outline" style="width: 100%; font-size: 0.8rem; padding: 0.4rem; color: var(--danger); border-color: var(--danger);"><i class='bx bx-log-out'></i> Sair da Conta</button>
+            <div style="padding: 0 1rem 1rem 1rem; display:flex; flex-direction:column; gap:0.4rem;">
+                <button onclick="document.getElementById('change-password-modal').classList.remove('hidden')" class="btn btn-outline" style="width: 100%; font-size: 0.78rem; padding: 0.4rem; color: var(--primary); border-color: rgba(99,102,241,0.3);"><i class='bx bx-key'></i> Alterar Senha</button>
+                <button id="btn-logout" class="btn btn-outline" style="width: 100%; font-size: 0.78rem; padding: 0.4rem; color: var(--danger); border-color: rgba(239,68,68,0.3);"><i class='bx bx-log-out'></i> Sair da Conta</button>
             </div>
         </aside>
 
