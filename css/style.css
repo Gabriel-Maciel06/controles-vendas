@@ -186,6 +186,9 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
     color: var(--text-sub);
     font-size: 0.875rem;
     font-weight: 500;
+    cursor: pointer;
+    position: relative;
+    z-index: 10;
     transition: all var(--t-fast);
 }
 

@@ -297,19 +297,21 @@ const AppModule = {
 
                 // Get target view ID
                 const targetId = item.getAttribute('data-target');
+                if (!targetId) return;
 
                 // Update active state on nav items
                 navItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
 
                 // Update page title
-                const titleText = item.querySelector('span').innerText;
-                pageTitleEl.innerText = titleText;
+                const titleSpan = item.querySelector('span');
+                if (titleSpan && pageTitleEl) {
+                    pageTitleEl.innerText = titleSpan.innerText;
+                }
 
                 // Show target view, hide others
                 viewSections.forEach(section => {
                     if (section.id === `view-${targetId}`) {
-                        // Small delay to reset animation
                         section.classList.remove('hidden');
                         section.classList.add('active');
                         this.renderView(targetId);
