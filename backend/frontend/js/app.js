@@ -312,24 +312,7 @@ const AppModule = {
                         // Small delay to reset animation
                         section.classList.remove('hidden');
                         section.classList.add('active');
-                        
-                        // DASHBOARD AUTO-UPDATE on open
-                        if (targetId === 'dashboard' && window.DashboardModule) {
-                            window.DashboardModule.update();
-                        }
-                        // KANBAN RENDER on open
-                        if (targetId === 'kanban' && window.KanbanModule) {
-                            window.KanbanModule.render();
-                        }
-                        // CRM VIEWS — filtered by origin
-                        const crmViews = ['crm', 'crm-ativo', 'crm-inativo'];
-                        if (crmViews.includes(targetId) && window.CRMModule) {
-                            window.CRMModule.init(targetId);
-                        }
-                        // PROSPEC VIEW
-                        if (targetId === 'crm-prospec' && window.ProspecModule) {
-                            window.ProspecModule.init();
-                        }
+                        this.renderView(targetId);
                     } else {
                         section.classList.remove('active');
                         section.classList.add('hidden');
@@ -337,6 +320,40 @@ const AppModule = {
                 });
             });
         });
+    },
+
+    renderView(targetId) {
+        if (!targetId) return;
+
+        // SALES / RESUMO VIEW
+        if (targetId === 'sales' && window.SalesModule) {
+            window.SalesModule.init();
+        }
+        // DASHBOARD AUTO-UPDATE on open
+        if (targetId === 'dashboard' && window.DashboardModule) {
+            window.DashboardModule.update();
+        }
+        // KANBAN RENDER on open
+        if (targetId === 'kanban' && window.KanbanModule) {
+            window.KanbanModule.render();
+        }
+        // CRM VIEWS — filtered by origin (Ativos, Inativos)
+        const crmViews = ['crm', 'crm-ativo', 'crm-inativo'];
+        if (crmViews.includes(targetId) && window.CRMModule) {
+            window.CRMModule.init(targetId);
+        }
+        // PROSPEC VIEW
+        if (targetId === 'crm-prospec' && window.ProspecModule) {
+            window.ProspecModule.init();
+        }
+        // SAMPLES VIEW
+        if (targetId === 'samples' && window.SamplesModule) {
+            window.SamplesModule.init();
+        }
+        // REMINDERS VIEW
+        if (targetId === 'reminders' && window.RemindersModule) {
+            window.RemindersModule.init();
+        }
     },
 
     initTopbarFeatures() {
@@ -533,6 +550,18 @@ const AppModule = {
                 }
             });
         });
+    },
+
+    onDataReady() {
+        this.updateNotifications(true);
+        // Auto-render whichever view is currently active when DataStore initializes
+        const activeNav = document.querySelector('.nav-item.active');
+        if (activeNav) {
+            const targetId = activeNav.getAttribute('data-target');
+            this.renderView(targetId);
+        } else {
+            this.renderView('sales');
+        }
     }
 };
 

@@ -219,7 +219,7 @@ def db_check(db: Session = Depends(get_db)):
 
 # --- AUTH ENDPOINT ---
 class LoginRequest(BaseModel):
-    username: str
+    username: str = ""
     password: str
 
 class ChangePasswordRequest(BaseModel):
@@ -228,22 +228,28 @@ class ChangePasswordRequest(BaseModel):
 
 @app.post("/api/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    username = req.username.strip()
-    password = req.password.strip()
+    username = (req.username or "").strip()
+    password = (req.password or "").strip()
     from auth import create_token
 
-    # Busca usuário no banco (case insensitive)
     db_users = db.query(models.User).all()
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
     user = None
-    for u in db_users:
-        if u.username.lower().strip() == username.lower().strip():
-            user = u
-            break
+
+    if username:
+        for u in db_users:
+            if u.username.lower().strip() == username.lower().strip():
+                user = u
+                break
+    else:
+        for u in db_users:
+            if hmac.compare_digest(u.password_hash, hashed_password):
+                user = u
+                break
 
     if not user:
-        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+        raise HTTPException(status_code=401, detail="Usuário ou senha incorretos")
 
-    hashed_password = hashlib.sha256(password.encode()).hexdigest()
     if not hmac.compare_digest(user.password_hash, hashed_password):
         raise HTTPException(status_code=401, detail="Senha incorreta")
 
