@@ -8,7 +8,7 @@ const SamplesModule = {
     init() {
         this.cacheDOM();
         this.bindEvents();
-        this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+        if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
         this.setDefaultDelivery();
         this.loadSamples();
         this.startTrackingLoop();

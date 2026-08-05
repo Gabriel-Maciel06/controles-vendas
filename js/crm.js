@@ -8,47 +8,118 @@ const CRMModule = {
     filteredAlerts: [],
     currentPage: 1,
     itemsPerPage: 20,
-    activeView: 'crm', // view atual ativa
-
-    // Filtros de origin por view
+    // Filtros por view de status do cliente (Ativo vs Inativo)
     ORIGIN_FILTERS: {
-        'crm-google':  c => (c.origin || '') === 'Google',
-        'crm-ativo':   c => (c.origin || '') === 'Inativo' && (c.temperature || '') !== 'Primeiro contato',
-        'crm-inativo': c => (c.origin || '') === 'Inativo' && (!c.temperature || c.temperature === 'Primeiro contato' || c.temperature === 'Frio'),
-        'crm-maps':    c => (c.origin || '') === 'Maps',
+        'crm-ativo':   c => (c.status || 'Ativo') === 'Ativo',
+        'crm-inativo': c => (c.status || '') === 'Inativo',
         'crm':         () => true,
     },
 
     init(viewId = 'crm') {
         this.activeView = viewId;
-        this.mountForm(); // Novo: Monta o formulário na view ativa
-        this.cacheDOM();
-        
-        if (this.dom.form) {
-            this.bindEvents();
-            if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
-            
-            // Configurações padrão por view
-            if (viewId === 'crm-google') {
-                this.selectOrigin('Google');
-                this.selectTemp('Quente');
-            } else if (viewId === 'crm-ativo') {
-                this.selectOrigin('Inativo');
-                this.selectTemp('Pós venda');
-            } else if (viewId === 'crm-inativo') {
-                this.selectOrigin('Inativo');
-                this.selectTemp('Primeiro contato');
-            } else if (viewId === 'crm-maps') {
-                this.selectOrigin('Maps');
-                this.selectTemp('Frio');
-            } else {
-                this.selectOrigin('');
-                this.selectTemp('Primeiro contato');
+
+        if (viewId === 'crm-ativo') {
+            // Ativo tem formulário próprio inline de vendas — pula o form compartilhado
+            this.cacheDOM();
+            this.bindAtivoForm();
+        } else {
+            this.mountForm();
+            this.cacheDOM();
+
+            if (this.dom.form) {
+                this.bindEvents();
+                if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+
+                if (viewId === 'crm-inativo') {
+                    this.selectOrigin('Inativo');
+                    this.selectTemp('Primeiro contato');
+                } else {
+                    this.selectOrigin('');
+                    this.selectTemp('Primeiro contato');
+                }
+
+                this.selectDays(15);
             }
-            
-            this.selectDays(15);
         }
         this.loadAlerts();
+    },
+
+    // ── Formulário dedicado de vendas para a aba Ativos ──
+    bindAtivoForm() {
+        const form = document.getElementById('crm-ativo-form');
+        if (!form || form._bound) return;
+
+        const dateInput = document.getElementById('ativo-date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleAtivoSubmit();
+        });
+        form._bound = true;
+    },
+
+    async handleAtivoSubmit() {
+        if (this._submittingAtivo) return;
+        this._submittingAtivo = true;
+
+        const clientInput = document.getElementById('ativo-client');
+        const valueInput  = document.getElementById('ativo-value');
+        const dateInput   = document.getElementById('ativo-date');
+        const btn         = document.querySelector('#crm-ativo-form button[type="submit"]');
+        const originalText = btn.innerHTML;
+
+        const clientName = (clientInput.value || '').trim().toUpperCase();
+        const saleValue  = parseFloat(valueInput.value);
+        const saleDate   = dateInput.value || new Date().toISOString().split('T')[0];
+
+        if (!clientName) { alert('Preencha o nome do cliente.'); this._submittingAtivo = false; return; }
+        if (!saleValue || saleValue <= 0) { alert('Preencha o valor da venda.'); this._submittingAtivo = false; return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Salvando...';
+
+        try {
+            // Cria registro de venda (backend auto-cria/atualiza o cliente como Ativo)
+            const sale = {
+                client:      clientName,
+                value:       saleValue,
+                saleDate:    saleDate,
+                invoiceDate: saleDate,
+                type:        'Venda',
+                boxes20056:  0,
+                commission:  0,
+                createdAt:   new Date().toISOString(),
+            };
+
+            await DataStore.add(STORAGE_KEYS.SALES, sale);
+
+            // Re-busca clientes do servidor (a venda auto-criou/atualizou o Customer)
+            const profile = sessionStorage.getItem('maciel_profile') || 'default';
+            const custRes = await fetchWithAuth(`${API_BASE_URL}/customers?profile=${profile}`);
+            if (custRes.ok) {
+                DataStore.cache.crm_customers = await custRes.json();
+            }
+
+            // Limpa formulário
+            clientInput.value = '';
+            valueInput.value  = '';
+            dateInput.value   = new Date().toISOString().split('T')[0];
+
+            alert('✅ Venda registrada! Cliente adicionado aos Ativos.');
+
+            this.loadAlerts();
+            if (typeof DashboardModule !== 'undefined') DashboardModule.update();
+        } catch (error) {
+            console.error('Erro ao registrar venda:', error);
+            alert('⚠️ Erro ao salvar: ' + error.message);
+        } finally {
+            this._submittingAtivo = false;
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     },
 
     mountForm() {
@@ -514,13 +585,15 @@ const CRMModule = {
         // Pegar o registro mais recente por cliente
         const latest = {};
         all.forEach(c => {
-            const name = c.name || c.client;
-            const date = c.lastContactDate || c.contactDate || '';
-            if (!latest[name] || date > (latest[name].lastContactDate || '')) latest[name] = c;
+            const name = (c.name || c.client || '').trim().toUpperCase();
+            if (!name) return;
+            const date = c.lastPurchaseDate || c.lastContactDate || (c.createdAt ? c.createdAt.substring(0, 10) : '');
+            if (!latest[name] || date > (latest[name].lastPurchaseDate || latest[name].lastContactDate || '')) {
+                latest[name] = c;
+            }
         });
 
         this.allAlerts = Object.values(latest);
-
         this.applyFilters(false); // Retain pagination on reload
     },
 
@@ -538,12 +611,15 @@ const CRMModule = {
         const sortMode    = sortObj ? sortObj.value : 'priority';
 
         const today      = new Date().toISOString().split('T')[0];
-        const weekEnd    = new Date(); weekEnd.setDate(weekEnd.getDate() + 7);
+        const weekEnd    = new Date();
+        weekEnd.setDate(weekEnd.getDate() + 7);
         const weekEndStr = weekEnd.toISOString().split('T')[0];
 
         // Aplica filtro fixo de view (ORIGIN_FILTERS)
         const viewFilter = this.ORIGIN_FILTERS[this.activeView] || (() => true);
         let filtered = this.allAlerts.filter(viewFilter);
+
+        const isDedicatedView = this.activeView === 'crm-ativo' || this.activeView === 'crm-inativo';
 
         filtered = filtered.filter(c => {
             const name  = (c.name || c.client || '').toLowerCase();
@@ -552,17 +628,22 @@ const CRMModule = {
             // Busca por nome ou telefone
             if (query && !name.includes(query) && !phone.includes(query)) return false;
 
-            // Filtro de origin (Inativo, Ativo, Prospec, Maps...)
-            // Cuidado: alguns clientes legados podem ter 'origin' vazio. 
-            // O source costuma guardar Inativo também se origin falhar... vamos testar os 2
-            if (originFilter) {
-                const cOrigin = c.origin || '';
-                const cSource = c.source || '';
-                if (cOrigin !== originFilter && cSource !== originFilter) return false;
+            // Filtro de origem/status (apenas se não estiver em view dedicada)
+            if (!isDedicatedView && originFilter) {
+                const cStatus = (c.status || '').toLowerCase();
+                const cOrigin = (c.origin || '').toLowerCase();
+                const cSource = (c.source || '').toLowerCase();
+                const fLow    = originFilter.toLowerCase();
+
+                if (fLow === 'ativo' || fLow === 'inativo') {
+                    if (cStatus !== fLow) return false;
+                } else {
+                    if (cOrigin !== fLow && cSource !== fLow) return false;
+                }
             }
 
             // Filtro de temperatura
-            if (temperature && (c.temperature || 'Frio') !== temperature) return false;
+            if (temperature && (c.temperature || '').toLowerCase() !== temperature.toLowerCase()) return false;
 
             return true;
         });
@@ -636,10 +717,8 @@ const CRMModule = {
     // ── Despachador de render por view ──
     renderViewSpecific(viewId, customers) {
         switch(viewId) {
-            case 'crm-google':  return this.renderGoogleCards(customers);
             case 'crm-ativo':   return this.renderAtivoTable(customers);
             case 'crm-inativo': return this.renderInativoTable(customers);
-            case 'crm-maps':    return this.renderMapsGrouped(customers);
             default:            return this.renderTable(customers);
         }
     },
@@ -677,9 +756,52 @@ const CRMModule = {
         });
     },
 
-    // ── Ativo: tabela padrão ──
+    // ── Ativo: tabela com nome e valor ──
     renderAtivoTable(customers) {
-        this.renderTable(customers);
+        const body = document.getElementById('crm-ativo-body');
+        if (!body) { if (this.dom.alertsBody) this.renderTable(customers); return; }
+        body.innerHTML = '';
+
+        if (!customers.length) {
+            body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente ativo. Registre uma venda acima!</td></tr>';
+            return;
+        }
+
+        customers.forEach(c => {
+            const name    = c.name || c.client || '—';
+            const total   = c.totalPurchased || 0;
+            const lastStr = c.lastPurchaseDate || c.lastContactDate || '';
+            const lastFmt = lastStr ? lastStr.substring(0,10).split('-').reverse().join('/') : '—';
+            const count   = c.purchaseCount || 0;
+            const initial = name.charAt(0).toUpperCase();
+            const phone   = c.phone || '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;align-items:center;gap:0.65rem;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:rgba(29,158,117,0.18);display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;color:#1D9E75;flex-shrink:0;">${initial}</div>
+                        <div>
+                            <div style="font-weight:600;color:var(--text-main);font-size:0.87rem;">${this.escapeHTML(name)}</div>
+                            ${phone ? '<div style="font-size:0.72rem;color:#25D366;margin-top:1px;">' + this.escapeHTML(phone) + '</div>' : ''}
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:0.75rem 0.5rem;font-weight:700;color:var(--accent);font-size:0.9rem;">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                <td style="padding:0.75rem 0.5rem;font-size:0.82rem;color:var(--text-muted);">${lastFmt}</td>
+                <td style="padding:0.75rem 0.5rem;text-align:center;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(99,102,241,0.12);color:#818cf8;font-size:0.8rem;font-weight:700;">${count}</span>
+                </td>
+                <td style="padding:0.75rem 0.5rem;">
+                    <div style="display:flex;gap:0.28rem;">
+                        <button onclick="CRMModule.openEditModal('${c.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
+                        ${phone ? `<button onclick="window.open('https://wa.me/55${phone.replace(/\\D/g, '')}', '_blank')" title="WhatsApp" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(37,211,102,0.1);color:#25D366;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;" onmouseover="this.style.background='rgba(37,211,102,0.22)'" onmouseout="this.style.background='rgba(37,211,102,0.1)'"><i class='bx bxl-whatsapp'></i></button>` : ''}
+                        <button onclick="CRMModule.deleteContact('${c.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
     },
 
     // ── Inativo: dias sem comprar + ticket médio ──
@@ -688,7 +810,10 @@ const CRMModule = {
         if (!body) return;
         body.innerHTML = '';
 
-        const today = new Date();
+        if (!customers.length) {
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente inativo (clientes que compraram há mais de 60 dias).</td></tr>';
+            return;
+        }
         customers.forEach(c => {
             const lastDate = c.lastContactDate ? new Date(c.lastContactDate + 'T00:00:00') : null;
             const diffDays = lastDate ? Math.floor((today - lastDate) / (1000 * 60 * 60 * 24)) : '—';
@@ -872,7 +997,7 @@ const CRMModule = {
         alerts.forEach(alert => {
             const name       = alert.name || alert.client || '—';
             const phone      = alert.phone || '';
-            const lastDate   = alert.lastContactDate || alert.contactDate || '';
+            const lastDate   = alert.lastPurchaseDate || alert.lastContactDate || alert.contactDate || (alert.createdAt ? alert.createdAt.substring(0, 10) : '');
             const lastFmt    = lastDate   ? lastDate.split('-').reverse().join('/')   : '—';
             const nextFollow = alert.nextFollowUp || '';
             const nextFmt    = nextFollow ? nextFollow.split('-').reverse().join('/') : '—';
@@ -900,7 +1025,7 @@ const CRMModule = {
             // Telefone clicável — abre WhatsApp diretamente
             const phoneDisplay = phone
                 ? `<div style="font-size:0.73rem;color:#25D366;margin-top:2px;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" 
-                       onclick="WhatsAppModule.openDirect('${this.escapeAttr(phone)}', '${this.escapeAttr(name)}')" 
+                       onclick="window.open('https://wa.me/55${phone.replace(/\D/g, '')}', '_blank')" 
                        title="Abrir WhatsApp com ${this.escapeAttr(name)}">${this.escapeHTML(phone)}</div>`
                 : '<div style="font-size:0.72rem;color:rgba(255,255,255,0.2);margin-top:2px;">sem telefone</div>';
 
@@ -940,7 +1065,7 @@ const CRMModule = {
                 <td style="padding:0.75rem 0.5rem;">
                     <div style="display:flex;align-items:center;gap:0.28rem;">
                         <button onclick="CRMModule.openEditModal('${alert.id}')" title="Editar" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(99,102,241,0.13);color:#818cf8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(99,102,241,0.28)'" onmouseout="this.style.background='rgba(99,102,241,0.13)'"><i class='bx bx-edit'></i></button>
-                        <button onclick="${phone ? `WhatsAppModule.openComposer('${alert.id}')` : 'void(0)'}" title="${wappTitle}" style="width:28px;height:28px;border-radius:7px;border:none;${wappStyle}display:flex;align-items:center;justify-content:center;font-size:0.95rem;" ${wappHover}><i class='bx bxl-whatsapp'></i></button>
+                        <button onclick="${phone ? `window.open('https://wa.me/55${phone.replace(/\D/g, '')}', '_blank')` : 'void(0)'}" title="${wappTitle}" style="width:28px;height:28px;border-radius:7px;border:none;${wappStyle}display:flex;align-items:center;justify-content:center;font-size:0.95rem;" ${wappHover}><i class='bx bxl-whatsapp'></i></button>
                         <button onclick="document.getElementById('crm-client').value='${this.escapeAttr(name)}';document.getElementById('crm-notes').focus();" title="Novo contato" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-phone'></i></button>
                         <button onclick="CRMModule.viewHistory('${this.escapeAttr(name)}')" title="Histórico" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(255,255,255,0.05);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'"><i class='bx bx-history'></i></button>
                         <button onclick="CRMModule.deleteContact('${alert.id}')" title="Excluir" style="width:28px;height:28px;border-radius:7px;border:none;background:rgba(239,68,68,0.07);color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.88rem;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'"><i class='bx bx-trash'></i></button>
@@ -1108,5 +1233,7 @@ const CRMModule = {
 window.CRMModule = CRMModule;
 
 document.addEventListener('DataStoreReady', () => {
-    CRMModule.init();
+    const activeSection = document.querySelector('.view-section:not(.hidden)');
+    const currentViewId = activeSection ? activeSection.id.replace('view-', '') : 'crm';
+    CRMModule.init(currentViewId);
 });

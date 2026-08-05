@@ -1,9 +1,7 @@
 /**
  * Data Management Module - Cloud Sync
  */
-const API_BASE_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") 
-    ? "http://localhost:8000/api" 
-    : "http://20.85.228.35:8000/api";
+const API_BASE_URL = "/api";
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',
@@ -22,7 +20,7 @@ const STORAGE_KEYS = {
 };
 
 function getAuthHeaders() {
-    const token = sessionStorage.getItem('maciel_token');
+    const token = sessionStorage.getItem('maciel_token') || localStorage.getItem('maciel_token');
     return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -39,21 +37,25 @@ async function fetchWithAuth(url, options = {}) {
     let res = await fetch(url, options);
 
     // Só tenta renovar se o usuário já estava autenticado (token expirou)
-    if (res.status === 401 && sessionStorage.getItem('maciel_auth') === 'true') {
-        const cachedPass = sessionStorage.getItem('_maciel_session_key');
+    const isAuth = sessionStorage.getItem('maciel_auth') === 'true' || localStorage.getItem('maciel_auth') === 'true';
+    if (res.status === 401 && isAuth) {
+        const cachedPass = sessionStorage.getItem('_maciel_session_key') || localStorage.getItem('_maciel_session_key');
 
         if (cachedPass) {
             try {
+                const username = sessionStorage.getItem('maciel_username') || localStorage.getItem('maciel_username') || '';
                 const loginRes = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: cachedPass })
+                    body: JSON.stringify({ username: username, password: cachedPass })
                 });
 
                 if (loginRes.ok) {
                     const data = await loginRes.json();
                     sessionStorage.setItem('maciel_token', data.token || '');
                     sessionStorage.setItem('maciel_profile', data.profile || 'default');
+                    localStorage.setItem('maciel_token', data.token || '');
+                    localStorage.setItem('maciel_profile', data.profile || 'default');
                     console.log('[Auth] Token renovado automaticamente!');
 
                     // Repete a requisição original com novo token
@@ -68,6 +70,8 @@ async function fetchWithAuth(url, options = {}) {
             console.warn('[Auth] Token expirado, redirecionando para login...');
             sessionStorage.removeItem('maciel_auth');
             sessionStorage.removeItem('maciel_token');
+            localStorage.removeItem('maciel_auth');
+            localStorage.removeItem('maciel_token');
             location.reload();
         }
     }
@@ -169,8 +173,12 @@ const DataStore = {
             return await res.json();
         } catch (error) {
             console.error("API Error adding:", error);
-            alert("⚠️ ERRO DE SINCRONIZAÇÃO: O dado foi registrado localmente mas NÃO foi salvo no servidor. Verifique sua conexão ou se o backend está online. Erro: " + error.message);
-            return record;
+            // Reverter a adição local se falhou no servidor
+            if (Array.isArray(this.cache[key])) {
+                this.cache[key] = this.cache[key].filter(item => String(item.id) !== String(record.id));
+            }
+            alert("⚠️ ERRO DE SINCRONIZAÇÃO: O dado NÃO foi salvo no servidor devido a um erro. Por favor, tente novamente. Erro: " + error.message);
+            throw error; // Lançar erro para o chamador saber que falhou
         }
     },
 

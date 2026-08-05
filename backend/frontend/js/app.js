@@ -50,14 +50,26 @@ const AppModule = {
         const errorMsg      = document.getElementById('login-error');
         const btnSubmit     = form?.querySelector('button[type="submit"]');
 
-        // Já autenticado nesta sessão — carrega dados direto
-        if (sessionStorage.getItem('maciel_auth') === 'true') {
+        // Check if user is already authenticated in sessionStorage or localStorage
+        const isAuth = sessionStorage.getItem('maciel_auth') === 'true' || localStorage.getItem('maciel_auth') === 'true';
+        if (isAuth) {
+            // Sincroniza dados do localStorage para o sessionStorage se necessário
+            if (localStorage.getItem('maciel_auth') === 'true') {
+                sessionStorage.setItem('maciel_auth', 'true');
+                sessionStorage.setItem('maciel_profile', localStorage.getItem('maciel_profile') || 'default');
+                sessionStorage.setItem('maciel_username', localStorage.getItem('maciel_username') || 'Vendedor');
+                sessionStorage.setItem('maciel_token', localStorage.getItem('maciel_token') || '');
+                if (localStorage.getItem('_maciel_session_key')) {
+                    sessionStorage.setItem('_maciel_session_key', localStorage.getItem('_maciel_session_key'));
+                }
+            }
+
             if (overlay) {
                 overlay.style.display = 'none';
                 overlay.classList.add('hidden');
             }
             this.applyProfileTheme();
-            DataStore.init(); // Token ainda válido na sessão — carrega dados
+            DataStore.init();
             return;
         }
 
@@ -82,18 +94,26 @@ const AppModule = {
 
                 if (res.ok) {
                     const data = await res.json();
+                    
+                    // Salva na sessão corrente
                     sessionStorage.setItem('maciel_auth',        'true');
                     sessionStorage.setItem('maciel_profile',     data.profile || 'default');
                     sessionStorage.setItem('maciel_username',    data.username || 'Vendedor');
                     sessionStorage.setItem('maciel_token',       data.token   || '');
-                    sessionStorage.setItem('_maciel_session_key', passVal); // Permite renovação automática de token
+                    sessionStorage.setItem('_maciel_session_key', passVal);
+
+                    // Salva no localStorage para persistência de login no navegador
+                    localStorage.setItem('maciel_auth',        'true');
+                    localStorage.setItem('maciel_profile',     data.profile || 'default');
+                    localStorage.setItem('maciel_username',    data.username || 'Vendedor');
+                    localStorage.setItem('maciel_token',       data.token   || '');
+                    localStorage.setItem('_maciel_session_key', passVal);
                     
                     if (overlay) {
                         overlay.style.display = 'none';
                         overlay.classList.add('hidden');
                     }
                     this.applyProfileTheme();
-                    // Recarrega os dados do perfil correto
                     await DataStore.init();
                 } else {
                     const errData = await res.json().catch(() => ({}));
@@ -324,14 +344,18 @@ const AppModule = {
         }
         // DASHBOARD AUTO-UPDATE on open
         if (targetId === 'dashboard' && window.DashboardModule) {
-            window.DashboardModule.update();
+            if (!window.DashboardModule.dom) {
+                window.DashboardModule.init();
+            } else {
+                window.DashboardModule.update();
+            }
         }
         // KANBAN RENDER on open
         if (targetId === 'kanban' && window.KanbanModule) {
             window.KanbanModule.render();
         }
         // CRM VIEWS — filtered by origin (Ativos, Inativos)
-        const crmViews = ['crm', 'crm-ativo', 'crm-inativo'];
+        const crmViews = ['crm', 'crm-ativo', 'crm-inativo', 'crm-google', 'crm-maps'];
         if (crmViews.includes(targetId) && window.CRMModule) {
             window.CRMModule.init(targetId);
         }
@@ -347,6 +371,10 @@ const AppModule = {
         if (targetId === 'reminders' && window.RemindersModule) {
             window.RemindersModule.init();
         }
+        // CALENDAR VIEW
+        if (targetId === 'calendar' && window.CalendarModule) {
+            window.CalendarModule.init();
+        }
     },
 
     initTopbarFeatures() {
@@ -361,8 +389,12 @@ const AppModule = {
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
-                sessionStorage.removeItem('maciel_auth');
-                sessionStorage.removeItem('maciel_profile');
+                sessionStorage.clear();
+                localStorage.removeItem('maciel_auth');
+                localStorage.removeItem('maciel_profile');
+                localStorage.removeItem('maciel_username');
+                localStorage.removeItem('maciel_token');
+                localStorage.removeItem('_maciel_session_key');
                 location.reload(); // Recarrega tela inteira para resetar os state caches
             });
         }

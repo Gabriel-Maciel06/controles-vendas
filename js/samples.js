@@ -8,7 +8,7 @@ const SamplesModule = {
     init() {
         this.cacheDOM();
         this.bindEvents();
-        this.dom.dateInput.value = new Date().toISOString().split('T')[0];
+        if (this.dom.dateInput) this.dom.dateInput.value = new Date().toISOString().split('T')[0];
         this.setDefaultDelivery();
         this.loadSamples();
         this.startTrackingLoop();
@@ -126,7 +126,7 @@ const SamplesModule = {
         }
 
         try {
-            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:8000' : 'http://20.85.228.35:8000';
+            const apiBase = "";
             const res = await fetch(`${apiBase}/api/samples/track-all?profile=${profile}`, { method: 'POST' });
             
             if (res.ok) {

@@ -810,7 +810,10 @@ const CRMModule = {
         if (!body) return;
         body.innerHTML = '';
 
-        const today = new Date();
+        if (!customers.length) {
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Nenhum cliente inativo (clientes que compraram há mais de 60 dias).</td></tr>';
+            return;
+        }
         customers.forEach(c => {
             const lastDate = c.lastContactDate ? new Date(c.lastContactDate + 'T00:00:00') : null;
             const diffDays = lastDate ? Math.floor((today - lastDate) / (1000 * 60 * 60 * 24)) : '—';
