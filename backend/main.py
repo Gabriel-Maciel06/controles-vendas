@@ -521,7 +521,7 @@ async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
     """
     api_key = os.getenv("CLAUDE_API_KEY") or os.getenv("GEMINI_API_KEY", "")
     if not api_key:
-        raise HTTPException(status_code=500, detail="Chave de API de IA não configurada no servidor.")
+        return JSONResponse(status_code=200, content={"content": [{"text": "{}"}], "disabled": True})
     
     # Extrair campos comuns do payload do frontend
     model = payload.get("model", "claude-3-haiku-20240307")

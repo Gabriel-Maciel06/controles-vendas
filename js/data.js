@@ -66,13 +66,17 @@ async function fetchWithAuth(url, options = {}) {
                 console.error('[Auth] Falha ao renovar token:', e);
             }
         } else {
-            // Sem senha em cache — força login novamente
-            console.warn('[Auth] Token expirado, redirecionando para login...');
+            // Sem senha em cache — exibe tela de login sem dar reload na página
+            console.warn('[Auth] Token expirado ou inválido. Exibindo formulário de acesso...');
             sessionStorage.removeItem('maciel_auth');
             sessionStorage.removeItem('maciel_token');
             localStorage.removeItem('maciel_auth');
             localStorage.removeItem('maciel_token');
-            location.reload();
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.classList.remove('hidden');
+            }
         }
     }
 
