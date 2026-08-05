@@ -208,6 +208,15 @@ const KanbanModule = {
         };
         const tempBadge = tempBadges[temp] || tempBadges['Frio'];
 
+        // Indicador de Ciclo de Vida do Fechamento / Pós-Venda (7 dias)
+        let lifecycleText = '';
+        if (col.id === 'Fechamento') {
+            const daysLeft = Math.max(0, 7 - daysUnchanged);
+            lifecycleText = `<div class="kb-card-row" style="color:#10B981;font-weight:600;"><i class='bx bx-check-circle'></i> 🛒 Venda recente • Pós-venda em ${daysLeft} dia${daysLeft !== 1 ? 's' : ''}</div>`;
+        } else if (col.id === 'Pós venda') {
+            lifecycleText = `<div class="kb-card-row" style="color:#0ea5e9;font-weight:600;"><i class='bx bx-refresh'></i> 🔄 Pós-Venda • Cliente há ${daysUnchanged} dia${daysUnchanged !== 1 ? 's' : ''}</div>`;
+        }
+
         // Opções de mover para select discreto
         const moveOptions = this.COLUMNS
             .filter(x => x.id !== col.id)
@@ -245,6 +254,7 @@ const KanbanModule = {
                     <i class='bx bx-user'></i>
                     <span class="kb-card-buyer-info">${this.esc(buyer || name)} ${city ? '• ' + this.esc(city) : ''}</span>
                 </div>
+                ${lifecycleText}
                 <div class="kb-card-row">
                     <i class='bx bx-time-five'></i>
                     <span>${timeStaleText}</span>
@@ -275,30 +285,49 @@ const KanbanModule = {
         </div>`;
     },
 
-    // ── Mapeia status do cliente para a coluna correspondente ──
+    // ── Mapeia status do cliente para a coluna correspondente com Ciclo de Vida ──
     getCardColumn(c) {
         if (c.temperature === 'Lixeira' || c.status === 'Lixeira') return 'Perdido';
 
+        let stage = c.temperature;
         const etapas = ['Primeiro contato', 'Qualificação', 'Primeira Oferta', 'Maturação', 'Fechamento', 'Pós venda', 'Perdido'];
-        if (etapas.includes(c.temperature)) return c.temperature;
 
-        const map = {
-            'Lead':     'Primeiro contato',
-            'Prospect': 'Primeiro contato',
-            'Contato':  'Primeiro contato',
-            'Inativo':  'Primeiro contato',
-            'Perdido':  'Perdido',
-            'Frio':     'Primeiro contato',
-            'Ativo':    'Pós venda',
-            'Morno':    'Qualificação',
-            'Proposta': 'Primeira Oferta',
-            'Quente':   'Maturação',
-            'Fechando': 'Fechamento',
-            'Fechado':  'Fechamento',
-        };
+        if (!stage || !etapas.includes(stage)) {
+            const map = {
+                'Lead':     'Primeiro contato',
+                'Prospect': 'Primeiro contato',
+                'Contato':  'Primeiro contato',
+                'Inativo':  'Primeiro contato',
+                'Perdido':  'Perdido',
+                'Frio':     'Primeiro contato',
+                'Ativo':    'Pós venda',
+                'Morno':    'Qualificação',
+                'Proposta': 'Primeira Oferta',
+                'Quente':   'Maturação',
+                'Fechando': 'Fechamento',
+                'Fechado':  'Fechamento',
+            };
+            stage = map[c.temperature] || map[c.status] || 'Primeiro contato';
+        }
 
-        if (c.temperature && map[c.temperature]) return map[c.temperature];
-        return map[c.status] || 'Primeiro contato';
+        // Regra do Ciclo de Vida de 7 dias (1 semana):
+        // Se estiver em Fechamento, verifica se já se passaram 7 dias da venda.
+        // Se sim, transita automaticamente para 'Pós venda'.
+        if (stage === 'Fechamento' || stage === 'Fechado' || stage === 'Fechando') {
+            const saleDateStr = c.closedAt || c.saleDate || c.updatedAt || c.createdAt;
+            if (saleDateStr) {
+                const saleDate = new Date(saleDateStr);
+                const now = new Date();
+                const diffMs = now - saleDate;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays >= 7) {
+                    return 'Pós venda';
+                }
+            }
+            return 'Fechamento';
+        }
+
+        return stage;
     },
 
     // ── Pega clientes únicos mais recentes ──
@@ -320,10 +349,17 @@ const KanbanModule = {
         const card = document.getElementById(`kb-card-${id}`);
         if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
 
-        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { 
+        const updatePayload = { 
             temperature: newTemp,
             updatedAt: new Date().toISOString()
-        });
+        };
+
+        // Se foi movido para Fechamento, registra data exata do fechamento da venda
+        if (newTemp === 'Fechamento') {
+            updatePayload.closedAt = new Date().toISOString();
+        }
+
+        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, updatePayload);
 
         // Automação: se moveu para Pós venda, criar lembrete de recontato
         if (newTemp === 'Pós venda') {
