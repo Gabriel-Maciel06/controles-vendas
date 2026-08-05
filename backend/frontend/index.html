@@ -24,7 +24,7 @@
     <!-- Leaflet CSS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
-    <link rel="stylesheet" href="css/style.css?v=8.0">
+    <link rel="stylesheet" href="css/style.css?v=9.0">
 </head>
 
 <body>
@@ -548,32 +548,62 @@
                 <section id="view-kanban" class="view-section hidden">
                     <div style="max-width:1400px;margin:0 auto;">
 
-                        <!-- Header -->
-                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
-                            <div>
-                                <h2 style="margin:0;font-size:1.05rem;color:var(--text-main);font-weight:700;">🗂 Funil de Vendas</h2>
-                                <p style="margin:0.15rem 0 0;font-size:0.75rem;color:var(--text-muted);">Arraste os cards entre colunas ou clique em ↪ para mover</p>
+                        <!-- Header & Controls -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:0.8rem 1.2rem;">
+                            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                                <div>
+                                    <h2 style="margin:0;font-size:1.1rem;color:var(--text-main);font-weight:700;display:flex;align-items:center;gap:0.5rem;">
+                                        📊 Funil de Vendas
+                                    </h2>
+                                    <p style="margin:0.15rem 0 0;font-size:0.75rem;color:var(--text-muted);">
+                                        Gerencie seus negócios por etapa em tempo real
+                                    </p>
+                                </div>
+                                <div style="display:flex;gap:0.6rem;align-items:center;">
+                                    <span id="kanban-total-count" style="background:rgba(99,102,241,0.15);color:#818cf8;font-size:0.75rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:20px;">
+                                        0 Oportunidades
+                                    </span>
+                                    <span id="kanban-total-value" style="background:rgba(16,185,129,0.15);color:#10B981;font-size:0.75rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:20px;">
+                                        R$ 0,00
+                                    </span>
+                                </div>
                             </div>
-                            <button onclick="KanbanModule.render()" class="btn btn-outline" style="font-size:0.78rem;padding:0.35rem 0.8rem;">
-                                <i class='bx bx-refresh'></i> Atualizar
-                            </button>
-                        </div>
 
-                        <!-- Filtro por origem + busca -->
-                        <div style="margin-bottom:1rem;display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;justify-content:center;">
-                            <div style="position:relative;flex:1;min-width:180px;max-width:280px;">
-                                <i class='bx bx-search' style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.9rem;"></i>
-                                <input id="kanban-search" type="text" placeholder="Buscar cliente..."
-                                    oninput="KanbanModule.render()"
-                                    style="width:100%;padding:0.4rem 0.7rem 0.4rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;box-sizing:border-box;">
+                            <!-- Filtros e Ações -->
+                            <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+                                <div style="position:relative;min-width:180px;">
+                                    <i class='bx bx-search' style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.9rem;"></i>
+                                    <input id="kanban-search" type="text" placeholder="Buscar oportunidade..."
+                                        oninput="KanbanModule.render()"
+                                        style="width:100%;padding:0.4rem 0.7rem 0.4rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.8rem;outline:none;box-sizing:border-box;">
+                                </div>
+
+                                <select id="kanban-filter-origin" onchange="KanbanModule.render()" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.8rem;outline:none;cursor:pointer;">
+                                    <option value="">🌐 Origem: Todas</option>
+                                    <option value="Google">🌐 Google</option>
+                                    <option value="Inativo">⏸ Inativos</option>
+                                    <option value="Maps">🗺 Maps</option>
+                                    <option value="Prospec">🎯 Prospecção</option>
+                                </select>
+
+                                <select id="kanban-filter-temp" onchange="KanbanModule.render()" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.8rem;outline:none;cursor:pointer;">
+                                    <option value="">🔥 Temp: Todas</option>
+                                    <option value="Fechando">✅ Fechando</option>
+                                    <option value="Quente">🔥 Quente</option>
+                                    <option value="Morno">🌡 Morno</option>
+                                    <option value="Frio">🧊 Frio</option>
+                                </select>
+
+                                <select id="kanban-filter-sort" onchange="KanbanModule.render()" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.8rem;outline:none;cursor:pointer;">
+                                    <option value="recent">📅 Mais Recentes</option>
+                                    <option value="value">💰 Maior Valor</option>
+                                    <option value="stale">⏱ Mais Tempo Parado</option>
+                                </select>
+
+                                <button onclick="KanbanModule.render()" class="btn btn-outline" style="font-size:0.78rem;padding:0.4rem 0.8rem;border-radius:8px;">
+                                    <i class='bx bx-refresh'></i>
+                                </button>
                             </div>
-                            <select id="kanban-filter-origin" onchange="KanbanModule.render()" style="padding:0.4rem 0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;cursor:pointer;">
-                                <option value="">Todos</option>
-                                <option value="Google">🌐 Google</option>
-                                <option value="Inativo">⏸ Inativos</option>
-                                <option value="Maps">🗺 Maps</option>
-                                <option value="Prospec">🎯 Prospecção</option>
-                            </select>
                         </div>
 
                         <!-- Painel de Métricas (oculto pelo JS — integrado nos headers) -->
@@ -1822,17 +1852,17 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="js/data.js?v=8.0"></script>
-    <script src="js/dashboard.js?v=8.0"></script>
-    <script src="js/sales.js?v=8.0"></script>
-    <script src="js/ai-suggestions.js?v=8.0"></script>
-    <script src="js/crm.js?v=8.0"></script>
-    <script src="js/samples.js?v=8.0"></script>
-    <script src="js/calendar.js?v=8.0"></script>
-    <script src="js/reminders.js?v=8.0"></script>
-    <script src="js/whatsapp.js?v=8.0"></script>
-    <script src="js/kanban.js?v=8.0"></script>
-    <script src="js/prospec.js?v=8.0"></script>
+    <script src="js/data.js?v=9.0"></script>
+    <script src="js/dashboard.js?v=9.0"></script>
+    <script src="js/sales.js?v=9.0"></script>
+    <script src="js/ai-suggestions.js?v=9.0"></script>
+    <script src="js/crm.js?v=9.0"></script>
+    <script src="js/samples.js?v=9.0"></script>
+    <script src="js/calendar.js?v=9.0"></script>
+    <script src="js/reminders.js?v=9.0"></script>
+    <script src="js/whatsapp.js?v=9.0"></script>
+    <script src="js/kanban.js?v=9.0"></script>
+    <script src="js/prospec.js?v=9.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="js/whatsapp-analyzer.js?v=8.0"></script>
     <script src="js/app.js?v=8.0"></script>

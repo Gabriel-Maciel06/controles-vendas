@@ -922,255 +922,297 @@ select option { background: var(--bg-surface); color: var(--text-main); }
 }
 
 /* ===================================================
-   KANBAN v2 — Compact & Centered
+   KANBAN v3 — Premium CRM Board (Agendor Style)
    =================================================== */
 
-/* Board container */
 #kanban-board {
     display: flex !important;
-    gap: 0.6rem !important;
+    gap: 0.85rem !important;
     overflow-x: auto !important;
-    align-items: stretch !important;
-    padding-bottom: 1rem !important;
-    justify-content: center !important;
+    align-items: flex-start !important;
+    padding: 0.5rem 0.2rem 1.5rem !important;
+    justify-content: flex-start !important;
     flex-wrap: nowrap !important;
+    min-height: 600px;
 }
 
 /* Coluna */
 .kb-col {
-    flex: 0 0 170px !important;
-    min-width: 155px !important;
-    max-width: 200px !important;
+    flex: 0 0 270px !important;
+    min-width: 260px !important;
+    max-width: 285px !important;
     display: flex;
     flex-direction: column;
-    border-radius: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     overflow: hidden;
-    background: rgba(255,255,255,0.015);
-    border: 1px solid rgba(255,255,255,0.05);
-    transition: border-color 0.15s;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .kb-col:hover {
-    border-color: rgba(255,255,255,0.1);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Header da coluna */
 .kb-col-header {
+    padding: 0.75rem 0.9rem;
+    background: var(--bg-surface-2, rgba(255, 255, 255, 0.04));
+    border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.kb-col-header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.55rem 0.65rem;
 }
 
 .kb-col-title {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.4rem;
 }
 
 .kb-col-emoji {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
-.kb-col-count {
-    font-size: 0.65rem;
+.kb-col-name {
     font-weight: 700;
-    border-radius: 20px;
-    padding: 1px 7px;
-    min-width: 20px;
-    text-align: center;
+    font-size: 0.84rem;
+    color: var(--text-main);
+}
+
+.kb-col-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+}
+
+.kb-col-header-sub {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: right;
 }
 
 /* Área de cards */
-.kb-cards {
-    flex: 1;
-    padding: 0.35rem;
+.kb-cards-container {
+    padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    min-height: 100px;
-    transition: background 0.15s;
+    gap: 0.6rem;
+    max-height: calc(100vh - 270px);
+    min-height: 120px;
+    overflow-y: auto;
 }
 
-/* Card compacto */
+.kb-cards-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.kb-cards-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.kb-empty-drop-zone {
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+/* Card Estilo CRM */
 .kb-card {
-    background: var(--bg-surface, rgba(255,255,255,0.04));
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 7px;
-    padding: 0.5rem 0.55rem;
+    background: var(--bg-surface, rgba(255, 255, 255, 0.035));
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+    border-radius: 10px;
+    padding: 0.75rem 0.8rem;
     cursor: grab;
-    transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .kb-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
-.kb-card:hover .kb-card-actions {
-    opacity: 1;
+.kb-card:active {
+    cursor: grabbing;
 }
 
-/* Linha principal do card */
-.kb-card-main {
+/* Header do card com Pills */
+.kb-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.kb-card-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.kb-pill {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+}
+
+.kb-icon-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    transition: background 0.15s, color 0.15s;
+}
+
+.kb-icon-btn:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+}
+
+/* Título / Razão Social */
+.kb-card-deal-name {
+    font-weight: 700;
+    font-size: 0.84rem;
+    color: var(--text-main);
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+/* Detalhes do Negócio */
+.kb-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.kb-card-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+
+.kb-card-row i {
+    font-size: 0.8rem;
+    color: var(--primary, #10b981);
+    flex-shrink: 0;
+}
+
+.kb-card-buyer-info {
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+/* Rodapé do Card */
+.kb-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.4rem;
+    border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.06));
+    margin-top: 0.2rem;
+}
+
+.kb-card-footer-left {
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
 
-.kb-card-avatar {
-    width: 22px;
-    height: 22px;
+.kb-wpp-badge {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.kb-card-name {
-    font-weight: 600;
-    font-size: 0.75rem;
-    color: var(--text-main);
-    line-height: 1.2;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Ações — ocultas por padrão, aparecem no hover */
-.kb-card-actions {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity 0.12s;
-    flex-shrink: 0;
-}
-
-.kb-action-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
     border: none;
+    background: rgba(37, 211, 102, 0.18);
+    color: #25D366;
     cursor: pointer;
-    font-size: 0.7rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.1s;
+    font-size: 0.85rem;
+    transition: background 0.15s, transform 0.1s;
 }
 
-.kb-action-edit {
-    background: rgba(99,102,241,0.12);
-    color: #818cf8;
-}
-.kb-action-edit:hover { background: rgba(99,102,241,0.25); }
-
-.kb-action-wpp {
-    background: rgba(37,211,102,0.1);
-    color: #25D366;
-}
-.kb-action-wpp:hover { background: rgba(37,211,102,0.22); }
-
-.kb-action-trash {
-    background: rgba(239,68,68,0.1);
-    color: #ef4444;
-}
-.kb-action-trash:hover { background: rgba(239,68,68,0.22); }
-
-/* Footer do card */
-.kb-card-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    margin-top: 0.3rem;
-    font-size: 0.65rem;
+.kb-wpp-badge:hover {
+    background: rgba(37, 211, 102, 0.35);
+    transform: scale(1.08);
 }
 
-.kb-card-phone {
-    color: var(--text-muted);
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.kb-follow-late   { color: #E24B4A; font-weight: 600; }
-.kb-follow-today  { color: #EF9F27; font-weight: 600; }
-.kb-follow-normal { color: var(--text-muted); }
-
-/* Select mover — super discreto */
 .kb-move-select {
-    width: 28px !important;
-    min-width: 28px;
-    padding: 1px 2px !important;
+    padding: 2px 6px !important;
     font-size: 0.7rem !important;
-    border-radius: 4px !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    background: rgba(255,255,255,0.03) !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
     color: var(--text-muted) !important;
     cursor: pointer;
-    margin-left: auto;
-    appearance: none;
-    -webkit-appearance: none;
-    text-align: center;
+    outline: none;
 }
 
 .kb-move-select:hover {
-    background: rgba(255,255,255,0.08) !important;
-    border-color: rgba(255,255,255,0.15) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-main) !important;
 }
 
-.kb-move-select:focus {
-    width: auto !important;
-    min-width: 100px;
+.kb-card-value {
+    font-weight: 700;
+    font-size: 0.84rem;
+    color: var(--primary, #10b981);
 }
 
-/* Botão "Ver mais" */
-.kb-show-more {
+/* Botão expandir mais */
+.kb-btn-expand {
+    width: 100%;
+    padding: 0.45rem;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
-    padding: 0.4rem;
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    background: rgba(255,255,255,0.02);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.12s;
-    margin-top: 0.15rem;
+    transition: background 0.15s, color 0.15s;
+    margin-top: 0.2rem;
 }
 
-.kb-show-more:hover {
-    background: rgba(255,255,255,0.06);
+.kb-btn-expand:hover {
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-main);
-}
-
-/* Drop hint */
-.kb-drop-hint {
-    border: 2px dashed rgba(255,255,255,0.15);
-    border-radius: 7px;
-    height: 40px;
-    transition: border-color 0.15s;
-}
-
-/* Responsivo — em mobile, colunas menores */
-@media (max-width: 768px) {
-    #kanban-board {
-        justify-content: flex-start !important;
-    }
-    .kb-col {
-        flex: 0 0 145px !important;
-        min-width: 135px !important;
-    }
-    .kb-card-actions {
-        opacity: 1; /* Sempre visível no mobile (sem hover) */
-    }
 }

@@ -1,28 +1,31 @@
 /**
- * Kanban Module — Funil de Vendas (v2 — Compact & Centered)
- * Colunas: Lead → Contato → Proposta → Fechado → Perdido
- * Drag & drop entre colunas. Salva status no backend automaticamente.
+ * Kanban Module — Funil de Vendas v3.0 (Estilo CRM Premium / Agendor)
+ * Visual alinhado, cards estilizados, limite de cards por coluna e soma de valores.
  */
 
 const KanbanModule = {
-
     COLUMNS: [
-        { id: 'Primeiro contato', label: 'Primeiro contato', emoji: '🤝', color: '#3b82f6', bg: 'rgba(59,130,246,0.06)' },
-        { id: 'Qualificação',     label: 'Qualificação',     emoji: '🔍', color: '#8b5cf6', bg: 'rgba(139,92,246,0.06)'  },
-        { id: 'Primeira Oferta',  label: 'Primeira Oferta',  emoji: '💡', color: '#EF9F27', bg: 'rgba(239,159,39,0.06)'  },
-        { id: 'Maturação',        label: 'Maturação',        emoji: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)'  },
-        { id: 'Fechamento',       label: 'Fechamento',       emoji: '✅', color: '#10B981', bg: 'rgba(16,185,129,0.06)'  },
-        { id: 'Pós venda',        label: 'Pós venda',        emoji: '🔄', color: '#0ea5e9', bg: 'rgba(14,165,233,0.06)'  },
-        { id: 'Perdido',          label: 'Perdido',          emoji: '❌', color: '#6b7280', bg: 'rgba(107,114,128,0.06)' },
+        { id: 'Primeiro contato', label: 'Primeiro Contato',     emoji: '🤝', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+        { id: 'Qualificação',     label: 'Qualificação',        emoji: '🔍', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)'  },
+        { id: 'Primeira Oferta',  label: 'Proposta / Oferta',    emoji: '💡', color: '#EF9F27', bg: 'rgba(239,159,39,0.1)'  },
+        { id: 'Maturação',        label: 'Maturação',           emoji: '⏳', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+        { id: 'Fechamento',       label: 'Fechamento / Venda',  emoji: '✅', color: '#10B981', bg: 'rgba(16,185,129,0.1)'  },
+        { id: 'Pós venda',        label: 'Pós-Venda / Contrato', emoji: '🔄', color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
+        { id: 'Perdido',          label: 'Perdido',             emoji: '❌', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
     ],
 
-    MAX_VISIBLE: 5,  // Cards visíveis por coluna antes de "Ver mais"
-    expandedCols: {}, // Rastreia colunas expandidas
+    MAX_VISIBLE: 8, // Exibe no máximo 8 por coluna para não poluir o layout
+    expandedCols: {},
 
     dragId: null,
     dragCol: null,
+
     init() {
         this.render();
+    },
+
+    fmtCurrency(val) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
     },
 
     // ── Monta o board completo ──
@@ -31,52 +34,80 @@ const KanbanModule = {
         if (!board) return;
 
         const filterOrigin = document.getElementById('kanban-filter-origin')?.value || '';
+        const filterTemp   = document.getElementById('kanban-filter-temp')?.value || '';
         const searchQuery  = (document.getElementById('kanban-search')?.value || '').trim().toLowerCase();
+        const sortMode     = document.getElementById('kanban-filter-sort')?.value || 'recent';
+
         let customers = this.getLatestCustomers();
 
+        // Filtros
         if (filterOrigin) {
             customers = customers.filter(c => c.origin === filterOrigin);
+        }
+        if (filterTemp) {
+            customers = customers.filter(c => (c.temperature || 'Frio').toLowerCase() === filterTemp.toLowerCase());
         }
 
         if (searchQuery) {
             customers = customers.filter(c => {
-                const name = (c.name || c.client || '').toLowerCase();
-                const company = (c.company || '').toLowerCase();
-                return name.includes(searchQuery) || company.includes(searchQuery);
+                const name    = (c.name || c.client || '').toLowerCase();
+                const company = (c.company || c.razaoSocial || '').toLowerCase();
+                const buyer   = (c.buyer || '').toLowerCase();
+                const city    = (c.city || '').toLowerCase();
+                return name.includes(searchQuery) || company.includes(searchQuery) || buyer.includes(searchQuery) || city.includes(searchQuery);
             });
         }
 
-        // Oculta o painel de métricas separado (agora está integrado nos headers)
-        const metricsEl = document.getElementById('kanban-metrics');
-        if (metricsEl) metricsEl.style.display = 'none';
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
 
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Conta por coluna
+        // Mapear por coluna
         const colCustomers = {};
-        this.COLUMNS.forEach(c => colCustomers[c.id] = []);
+        this.COLUMNS.forEach(col => colCustomers[col.id] = []);
+
         customers.forEach(c => {
-            const col = this.getCardColumn(c);
-            if (colCustomers[col]) colCustomers[col].push(c);
+            const colId = this.getCardColumn(c);
+            if (colCustomers[colId]) colCustomers[colId].push(c);
         });
 
-        // Ordena: atrasados primeiro, depois por data de follow-up
+        // Ordenação por coluna
         Object.keys(colCustomers).forEach(colId => {
             colCustomers[colId].sort((a, b) => {
-                const aNext = a.nextFollowUp || '9999';
-                const bNext = b.nextFollowUp || '9999';
-                return aNext.localeCompare(bNext);
+                if (sortMode === 'value') {
+                    const va = a.value || a.totalPurchased || 0;
+                    const vb = b.value || b.totalPurchased || 0;
+                    return vb - va;
+                } else if (sortMode === 'stale') {
+                    const da = a.updatedAt || a.lastContactDate || '1970-01-01';
+                    const db = b.updatedAt || b.lastContactDate || '1970-01-01';
+                    return da.localeCompare(db);
+                } else {
+                    const da = a.updatedAt || a.lastContactDate || '1970-01-01';
+                    const db = b.updatedAt || b.lastContactDate || '1970-01-01';
+                    return db.localeCompare(da);
+                }
             });
         });
 
+        // Atualizar contadores totais no cabeçalho do painel
+        const totalValue = customers.reduce((sum, c) => sum + (c.value || c.totalPurchased || 0), 0);
         const totalLeads = customers.length;
+        
+        const countEl = document.getElementById('kanban-total-count');
+        if (countEl) countEl.innerText = `${totalLeads} Oportunidades`;
+        
+        const valEl = document.getElementById('kanban-total-value');
+        if (valEl) valEl.innerText = this.fmtCurrency(totalValue);
 
+        // Renderizar Colunas
         board.innerHTML = this.COLUMNS.map(col => {
             const cards = colCustomers[col.id] || [];
             const count = cards.length;
-            const isExpanded = this.expandedCols[col.id];
+            const colTotalValue = cards.reduce((sum, c) => sum + (c.value || c.totalPurchased || 0), 0);
+            
+            const isExpanded = !!this.expandedCols[col.id];
             const visibleCards = isExpanded ? cards : cards.slice(0, this.MAX_VISIBLE);
-            const hiddenCount = cards.length - this.MAX_VISIBLE;
+            const hiddenCount = cards.length - visibleCards.length;
 
             return `
             <div class="kb-col" id="kb-col-${col.id}"
@@ -84,37 +115,43 @@ const KanbanModule = {
                  ondragleave="KanbanModule.onDragLeave(event,'${col.id}')"
                  ondrop="KanbanModule.onDrop(event,'${col.id}')">
 
-                <!-- Header da coluna com contagem integrada -->
-                <div class="kb-col-header" style="background:${col.bg};border-bottom:2px solid ${col.color};">
-                    <div class="kb-col-title">
-                        <span class="kb-col-emoji">${col.emoji}</span>
-                        <span style="color:${col.color};font-weight:700;font-size:0.8rem;">${col.label}</span>
+                <!-- Header da coluna -->
+                <div class="kb-col-header" style="border-top: 3px solid ${col.color};">
+                    <div class="kb-col-header-top">
+                        <div class="kb-col-title">
+                            <span class="kb-col-emoji">${col.emoji}</span>
+                            <span class="kb-col-name">${col.label}</span>
+                        </div>
+                        <span class="kb-col-badge">${count}</span>
                     </div>
-                    <span class="kb-col-count" style="background:${col.color};color:#fff;">${count}</span>
+                    <div class="kb-col-header-sub">
+                        <span>${this.fmtCurrency(colTotalValue)}</span>
+                    </div>
                 </div>
 
-                <!-- Área dos cards -->
-                <div class="kb-cards" id="kb-cards-${col.id}">
-                    ${visibleCards.map(c => this.renderCard(c, col, today)).join('')}
-                    ${!isExpanded && hiddenCount > 0 ? `
-                        <button class="kb-show-more" onclick="KanbanModule.toggleExpand('${col.id}')" style="border-left:2px solid ${col.color}40;">
+                <!-- Lista de cards scrollável -->
+                <div class="kb-cards-container" id="kb-cards-${col.id}">
+                    ${cards.length === 0 ? `
+                        <div class="kb-empty-drop-zone">Nenhum cliente aqui</div>
+                    ` : visibleCards.map(c => this.renderCard(c, col, now, todayStr)).join('')}
+
+                    ${hiddenCount > 0 ? `
+                        <button class="kb-btn-expand" onclick="KanbanModule.toggleExpand('${col.id}')">
                             <i class='bx bx-chevron-down'></i> Ver mais ${hiddenCount} clientes
                         </button>
                     ` : ''}
-                    ${isExpanded && hiddenCount > 0 ? `
-                        <button class="kb-show-more" onclick="KanbanModule.toggleExpand('${col.id}')" style="border-left:2px solid ${col.color}40;">
-                            <i class='bx bx-chevron-up'></i> Recolher
+
+                    ${isExpanded && cards.length > this.MAX_VISIBLE ? `
+                        <button class="kb-btn-expand" onclick="KanbanModule.toggleExpand('${col.id}')">
+                            <i class='bx bx-chevron-up'></i> Mostrar menos
                         </button>
                     ` : ''}
-                    <div class="kb-drop-hint" style="display:none;border-color:${col.color}55;"></div>
+
+                    <div class="kb-drop-hint" style="display:none;border-color:${col.color};"></div>
                 </div>
             </div>
         `;
         }).join('');
-
-        // Limpa lixeira
-        const lixeiraContainer = document.getElementById('lixeira-container');
-        if (lixeiraContainer) lixeiraContainer.style.display = 'none';
     },
 
     toggleExpand(colId) {
@@ -122,30 +159,56 @@ const KanbanModule = {
         this.render();
     },
 
-    // ── Card compacto ──
-    renderCard(c, col, today) {
-        const name     = (c.name || c.client || '—');
-        const initial  = name.charAt(0).toUpperCase();
-        const phone    = c.phone || '';
-        const next     = c.nextFollowUp || '';
-        const nextFmt  = next ? next.split('-').reverse().join('/') : '';
-        const isLate   = next && next < today;
-        const isToday  = next === today;
+    // ── Renderiza card individual (Estilo foto CRM) ──
+    renderCard(c, col, now, todayStr) {
+        const name     = (c.name || c.client || 'Sem Nome').trim();
+        const buyer    = (c.buyer || '').trim();
+        const company  = (c.company || c.razaoSocial || '').trim();
+        const city     = (c.city || '').trim();
+        const phone    = (c.phone || '').trim();
+        const val      = c.value || c.totalPurchased || 0;
+        const origin   = c.origin || 'Google';
+        const temp     = c.temperature || 'Frio';
 
-        const followClass = isLate ? 'kb-follow-late' : isToday ? 'kb-follow-today' : 'kb-follow-normal';
-        const followIcon  = isLate ? '⚠️' : isToday ? '🔔' : nextFmt ? '📅' : '';
+        // Tempo parado / atualização
+        const lastDateStr = c.updatedAt || c.lastContactDate || c.createdAt || '';
+        let hoursUnchanged = 0;
+        let daysUnchanged = 0;
+        if (lastDateStr) {
+            const lastDate = new Date(lastDateStr);
+            const diffMs = now - lastDate;
+            hoursUnchanged = Math.floor(diffMs / (1000 * 60 * 60));
+            daysUnchanged = Math.floor(hoursUnchanged / 24);
+        }
 
-        const originColors = {
-            'Google': '#818cf8',
-            'Inativo': '#1D9E75',
-            'Prospec': '#EF9F27',
-            'Maps': '#888888',
+        let timeStaleText = 'Atualizado há pouco';
+        if (hoursUnchanged >= 24) {
+            timeStaleText = `${daysUnchanged} dia${daysUnchanged > 1 ? 's' : ''} sem atualização`;
+        } else if (hoursUnchanged > 0) {
+            timeStaleText = `${hoursUnchanged} hora${hoursUnchanged > 1 ? 's' : ''} sem atualização`;
+        }
+
+        const stageDays = daysUnchanged <= 0 ? 1 : daysUnchanged + 1;
+        const stageDaysText = `${stageDays} dia${stageDays > 1 ? 's' : ''} na etapa`;
+
+        // Cores dos Pills / Badges
+        const originBadges = {
+            'Google':  { label: 'Google', bg: 'rgba(99,102,241,0.15)', color: '#818cf8' },
+            'Inativo': { label: 'Inativo', bg: 'rgba(29,158,117,0.15)', color: '#1D9E75' },
+            'Prospec': { label: 'Prospec', bg: 'rgba(239,159,39,0.15)', color: '#EF9F27' },
+            'Maps':    { label: 'Maps',    bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' }
         };
-        const originColor = c.origin && originColors[c.origin] ? originColors[c.origin] : 'transparent';
+        const origBadge = originBadges[origin] || { label: origin, bg: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)' };
 
-        const isMaps = c.origin === 'Maps';
+        const tempBadges = {
+            'Fechando': { label: 'Fechando', bg: 'rgba(16,185,129,0.15)', color: '#10B981' },
+            'Quente':   { label: 'Quente 🔥',  bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
+            'Morno':    { label: 'Morno 🌡',   bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+            'Frio':     { label: 'Frio 🧊',    bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
+        };
+        const tempBadge = tempBadges[temp] || tempBadges['Frio'];
 
-        // Monta o select de mover (leve e discreto)
+        // Opções de mover para select discreto
         const moveOptions = this.COLUMNS
             .filter(x => x.id !== col.id)
             .map(x => `<option value="${x.id}">${x.emoji} ${x.label}</option>`)
@@ -156,46 +219,68 @@ const KanbanModule = {
              id="kb-card-${c.id}"
              draggable="true"
              ondragstart="KanbanModule.onDragStart(event,'${c.id}','${col.id}')"
-             ondragend="KanbanModule.onDragEnd(event)"
-             style="border-left:3px solid ${originColor};">
+             ondragend="KanbanModule.onDragEnd(event)">
 
-            <!-- Linha principal: avatar + nome + ações -->
-            <div class="kb-card-main">
-                <div class="kb-card-avatar" style="background:${col.color}22;color:${col.color};">${initial}</div>
-                <div class="kb-card-name" title="${this.esc(name)}">${this.esc(name)}</div>
-                <div class="kb-card-actions">
-                    <button onclick="CRMModule.openEditModal('${c.id}')" title="Editar" class="kb-action-btn kb-action-edit">
+            <!-- Cabeçalho do Card (Pills + Ações) -->
+            <div class="kb-card-header">
+                <div class="kb-card-pills">
+                    <span class="kb-pill" style="background:${origBadge.bg};color:${origBadge.color};">${origBadge.label}</span>
+                    <span class="kb-pill" style="background:${tempBadge.bg};color:${tempBadge.color};">${tempBadge.label}</span>
+                </div>
+                <div class="kb-card-top-actions">
+                    <button onclick="CRMModule.openEditModal('${c.id}')" title="Editar" class="kb-icon-btn">
                         <i class='bx bx-edit-alt'></i>
                     </button>
-                    <button onclick="WhatsAppModule.openComposer('${c.id}')" title="WhatsApp" class="kb-action-btn kb-action-wpp">
-                        <i class='bx bxl-whatsapp'></i>
-                    </button>
-                    ${isMaps ? `
-                    <button onclick="KanbanModule.moveToLixeira('${c.id}')" title="Descartar" class="kb-action-btn kb-action-trash">
-                        <i class='bx bx-trash'></i>
-                    </button>` : ''}
                 </div>
             </div>
 
-            <!-- Linha secundária: follow-up + mover -->
+            <!-- Título / Razão Social -->
+            <div class="kb-card-deal-name" title="${this.esc(name)}">
+                ${this.esc(company || name)}
+            </div>
+
+            <!-- Detalhes do Negócio -->
+            <div class="kb-card-details">
+                <div class="kb-card-row">
+                    <i class='bx bx-user'></i>
+                    <span class="kb-card-buyer-info">${this.esc(buyer || name)} ${city ? '• ' + this.esc(city) : ''}</span>
+                </div>
+                <div class="kb-card-row">
+                    <i class='bx bx-time-five'></i>
+                    <span>${timeStaleText}</span>
+                </div>
+                <div class="kb-card-row">
+                    <i class='bx bx-calendar'></i>
+                    <span>${stageDaysText}</span>
+                </div>
+            </div>
+
+            <!-- Rodapé do Card (WhatsApp + Valor + Mover) -->
             <div class="kb-card-footer">
-                <span class="${followClass}">${followIcon} ${nextFmt || '—'}</span>
-                ${phone ? `<span class="kb-card-phone">${this.esc(phone)}</span>` : ''}
-                <select class="kb-move-select" onchange="KanbanModule.moveCard('${c.id}',this.value);this.value='';" title="Mover para outra etapa">
-                    <option value="">↪</option>
-                    ${moveOptions}
-                </select>
+                <div class="kb-card-footer-left">
+                    ${phone ? `
+                    <button onclick="WhatsAppModule.openComposer('${c.id}')" title="WhatsApp" class="kb-wpp-badge">
+                        <i class='bx bxl-whatsapp'></i>
+                    </button>` : ''}
+                    <select class="kb-move-select" onchange="KanbanModule.moveCard('${c.id}',this.value);this.value='';" title="Mover etapa">
+                        <option value="">↪ Mover</option>
+                        ${moveOptions}
+                    </select>
+                </div>
+
+                <div class="kb-card-value">
+                    ${val > 0 ? this.fmtCurrency(val) : '<span style="color:var(--text-muted);font-size:0.75rem;">—</span>'}
+                </div>
             </div>
         </div>`;
     },
 
-    // ── Mapeia status legado → coluna ou temperatura ──
+    // ── Mapeia status do cliente para a coluna correspondente ──
     getCardColumn(c) {
-        if (c.temperature === 'Lixeira') return 'Perdido';
-        if (c.status === 'Lixeira') return 'Perdido';
+        if (c.temperature === 'Lixeira' || c.status === 'Lixeira') return 'Perdido';
 
-        const novasEtapas = ['Primeiro contato', 'Qualificação', 'Primeira Oferta', 'Maturação', 'Fechamento', 'Pós venda', 'Perdido'];
-        if (novasEtapas.includes(c.temperature)) return c.temperature;
+        const etapas = ['Primeiro contato', 'Qualificação', 'Primeira Oferta', 'Maturação', 'Fechamento', 'Pós venda', 'Perdido'];
+        if (etapas.includes(c.temperature)) return c.temperature;
 
         const map = {
             'Lead':     'Primeiro contato',
@@ -216,30 +301,13 @@ const KanbanModule = {
         return map[c.status] || 'Primeiro contato';
     },
 
-    toggleLixeira() {
-        const c = document.getElementById('lixeira-container');
-        if(c) c.style.display = (c.style.display === 'none') ? 'block' : 'none';
-    },
-
-    async moveToLixeira(id) {
-        if(!confirm('Deseja mover este contato para Perdido?')) return;
-        await this.moveCard(id, 'Perdido');
-    },
-
-    async restoreFromLixeira(id) {
-        await this.moveCard(id, 'Primeiro contato');
-    },
-
-    renderLixeira(customers) {
-        // Obsoleto mas mantido para evitar crash caso seja chamado no HTML
-    },
-
-    // ── Pega cliente mais recente por nome (com filtro de origem) ──
+    // ── Pega clientes únicos mais recentes ──
     getLatestCustomers() {
         const all = DataStore.get(STORAGE_KEYS.CUSTOMERS) || [];
         const latest = {};
         all.forEach(c => {
             const name = c.name || c.client;
+            if (!name) return;
             if (!latest[name] || (c.updatedAt || c.createdAt) > (latest[name].updatedAt || latest[name].createdAt)) {
                 latest[name] = c;
             }
@@ -247,16 +315,15 @@ const KanbanModule = {
         return Object.values(latest);
     },
 
-    renderMetrics(customers) {
-        // Métricas agora estão integradas nos headers das colunas
-    },
-
     // ── Move card para nova coluna ──
     async moveCard(id, newTemp) {
         const card = document.getElementById(`kb-card-${id}`);
         if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
 
-        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { temperature: newTemp });
+        await DataStore.update(STORAGE_KEYS.CUSTOMERS, id, { 
+            temperature: newTemp,
+            updatedAt: new Date().toISOString()
+        });
 
         // Automação: se moveu para Pós venda, criar lembrete de recontato
         if (newTemp === 'Pós venda') {
@@ -269,7 +336,7 @@ const KanbanModule = {
                 const reminder = {
                     id: 'rmd_' + Date.now(),
                     profile: customer.profile || 'default',
-                    title: `Recontato: 2º pedido/Introdução - ${customer.name || 'Cliente'}`,
+                    title: `Recontato pós-venda: ${customer.name || 'Cliente'}`,
                     dateLimit: dateStr,
                     timeLimit: "09:00",
                     priority: "alta",
@@ -279,9 +346,6 @@ const KanbanModule = {
                 };
 
                 await DataStore.add(STORAGE_KEYS.REMINDERS, reminder);
-                if (typeof App !== 'undefined' && App.showToast) {
-                    App.showToast("Lembrete de Recontato automático criado para daqui 7 dias!");
-                }
             }
         }
 
@@ -290,7 +354,7 @@ const KanbanModule = {
         if (typeof CRMModule !== 'undefined' && CRMModule.allAlerts) CRMModule.loadAlerts();
     },
 
-    // ── Drag & Drop ──
+    // ── Drag & Drop Handlers ──
     onDragStart(e, id, colId) {
         this.dragId  = id;
         this.dragCol = colId;
@@ -306,7 +370,7 @@ const KanbanModule = {
             const card = document.getElementById(`kb-card-${this.dragId}`);
             if (card) card.style.opacity = '1';
         }
-        document.querySelectorAll('.kb-cards').forEach(el => {
+        document.querySelectorAll('.kb-cards-container').forEach(el => {
             el.style.background = '';
             const hint = el.querySelector('.kb-drop-hint');
             if (hint) hint.style.display = 'none';
@@ -321,7 +385,7 @@ const KanbanModule = {
         const area = document.getElementById(`kb-cards-${colId}`);
         const col  = this.COLUMNS.find(c => c.id === colId);
         if (area && col) {
-            area.style.background = `${col.color}12`;
+            area.style.background = `${col.color}15`;
             const hint = area.querySelector('.kb-drop-hint');
             if (hint && colId !== this.dragCol) hint.style.display = 'block';
         }
