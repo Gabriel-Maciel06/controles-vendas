@@ -421,12 +421,22 @@ const ProspecModule = {
                     <div style="font-size:0.72rem;color:var(--text-muted);">${this.escapeHTML(p.region || '—')}</div>
                 </td>
 
-                <!-- Anotações da Conversa (Editable Inline) -->
-                <td style="padding:0.75rem 0.6rem;">
-                    <input type="text" value="${this.escapeAttr(p.notes || '')}" placeholder="Digite anotações rápidas..."
-                           onchange="ProspecModule.updateProspectField('${p.id}', { notes: this.value })"
-                           style="width:100%;padding:0.35rem 0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.8rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
-                           onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'">
+                <!-- Anotações da Conversa (Ampliada + Botão Expandir) -->
+                <td style="padding:0.65rem 0.6rem;min-width:270px;">
+                    <div style="display:flex;flex-direction:column;gap:0.35rem;">
+                        <textarea rows="2" placeholder="Digite observações da conversa..."
+                                  onchange="ProspecModule.updateProspectField('${p.id}', { notes: this.value })"
+                                  style="width:100%;padding:0.45rem 0.65rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--text-main);font-size:0.83rem;line-height:1.4;outline:none;resize:vertical;min-height:55px;box-sizing:border-box;font-family:inherit;transition:border-color 0.2s;"
+                                  onfocus="this.style.borderColor='var(--primary)';this.style.minHeight='90px';" 
+                                  onblur="this.style.borderColor='rgba(255,255,255,0.08)';if(!this.value.trim())this.style.minHeight='55px';">${this.escapeHTML(p.notes || '')}</textarea>
+                        
+                        <button onclick="ProspecModule.openNotesModal('${p.id}')" title="Expandir painel de anotações em tela cheia" 
+                                style="align-self:flex-end;font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:0.3rem;transition:all 0.15s;"
+                                onmouseover="this.style.background='rgba(99,102,241,0.2)';this.style.color='#818cf8';"
+                                onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.color='var(--text-muted)';">
+                            <i class='bx bx-fullscreen'></i> Painel Completo
+                        </button>
+                    </div>
                 </td>
 
                 <!-- Ações -->
@@ -490,6 +500,68 @@ const ProspecModule = {
                 </div>
             </div>
         `;
+    },
+
+    // ── Painel / Modal de Anotações Expandido (Tela Cheia) ──
+    openNotesModal(id) {
+        const p = this.prospects.find(x => x.id === id);
+        if (!p) return;
+
+        const modal = document.getElementById('prospec-notes-modal');
+        const titleEl = document.getElementById('prospec-notes-modal-title');
+        const subEl = document.getElementById('prospec-notes-modal-subtitle');
+        const idEl = document.getElementById('prospec-notes-modal-id');
+        const textEl = document.getElementById('prospec-notes-modal-text');
+
+        if (!modal || !textEl) return;
+
+        if (idEl) idEl.value = p.id;
+        if (titleEl) titleEl.innerText = `📝 Anotações — ${p.razaoSocial || p.name || 'Prospecto'}`;
+        if (subEl) subEl.innerText = `Telefone: ${p.phone || '—'} | Cidade: ${p.city || '—'} ${p.region ? '(' + p.region + ')' : ''}`;
+        textEl.value = p.notes || '';
+
+        modal.classList.remove('hidden');
+        setTimeout(() => textEl.focus(), 100);
+    },
+
+    insertNoteTimestamp() {
+        const textEl = document.getElementById('prospec-notes-modal-text');
+        if (!textEl) return;
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const stamp = `[${dateStr}] - `;
+
+        const currentVal = textEl.value;
+        if (currentVal && !currentVal.endsWith('\n')) {
+            textEl.value = stamp + currentVal;
+        } else {
+            textEl.value = stamp + currentVal;
+        }
+        textEl.focus();
+    },
+
+    async saveNotesModal() {
+        const idEl = document.getElementById('prospec-notes-modal-id');
+        const textEl = document.getElementById('prospec-notes-modal-text');
+        if (!idEl || !textEl) return;
+
+        const id = idEl.value;
+        const notes = textEl.value.trim();
+
+        await this.updateProspectField(id, { notes });
+        document.getElementById('prospec-notes-modal').classList.add('hidden');
+        if (typeof App !== 'undefined' && App.showToast) {
+            App.showToast("Anotações salvas com sucesso!");
+        }
+    },
+
+    openWppFromNotes() {
+        const idEl = document.getElementById('prospec-notes-modal-id');
+        if (!idEl || !idEl.value) return;
+        const id = idEl.value;
+        document.getElementById('prospec-notes-modal').classList.add('hidden');
+        WhatsAppModule.openComposer(id);
     },
 
     escapeHTML(str) {

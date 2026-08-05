@@ -24,7 +24,7 @@
     <!-- Leaflet CSS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
-    <link rel="stylesheet" href="css/style.css?v=10.0">
+    <link rel="stylesheet" href="css/style.css?v=11.0">
 </head>
 
 <body>
@@ -815,14 +815,57 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Anotações Iniciais</label>
-                                    <textarea id="prospec-notes" rows="2" placeholder="Observações..." style="width:100%;padding:0.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);resize:vertical;"></textarea>
+                                    <label>Anotações Iniciais / Histórico</label>
+                                    <textarea id="prospec-notes" rows="5" placeholder="Observações detalhadas sobre o prospecto, produtos de interesse ou histórico inicial..." style="width:100%;padding:0.7rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:var(--bg-surface);color:var(--text-main);resize:vertical;font-size:0.88rem;line-height:1.45;min-height:110px;box-sizing:border-box;"></textarea>
                                 </div>
                                 <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem;">
                                     <button type="button" onclick="document.getElementById('prospec-add-modal').classList.add('hidden')" class="btn btn-outline">Cancelar</button>
                                     <button type="submit" class="btn btn-primary"><i class="bx bx-plus"></i> Salvar Prospecto</button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prospec Expanded Notes Modal (Tela Cheia) -->
+                <div id="prospec-notes-modal" class="modal-overlay hidden">
+                    <div class="modal-content" style="max-width: 720px; width: 92%;">
+                        <div class="modal-header">
+                            <div>
+                                <h2 style="margin:0; font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;" id="prospec-notes-modal-title">
+                                    📝 Anotações do Atendimento
+                                </h2>
+                                <span id="prospec-notes-modal-subtitle" style="font-size:0.8rem; color:var(--text-muted); margin-top:0.2rem; display:block;"></span>
+                            </div>
+                            <button class="icon-btn" onclick="document.getElementById('prospec-notes-modal').classList.add('hidden')"><i class='bx bx-x'></i></button>
+                        </div>
+                        <div class="modal-body" style="padding:1.2rem;">
+                            <input type="hidden" id="prospec-notes-modal-id">
+                            
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; flex-wrap:wrap; gap:0.5rem;">
+                                <label style="font-weight:700; font-size:0.85rem; color:var(--text-main);">
+                                    Histórico de Observações & Conversa:
+                                </label>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="ProspecModule.insertNoteTimestamp()" style="font-size:0.75rem; padding:0.3rem 0.7rem; border-color:rgba(99,102,241,0.3); color:#818cf8;">
+                                    <i class='bx bx-time'></i> + Data/Hora
+                                </button>
+                            </div>
+
+                            <textarea id="prospec-notes-modal-text" rows="12" 
+                                placeholder="Digite aqui o histórico completo das conversas, negociações, feedback e observações do prospecto..." 
+                                style="width:100%; padding:0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:var(--bg-surface); color:var(--text-main); font-size:0.92rem; line-height:1.5; outline:none; resize:vertical; font-family:inherit; min-height:260px; box-sizing:border-box;"></textarea>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.2rem; gap:0.8rem; flex-wrap:wrap;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="ProspecModule.openWppFromNotes()" style="color:#25D366; border-color:rgba(37,211,102,0.3); font-size:0.83rem; padding:0.45rem 0.9rem;">
+                                    <i class='bx bxl-whatsapp' style="font-size:1.1rem;"></i> Abrir WhatsApp
+                                </button>
+                                <div style="display:flex; gap:0.6rem;">
+                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('prospec-notes-modal').classList.add('hidden')">Cancelar</button>
+                                    <button type="button" class="btn btn-primary" onclick="ProspecModule.saveNotesModal()">
+                                        <i class='bx bx-save'></i> Salvar Anotações
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1852,17 +1895,17 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="js/data.js?v=10.0"></script>
-    <script src="js/dashboard.js?v=10.0"></script>
-    <script src="js/sales.js?v=10.0"></script>
-    <script src="js/ai-suggestions.js?v=10.0"></script>
-    <script src="js/crm.js?v=10.0"></script>
-    <script src="js/samples.js?v=10.0"></script>
-    <script src="js/calendar.js?v=10.0"></script>
-    <script src="js/reminders.js?v=10.0"></script>
-    <script src="js/whatsapp.js?v=10.0"></script>
-    <script src="js/kanban.js?v=10.0"></script>
-    <script src="js/prospec.js?v=10.0"></script>
+    <script src="js/data.js?v=11.0"></script>
+    <script src="js/dashboard.js?v=11.0"></script>
+    <script src="js/sales.js?v=11.0"></script>
+    <script src="js/ai-suggestions.js?v=11.0"></script>
+    <script src="js/crm.js?v=11.0"></script>
+    <script src="js/samples.js?v=11.0"></script>
+    <script src="js/calendar.js?v=11.0"></script>
+    <script src="js/reminders.js?v=11.0"></script>
+    <script src="js/whatsapp.js?v=11.0"></script>
+    <script src="js/kanban.js?v=11.0"></script>
+    <script src="js/prospec.js?v=11.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="js/whatsapp-analyzer.js?v=8.0"></script>
     <script src="js/app.js?v=8.0"></script>
