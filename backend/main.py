@@ -202,6 +202,22 @@ def startup_event():
         # Não re-raise — permite o servidor subir mesmo com erro de banco
 
 # --- debug endpoint ---
+from fastapi.responses import FileResponse
+
+@app.get("/downloads/{filename}")
+def download_file(filename: str):
+    """
+    Servidor de arquivos com mime-type oficial de pacotes Android (.apk)
+    """
+    file_path = os.path.join(os.path.dirname(__file__), "frontend", "downloads", filename)
+    if not os.path.exists(file_path):
+        file_path = os.path.join(os.path.dirname(__file__), "..", "downloads", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    media_type = "application/vnd.android.package-archive" if filename.endswith(".apk") else "application/octet-stream"
+    return FileResponse(file_path, media_type=media_type, filename=filename)
+
 @app.get("/api/db-check")
 def db_check(db: Session = Depends(get_db)):
     try:

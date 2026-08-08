@@ -7,6 +7,14 @@
   ],
   "routes": [
     {
+      "src": "/downloads/(.*)",
+      "headers": {
+        "Content-Type": "application/vnd.android.package-archive",
+        "Content-Disposition": "attachment; filename=$1"
+      },
+      "dest": "backend/main.py"
+    },
+    {
       "src": "/(.*)",
       "dest": "backend/main.py"
     }
