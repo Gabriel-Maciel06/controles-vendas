@@ -2,8 +2,16 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baixar App Prospecção — Android & iPhone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Instalar App Prospec — Isapel</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Prospec">
+    <meta name="theme-color" content="#0b1329">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     
     <!-- Boxicons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -14,6 +22,7 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -23,113 +32,106 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
+            padding: 1.25rem;
         }
 
         .download-card {
             background: #172442;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
             max-width: 480px;
             width: 100%;
             padding: 2rem 1.5rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
             text-align: center;
         }
 
         .app-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #6366f1, #4f46e5);
-            border-radius: 20px;
+            width: 86px;
+            height: 86px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 22px;
             margin: 0 auto 1.2rem auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
         }
 
         .app-icon i {
-            font-size: 2.8rem;
+            font-size: 3.2rem;
             color: #ffffff;
         }
 
         h1 {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 800;
             margin-bottom: 0.4rem;
         }
 
         p.subtitle {
-            font-size: 0.85rem;
+            font-size: 0.88rem;
             color: #94a3b8;
             margin-bottom: 1.8rem;
             line-height: 1.4;
         }
 
-        .btn-download-apk {
+        .btn-install-app {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
-            background: #10b981;
+            gap: 0.7rem;
+            background: linear-gradient(135deg, #10b981, #059669);
             color: #ffffff;
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            padding: 0.9rem 1.4rem;
-            border-radius: 12px;
+            padding: 1rem 1.4rem;
+            border-radius: 14px;
             text-decoration: none;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
             transition: transform 0.15s, background 0.15s;
             margin-bottom: 1rem;
         }
 
-        .btn-download-apk:active {
+        .btn-install-app:active {
             transform: scale(0.97);
-            background: #059669;
         }
 
-        .btn-web-app {
+        .btn-open-web {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.6rem;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: #f8fafc;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            padding: 0.8rem 1.2rem;
-            border-radius: 12px;
+            padding: 0.85rem 1.2rem;
+            border-radius: 14px;
             text-decoration: none;
-            transition: background 0.15s;
-        }
-
-        .btn-web-app:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .section-divider {
-            height: 1px;
-            background: rgba(255, 255, 255, 0.08);
-            margin: 1.5rem 0;
+            width: 100%;
         }
 
         .instructions-box {
             background: rgba(0, 0, 0, 0.25);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.2rem;
             text-align: left;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             line-height: 1.5;
+            margin-top: 1.5rem;
         }
 
         .instructions-box h3 {
-            font-size: 0.88rem;
-            font-weight: 700;
-            color: #6366f1;
-            margin-bottom: 0.5rem;
+            font-size: 0.92rem;
+            font-weight: 800;
+            color: #10b981;
+            margin-bottom: 0.6rem;
             display: flex;
             align-items: center;
             gap: 0.4rem;
@@ -138,13 +140,23 @@
         .step-item {
             display: flex;
             align-items: flex-start;
-            gap: 0.5rem;
-            margin-bottom: 0.4rem;
+            gap: 0.6rem;
+            margin-bottom: 0.6rem;
             color: #cbd5e1;
         }
 
-        .step-item:last-child {
-            margin-bottom: 0;
+        .step-num {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            font-weight: 800;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            flex-shrink: 0;
         }
     </style>
 </head>
@@ -155,55 +167,80 @@
             <i class='bx bx-phone-call'></i>
         </div>
 
-        <h1>Prospec Mobile App</h1>
-        <p class="subtitle">App Oficial de Prospecção de Vendas com Discador Telefônico Nativo</p>
+        <h1>Prospec Mobile</h1>
+        <p class="subtitle">Instale o aplicativo de prospecção com discador telefônico direto no seu celular</p>
 
-        <!-- BOTÃO 1: BAIXAR APK PARA ANDROID -->
-        <a href="downloads/ProspecMobile.apk" download class="btn-download-apk" id="btn-apk-download">
-            <i class='bx bxl-android' style="font-size:1.6rem;"></i>
-            <span>Baixar App Android (.APK)</span>
+        <!-- BOTÃO PRINCIPAL DE INSTALAÇÃO AUTOMÁTICA EM 1 CLIQUE -->
+        <button id="btn-install-native" class="btn-install-app">
+            <i class='bx bx-download' style="font-size:1.6rem;"></i>
+            <span>INSTALAR APP NO CELULAR</span>
+        </button>
+
+        <a href="prospec-mobile.html" class="btn-open-web">
+            <i class='bx bx-mobile-alt' style="font-size:1.2rem;color:#6366f1;"></i>
+            <span>Abrir no Navegador</span>
         </a>
 
-        <!-- BOTÃO 2: ABRIR VERSÃO WEB / PWA -->
-        <a href="prospec-mobile.html" class="btn-web-app">
-            <i class='bx bx-mobile-alt' style="font-size:1.3rem;color:#6366f1;"></i>
-            <span>Abrir no Navegador (Web App)</span>
-        </a>
-
-        <div class="section-divider"></div>
-
-        <!-- INSTRUÇÕES DE INSTALAÇÃO -->
+        <!-- GUIA PASSO A PASSO -->
         <div class="instructions-box">
-            <h3>🤖 Como instalar no Android (.APK):</h3>
+            <h3>📱 Como instalar no Android em 5 segundos:</h3>
+            
             <div class="step-item">
-                <span>1.</span>
-                <span>Clique no botão verde <b>"Baixar App Android (.APK)"</b> acima.</span>
-            </div>
-            <div class="step-item">
-                <span>2.</span>
-                <span>Abra o arquivo baixado e confirme a instalação (se solicitado, permita "Fontes Desconhecidas").</span>
-            </div>
-            <div class="step-item">
-                <span>3.</span>
-                <span>O ícone do **Prospec** aparecerá na tela do seu celular pronto para uso!</span>
+                <div class="step-num">1</div>
+                <span>Clique no botão verde <b>"INSTALAR APP NO CELULAR"</b> acima.</span>
             </div>
 
-            <h3 style="margin-top:1rem;color:#38bdf8;">🍏 Como instalar no iPhone (iOS):</h3>
             <div class="step-item">
-                <span>1.</span>
-                <span>Abra o link <a href="prospec-mobile.html" style="color:#38bdf8;text-decoration:underline;">prospec-mobile.html</a> no navegador <b>Safari</b>.</span>
+                <div class="step-num">2</div>
+                <span>No menu do Chrome (3 pontinhos no canto superior), toque em <b>"Instalar aplicativo"</b> ou <b>"Adicionar à Tela Inicial"</b>.</span>
+            </div>
+
+            <div class="step-item">
+                <div class="step-num">3</div>
+                <span>Confirme em <b>Instalar</b>. O ícone oficial do aplicativo aparecerá junto com seus outros apps!</span>
+            </div>
+
+            <h3 style="margin-top:1.2rem;color:#38bdf8;">🍏 No iPhone (iOS):</h3>
+            <div class="step-item">
+                <div class="step-num">1</div>
+                <span>Abra esta página no navegador <b>Safari</b>.</span>
             </div>
             <div class="step-item">
-                <span>2.</span>
-                <span>Toque no botão de <b>Compartilhar</b> (quadrado com seta para cima no Safari).</span>
+                <div class="step-num">2</div>
+                <span>Toque no botão de <b>Compartilhar</b> (ícone de quadrado com seta para cima).</span>
             </div>
             <div class="step-item">
-                <span>3.</span>
+                <div class="step-num">3</div>
                 <span>Selecione <b>"Adicionar à Tela de Início"</b>.</span>
             </div>
         </div>
-
     </div>
 
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('btn-install-native');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) {
+                installBtn.style.display = 'flex';
+            }
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('App instalado com sucesso!');
+                }
+                deferredPrompt = null;
+            } else {
+                // If not triggered automatically, redirect to prospec-mobile.html or show browser menu hint
+                alert('📱 Para instalar no Android:\n\n1. Toque nos 3 PONTINHOS no canto superior direito do seu navegador Chrome.\n2. Escolha "Instalar aplicativo" ou "Adicionar à tela inicial".\n\nPronto! O app será baixado e instalado no seu celular.');
+            }
+        });
+    </script>
 </body>
 </html>
