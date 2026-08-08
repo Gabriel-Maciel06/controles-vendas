@@ -117,21 +117,21 @@
         }
 
         .instructions-box {
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
             padding: 1.2rem;
             text-align: left;
             font-size: 0.85rem;
             line-height: 1.5;
-            margin-top: 1.5rem;
+            margin-top: 1.2rem;
         }
 
         .instructions-box h3 {
-            font-size: 0.92rem;
+            font-size: 0.95rem;
             font-weight: 800;
             color: #10b981;
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.7rem;
             display: flex;
             align-items: center;
             gap: 0.4rem;
@@ -146,17 +146,25 @@
         }
 
         .step-num {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
+            background: #10b981;
+            color: #000000;
             font-weight: 800;
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             flex-shrink: 0;
+        }
+
+        .highlight-box {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 0.9rem;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -168,19 +176,13 @@
         </div>
 
         <h1>Prospec Mobile</h1>
-        <p class="subtitle">Instale o aplicativo de prospecção com discador telefônico direto no seu celular</p>
+        <p class="subtitle">Instale o aplicativo oficial de prospecção com discador telefônico nativo</p>
 
-        <!-- BOTÃO 1: BAIXAR APK NATIVO ANDROID -->
-        <a href="downloads/ProspecMobile-Native.apk" download class="btn-install-app" id="btn-apk-download">
-            <i class='bx bxl-android' style="font-size:1.6rem;"></i>
-            <span>Baixar App Nativo Android (.APK)</span>
-        </a>
-
-        <!-- BOTÃO 2: BAIXAR CÓDIGO FONTE ANDROID STUDIO (KOTLIN) -->
-        <a href="downloads/native-prospec-android-source.zip" download class="btn-open-web" style="margin-bottom:0.8rem;border-color:#10b981;color:#10b981;">
-            <i class='bx bx-code-alt' style="font-size:1.3rem;"></i>
-            <span>Baixar Código Android Studio (Kotlin .ZIP)</span>
-        </a>
+        <!-- BOTÃO PRINCIPAL DE INSTALAÇÃO AUTOMÁTICA EM 1 CLIQUE -->
+        <button id="btn-install-native" class="btn-install-app">
+            <i class='bx bx-download' style="font-size:1.6rem;"></i>
+            <span>INSTALAR APP NO CELULAR</span>
+        </button>
 
         <a href="prospec-mobile.html" class="btn-open-web">
             <i class='bx bx-mobile-alt' style="font-size:1.2rem;color:#6366f1;"></i>
@@ -189,38 +191,35 @@
 
         <!-- GUIA PASSO A PASSO DA INSTALAÇÃO -->
         <div class="instructions-box">
-            <h3 style="color:#f59e0b;font-size:0.95rem;">⚠️ Seu celular mostrou a mensagem "Extrair"? VEJA COMO RESOLVER:</h3>
-            <p style="color:#f8fafc;margin-bottom:0.8rem;font-size:0.82rem;">Se o celular tentar extrair o arquivo em vez de instalar, siga este passo simples:</p>
             
-            <div class="step-item" style="background:rgba(245,158,11,0.1);padding:0.6rem;border-radius:10px;margin-bottom:0.5rem;">
-                <div class="step-num" style="background:#f59e0b;color:#000;">1</div>
-                <span>No celular, toque nos <b>3 PONTINHOS</b> no canto superior do navegador Chrome e entre em <b>Downloads</b>.</span>
+            <div class="highlight-box">
+                <h3 style="color:#10b981;margin-bottom:0.4rem;">📱 Como Instalar no Android em 2 Toques:</h3>
+                <p style="color:#f8fafc;font-size:0.82rem;line-height:1.4;">Para o Android instalar o aplicativo diretamente sem erros de arquivo:</p>
             </div>
 
-            <div class="step-item" style="background:rgba(245,158,11,0.1);padding:0.6rem;border-radius:10px;margin-bottom:0.8rem;">
-                <div class="step-num" style="background:#f59e0b;color:#000;">2</div>
-                <span>Toque no arquivo <b>ProspecMobile-Native.apk</b> direto na lista de Downloads do Chrome.</span>
-            </div>
-
-            <div class="step-item" style="background:rgba(16,185,129,0.15);padding:0.6rem;border-radius:10px;">
-                <div class="step-num" style="background:#10b981;color:#fff;">3</div>
-                <span>O Android abrirá a tela oficial: <b>"Deseja instalar este aplicativo?"</b> ➔ Toque em <b>INSTALAR</b>!</span>
-            </div>
-
-            <h3 style="margin-top:1.5rem;color:#10b981;">🤖 Outra opção (Gerenciador de Arquivos):</h3>
             <div class="step-item">
                 <div class="step-num">1</div>
-                <span>No seu gerenciador de arquivos, segure o dedo em cima do arquivo <b>.apk</b>.</span>
+                <span>No seu navegador Chrome, toque nos <b>3 PONTINHOS</b> no canto superior direito.</span>
             </div>
+
             <div class="step-item">
                 <div class="step-num">2</div>
-                <span>Toque em <b>Abrir com...</b> e escolha <b>Instalador de Pacotes</b> (robozinho do Android).</span>
+                <span>Toque na opção <b>"Instalar aplicativo"</b> ou <b>"Adicionar à Tela Inicial"</b>.</span>
+            </div>
+
+            <div class="step-item">
+                <div class="step-num">3</div>
+                <span>Confirme em <b>Instalar</b>. O aplicativo será instalado com o ícone oficial junto com seus outros apps!</span>
             </div>
 
             <h3 style="margin-top:1.5rem;color:#38bdf8;">🍏 No iPhone (iOS):</h3>
             <div class="step-item">
                 <div class="step-num">1</div>
-                <span>Abra esta página no <b>Safari</b> ➔ Compartilhar ➔ <b>Adicionar à Tela de Início</b>.</span>
+                <span>Abra no Safari ➔ Toque em <b>Compartilhar</b> (ícone de quadrado com seta).</span>
+            </div>
+            <div class="step-item">
+                <div class="step-num">2</div>
+                <span>Selecione <b>"Adicionar à Tela de Início"</b>.</span>
             </div>
         </div>
     </div>
@@ -246,8 +245,7 @@
                 }
                 deferredPrompt = null;
             } else {
-                // If not triggered automatically, redirect to prospec-mobile.html or show browser menu hint
-                alert('📱 Para instalar no Android:\n\n1. Toque nos 3 PONTINHOS no canto superior direito do seu navegador Chrome.\n2. Escolha "Instalar aplicativo" ou "Adicionar à tela inicial".\n\nPronto! O app será baixado e instalado no seu celular.');
+                alert('📱 Para instalar no seu Android:\n\n1. Toque nos 3 PONTINHOS no canto superior direito do Chrome.\n2. Escolha "Instalar aplicativo" ou "Adicionar à Tela Inicial".\n\nO Android instalará o aplicativo nativo diretamente no seu celular!');
             }
         });
     </script>
