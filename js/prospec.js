@@ -109,14 +109,53 @@ const ProspecModule = {
             const profile = sessionStorage.getItem('maciel_profile') || 'default';
             const res = await fetchWithAuth(`${API_BASE_URL}/prospects?profile=${profile}`);
             if (res.ok) {
-                this.prospects = await res.json();
-                this.updateFilters();
-                this.updateIndicators();
-                this.renderList();
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    this.prospects = data;
+                    localStorage.setItem('prospec_app_data', JSON.stringify(data));
+                    this.updateFilters();
+                    this.updateIndicators();
+                    this.renderList();
+                    return;
+                }
             }
         } catch (e) {
-            console.error("Erro ao carregar prospectos", e);
+            console.warn("Erro ao carregar prospectos da API", e);
         }
+
+        const cached = localStorage.getItem('prospec_app_data');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    this.prospects = parsed;
+                    this.updateFilters();
+                    this.updateIndicators();
+                    this.renderList();
+                    return;
+                }
+            } catch (err) {}
+        }
+
+        try {
+            const jsonRes = await fetch('backend/prospects_dataset.json');
+            if (jsonRes.ok) {
+                const jsonData = await jsonRes.json();
+                if (Array.isArray(jsonData) && jsonData.length > 0) {
+                    this.prospects = jsonData;
+                    localStorage.setItem('prospec_app_data', JSON.stringify(jsonData));
+                    this.updateFilters();
+                    this.updateIndicators();
+                    this.renderList();
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        this.prospects = [];
+        this.updateFilters();
+        this.updateIndicators();
+        this.renderList();
     },
 
     updateFilters() {

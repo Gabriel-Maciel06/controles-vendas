@@ -1057,7 +1057,24 @@ def save_settings(settings: dict, profile: str = Depends(get_current_user), db: 
 # --- PROSPECTS ---
 @app.get("/api/prospects", response_model=List[ProspectBase])
 def get_prospects(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Prospect).filter(models.Prospect.profile == profile).all()
+    items = db.query(models.Prospect).filter(models.Prospect.profile == profile).all()
+    if not items:
+        try:
+            dataset_path = os.path.join(os.path.dirname(__file__), "prospects_dataset.json")
+            if os.path.exists(dataset_path):
+                with open(dataset_path, "r", encoding="utf-8") as f:
+                    seed_data = json.load(f)
+                for d in seed_data:
+                    item_data = d.copy()
+                    item_data["id"] = f"{profile}_{item_data['id']}"
+                    item_data["profile"] = profile
+                    db_item = models.Prospect(**item_data)
+                    db.add(db_item)
+                db.commit()
+                items = db.query(models.Prospect).filter(models.Prospect.profile == profile).all()
+        except Exception as seed_err:
+            print(f"Erro ao auto-seedar prospectos: {seed_err}")
+    return items
 
 @app.post("/api/prospects", response_model=ProspectBase)
 def create_prospect(prospect: ProspectBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):

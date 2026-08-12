@@ -145,23 +145,44 @@ const ProspecApp = {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
-                this.prospects = await res.json();
-            } else {
-                throw new Error('API offline');
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    this.prospects = data;
+                    this.saveLocalCache();
+                    this.updateCityFilterOptions();
+                    return;
+                }
             }
         } catch (e) {
-            // LocalStorage fallback
-            const cached = localStorage.getItem('prospec_app_data');
-            if (cached) {
-                this.prospects = JSON.parse(cached);
-            } else {
-                this.prospects = [
-                    { id: '1', razaoSocial: 'Supermercado Silva & Filhos', buyer: 'Sr. Antônio', phone: '11988887777', city: 'Campinas', region: 'Interior SP', contacted: 'Sim', rating: 'Boa', stage: 'Em Negociação', notes: 'Demonstrou grande interesse em bobinas e sacolas personalizadas.' },
-                    { id: '2', razaoSocial: 'Embalagens São Paulo LTDA', buyer: 'Mariana', phone: '11977776666', city: 'São Paulo', region: 'Grande São Paulo', contacted: 'Não', rating: 'Média', stage: 'Novo Prospecto', notes: 'Contato inicial via indicação.' }
-                ];
-                this.saveLocalCache();
-            }
+            console.warn('[Prospec] API offline ou vinda vazia, buscando cache/json...');
         }
+
+        const cached = localStorage.getItem('prospec_app_data');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    this.prospects = parsed;
+                    this.updateCityFilterOptions();
+                    return;
+                }
+            } catch (err) {}
+        }
+
+        try {
+            const jsonRes = await fetch('backend/prospects_dataset.json');
+            if (jsonRes.ok) {
+                const jsonData = await jsonRes.json();
+                if (Array.isArray(jsonData) && jsonData.length > 0) {
+                    this.prospects = jsonData;
+                    this.saveLocalCache();
+                    this.updateCityFilterOptions();
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        this.prospects = [];
         this.updateCityFilterOptions();
     },
 
