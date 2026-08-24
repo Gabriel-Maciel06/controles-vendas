@@ -205,18 +205,31 @@ const SalesModule = {
     },
 
     async loadSales() {
-        // Busca fresca da API para garantir dados atualizados
-        let allSales = DataStore.get(STORAGE_KEYS.SALES) || [];
+        const activeProfile = window.getActiveProfile ? window.getActiveProfile() : 'default';
+        // Busca fresca da API para garantir dados atualizados e isolados
+        let allSales = (DataStore.get(STORAGE_KEYS.SALES) || []).filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+
+        console.group('%c[DEBUG 1 - ORIGEM DOS DADOS (SalesModule)]', 'background:#0284c7;color:#fff;font-weight:bold;padding:2px 6px;border-radius:3px');
+        console.log('perfilAtivo:', activeProfile);
+        console.log('tipoConexao:', window.supabaseClient ? 'Supabase' : 'Local/FastAPI/JSON');
+        console.log('dadosBrutosRecebidos:', allSales);
+        console.log('totalRegistros:', Array.isArray(allSales) ? allSales.length : 0);
+        if (Array.isArray(allSales) && allSales.length > 0) {
+            console.log('Amostra 1º registro:', allSales[0]);
+            console.log('Campo saleDate 1º registro:', allSales[0].saleDate || allSales[0].sale_date || 'NÃO ENCONTRADO');
+        }
+        console.groupEnd();
 
         // Se o cache está vazio, vai buscar direto na API
         if (allSales.length === 0) {
             try {
-                const profile = sessionStorage.getItem('maciel_profile') || 'default';
-                const res = await fetchWithAuth(`${API_BASE_URL}/sales?profile=${profile}`);
+                const res = await fetchWithAuth(`${API_BASE_URL}/sales?profile=${activeProfile}`);
                 if (res.ok) {
-                    allSales = await res.json();
-                    // Atualiza cache local também
-                    DataStore.cache.crm_sales = allSales;
+                    const fetched = await res.json();
+                    if (Array.isArray(fetched)) {
+                        allSales = fetched.filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+                        DataStore.cache.crm_sales = allSales;
+                    }
                 }
             } catch (e) {
                 console.error('Erro ao buscar vendas da API:', e);
@@ -225,24 +238,52 @@ const SalesModule = {
 
         const monthFilter = document.getElementById('global-month-filter');
         let currentYear, currentMonth;
+        
         if (monthFilter && monthFilter.value) {
             const [y, m] = monthFilter.value.split('-');
             currentYear = parseInt(y, 10);
             currentMonth = parseInt(m, 10) - 1;
         } else {
-            const now = new Date();
-            currentYear = now.getFullYear();
-            currentMonth = now.getMonth();
+            // Se o filtro estiver em branco, busca o mês mais recente que contém vendas reais
+            let latestDateStr = null;
+            for (const s of allSales) {
+                const sDate = s.saleDate || s.sale_date;
+                if (sDate && (!latestDateStr || sDate > latestDateStr)) {
+                    latestDateStr = sDate;
+                }
+            }
+            if (latestDateStr) {
+                const [yStr, mStr] = latestDateStr.split('-');
+                currentYear = parseInt(yStr, 10);
+                currentMonth = parseInt(mStr, 10) - 1;
+                const initVal = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                if (monthFilter) monthFilter.value = initVal;
+            } else {
+                const now = new Date();
+                currentYear = now.getFullYear();
+                currentMonth = now.getMonth();
+                if (monthFilter) monthFilter.value = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            }
         }
 
-        console.log(`[SalesModule] Total vendas: ${allSales.length}, Filtrando: ${currentYear}-${currentMonth + 1}`);
+        console.group('%c[DEBUG 2 - FILTRO DE MÊS (SalesModule)]', 'background:#7c3aed;color:#fff;font-weight:bold;padding:2px 6px;border-radius:3px');
+        console.log('Mês Selecionado no DOM (#global-month-filter):', monthFilter ? monthFilter.value : 'ELEMENTO NÃO ENCONTRADO');
+        console.log('Ano Alvo:', currentYear, 'Mês Alvo (0-indexado):', currentMonth, `(Equivale a ${currentMonth + 1}/${currentYear})`);
 
+        // Cálculo estrito das vendas reais no mês selecionado
         const filteredSales = allSales.filter(s => {
-            const dt = this._pegaMesEAno(s.saleDate);
+            const sDate = s.saleDate || s.sale_date;
+            const dt = this._pegaMesEAno(sDate);
             return dt.y === currentYear && dt.m === currentMonth;
         });
 
-        console.log(`[SalesModule] Vendas filtradas para o mês: ${filteredSales.length}`);
+        console.log('Total Vendas Antes do Filtro:', allSales.length);
+        console.log('Total Vendas Após Filtro de Mês:', filteredSales.length);
+        if (allSales.length > 0 && filteredSales.length === 0) {
+            console.warn('⚠️ ATENÇÃO: Havia vendas na base, porém NENHUMA bateu com o mês selecionado!');
+            console.log('Datas disponíveis na base (amostra de 10):', allSales.slice(0, 10).map(s => s.saleDate || s.sale_date));
+        }
+        console.groupEnd();
 
         this.renderTable(filteredSales);
         this.updateKPIs(filteredSales);
@@ -260,6 +301,16 @@ const SalesModule = {
     },
 
     renderTable(sales) {
+        console.group('%c[DEBUG 3 - RENDERIZAÇÃO DA TABELA (SalesModule.renderTable)]', 'background:#059669;color:#fff;font-weight:bold;padding:2px 6px;border-radius:3px');
+        console.log('tableBody DOM Encontrado:', !!this.dom.tableBody);
+        console.log('Qtd Vendas Recebidas para Renderizar:', Array.isArray(sales) ? sales.length : 0);
+        if (Array.isArray(sales) && sales.length > 0) {
+            console.log('Amostra da 1ª Venda na Tabela:', sales[0]);
+        } else {
+            console.warn('⚠️ Array de vendas para renderizar está VAZIO. A tabela exibirá: "Nenhuma venda registrada no mês."');
+        }
+        console.groupEnd();
+
         this.dom.tableBody.innerHTML = '';
         if (sales.length === 0) {
             this.dom.tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Nenhuma venda registrada no mês.</td></tr>`;

@@ -1,1 +1,12 @@
 .vercel
+*.zip
+*.tar.gz
+*.tar.gz.b64
+*.db
+backups_oficiais/
+prospec-mobile-app/android/
+tmp_ocr/
+__pycache__/
+*.pyc
+
+

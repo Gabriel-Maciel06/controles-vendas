@@ -1,0 +1,72 @@
+[
+  {
+    "id": "rem_default_01",
+    "profile": "default",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_maciel_01",
+    "profile": "maciel",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_caio_01",
+    "profile": "caio",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_karine_01",
+    "profile": "karine",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_hugo_01",
+    "profile": "hugo",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_fernanda_01",
+    "profile": "fernanda",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  },
+  {
+    "id": "rem_albert_01",
+    "profile": "albert",
+    "title": "Retornar ligação para FARMACIA SANTA MARTA",
+    "dateLimit": "2026-08-18",
+    "timeLimit": "14:30",
+    "priority": "Alta",
+    "status": "Pendente",
+    "createdAt": "2026-08-17T08:00:00.000Z"
+  }
+]

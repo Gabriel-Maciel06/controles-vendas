@@ -3,6 +3,18 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function() {
+            var isAuth = localStorage.getItem('maciel_auth') === 'true' || sessionStorage.getItem('maciel_auth') === 'true';
+            if (isAuth) {
+                document.documentElement.classList.add('user-authenticated');
+                var style = document.createElement('style');
+                style.id = 'auth-bypass-style';
+                style.innerHTML = '#login-overlay { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Vendas Isapel</title>
     <!-- Favicon Isapel -->
@@ -25,6 +37,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
     <link rel="stylesheet" href="css/style.css?v=11.0">
+    <link rel="stylesheet" href="css/prospec-style.css?v=101.0">
 </head>
 
 <body>
@@ -71,6 +84,10 @@
                 <a href="prospec.html" target="_blank" class="nav-item" style="color:#818cf8;font-weight:700;background:rgba(99,102,241,0.1);border-radius:8px;margin-top:0.2rem;">
                     <i class='bx bx-target-lock'></i>
                     <span>App Prospec ↗</span>
+                </a>
+                <a href="inativos.html" target="_blank" class="nav-item" style="color:#f59e0b;font-weight:700;background:rgba(245,158,11,0.1);border-radius:8px;margin-top:0.2rem;">
+                    <i class='bx bx-refresh'></i>
+                    <span>App Inativos ↗</span>
                 </a>
 
                 <!-- FUNIL -->
@@ -1438,35 +1455,107 @@
 
                 <!-- View: CRM Inativos -->
                 <section id="view-crm-inativo" class="view-section hidden" data-origin="Inativo">
-                    <div class="dashboard-grid">
-                        <div class="panel form-panel crm-form-mount"></div>
-
-                        <div class="panel list-panel">
-                            <div class="panel-header">
-                                <h2>⏸ Clientes Inativos</h2>
-                                <span id="crm-inativo-count" style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;"></span>
+                    <div class="panel" style="padding:1.5rem;">
+                        <!-- Header & KPI Bar -->
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <div>
+                                <h2 style="font-size:1.3rem;font-weight:700;margin:0;display:flex;align-items:center;gap:0.5rem;">
+                                    ⏸ Gestão e Reativação de Clientes Inativos
+                                </h2>
+                                <p style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0 0 0;">
+                                    Recupere clientes da carteira com contatos, histórico e status de reativação em tempo real.
+                                </p>
                             </div>
-                            <div style="padding:0 1.5rem 1rem;display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
-                                <div style="flex:1;min-width:160px;position:relative;">
-                                    <i class='bx bx-search' style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
-                                    <input type="text" id="crm-inativo-search" placeholder="Buscar..." style="width:100%;padding:0.45rem 0.75rem 0.45rem 2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.83rem;outline:none;box-sizing:border-box;" oninput="CRMModule.applyFilters()">
+                            <div style="display:flex;align-items:center;gap:1.2rem;">
+                                <div style="display:flex;gap:0.8rem;">
+                                    <div style="background:rgba(255,255,255,0.04);padding:0.45rem 0.9rem;border-radius:10px;border:1px solid rgba(255,255,255,0.08);text-align:center;">
+                                        <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;">Total</div>
+                                        <div id="kpi-total-count" style="font-size:1.1rem;font-weight:800;color:var(--text-main);">0</div>
+                                    </div>
+                                    <div style="background:rgba(37,211,102,0.08);padding:0.45rem 0.9rem;border-radius:10px;border:1px solid rgba(37,211,102,0.2);text-align:center;">
+                                        <div style="font-size:0.68rem;color:#25D366;text-transform:uppercase;font-weight:700;">Já Falou</div>
+                                        <div id="kpi-contacted-count" style="font-size:1.1rem;font-weight:800;color:#25D366;">0</div>
+                                    </div>
+                                    <div style="background:rgba(255,152,0,0.08);padding:0.45rem 0.9rem;border-radius:10px;border:1px solid rgba(255,152,0,0.2);text-align:center;">
+                                        <div style="font-size:0.68rem;color:#EF9F27;text-transform:uppercase;font-weight:700;">Pendentes</div>
+                                        <div id="kpi-pending-count" style="font-size:1.1rem;font-weight:800;color:#EF9F27;">0</div>
+                                    </div>
                                 </div>
+                                <a href="inativos.html" target="_blank" class="btn btn-primary" style="padding:0.65rem 1.1rem;font-size:0.88rem;font-weight:700;border-radius:10px;display:flex;align-items:center;gap:0.4rem;text-decoration:none;">
+                                    <i class='bx bx-fullscreen' style="font-size:1.1rem;"></i> Abrir em Tela Cheia ↗
+                                </a>
                             </div>
-                            <div class="table-container">
-                                <table class="app-table">
-                                    <thead><tr>
-                                        <th>Cliente</th>
-                                        <th>Cidade</th>
-                                        <th>Dias sem comprar</th>
-                                        <th>Ticket Médio</th>
-                                        <th>Follow-up</th>
-                                        <th>Ações</th>
-                                    </tr></thead>
-                                    <tbody id="crm-inativo-body"></tbody>
-                                </table>
-                            </div>
-                            <div id="crm-inativo-pagination"></div>
                         </div>
+
+                        <!-- Inativos Filter Toolbar -->
+                        <div style="padding:0.8rem 1rem;background:rgba(255,255,255,0.02);border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:1.2rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+                            <!-- Vendedor -->
+                            <select id="filter-vendedor" style="max-width:200px;color:#f59e0b;font-weight:700;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);padding:0.5rem;border-radius:8px;outline:none;cursor:pointer;">
+                                <option value="">💼 Todos os Vendedores</option>
+                                <option value="MACIEL" selected>💼 MACIEL</option>
+                                <option value="ALBERT">💼 ALBERT</option>
+                                <option value="ALMEIDA">💼 ALMEIDA</option>
+                                <option value="CAIO">💼 CAIO</option>
+                                <option value="FERNANDA">💼 FERNANDA</option>
+                                <option value="GABRIEL">💼 GABRIEL</option>
+                                <option value="HUGO">💼 HUGO</option>
+                                <option value="IGOR">💼 IGOR</option>
+                                <option value="KARINE">💼 KARINE</option>
+                                <option value="MATEUS">💼 MATEUS</option>
+                            </select>
+
+                            <!-- Busca -->
+                            <div style="flex:2;min-width:200px;position:relative;">
+                                <i class='bx bx-search' style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1rem;pointer-events:none;"></i>
+                                <input type="text" id="prospec-search-inativos" placeholder="Buscar por código, cliente ou cidade..." style="width:100%;padding:0.5rem 0.8rem 0.5rem 2.2rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.85rem;outline:none;box-sizing:border-box;">
+                            </div>
+
+                            <!-- Cidade -->
+                            <div style="flex:1;min-width:140px;">
+                                <select id="filter-city-inativos" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.84rem;cursor:pointer;outline:none;">
+                                    <option value="">Todas as Cidades</option>
+                                </select>
+                            </div>
+
+                            <!-- Status Falar -->
+                            <div style="flex:1;min-width:130px;">
+                                <select id="filter-contacted-inativos" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.84rem;cursor:pointer;outline:none;">
+                                    <option value="">Status Falar: Todos</option>
+                                    <option value="Sim">🟢 Já Falou</option>
+                                    <option value="Não">⚪ Não Falou</option>
+                                </select>
+                            </div>
+
+                            <!-- Avaliação -->
+                            <div style="flex:1;min-width:130px;">
+                                <select id="filter-rating-inativos" style="width:100%;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-main);font-size:0.84rem;cursor:pointer;outline:none;">
+                                    <option value="">Avaliação: Todas</option>
+                                    <option value="Boa">🟢 Boa</option>
+                                    <option value="Média">🟡 Média</option>
+                                    <option value="Ruim">🔴 Ruim</option>
+                                    <option value="Péssima">🟣 Péssima</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Spreadsheet Table (7 Colunas Estritas) -->
+                        <div class="table-container" style="border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.01);overflow-x:auto;">
+                            <table class="app-table" style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.05em;width:110px;">1. CÓD. CLIENTE</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:200px;">2. NOME DO CLIENTE</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.05em;width:160px;">3. VENDEDOR RESPONSÁVEL</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;width:115px;text-align:center;">4. JÁ FALOU?</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;width:140px;">5. CIDADE / REGIÃO</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;width:125px;">6. AVALIAÇÃO</th>
+                                        <th style="padding:0.85rem 0.6rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;min-width:230px;">7. ANOTAÇÕES DA CONVERSA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inativos-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div id="inativos-pagination" style="margin-top:1rem;"></div>
                     </div>
                 </section>
 
@@ -1510,10 +1599,10 @@
                         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.08);">
                             <div>
                                 <h2 style="font-size:1.3rem;font-weight:700;margin:0;display:flex;align-items:center;gap:0.5rem;">
-                                    📊 Planilha de Prospecção
+                                    📊 Prospecção & Funil de Negociação
                                 </h2>
                                 <p style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0 0 0;">
-                                    Gerencie seus contatos, marque se já conversou, classifique o atendimento e adicione anotações em tempo real.
+                                    Gerencie seus contatos, arraste entre as etapas comerciais e adicione anotações em tempo real.
                                 </p>
                             </div>
                             <div style="display:flex;align-items:center;gap:1.2rem;">
@@ -1531,9 +1620,17 @@
                                         <div id="prospec-pending-count" style="font-size:1.1rem;font-weight:800;color:#EF9F27;">0</div>
                                     </div>
                                 </div>
-                                <button onclick="document.getElementById('prospec-add-modal').classList.remove('hidden')" class="btn btn-primary" style="padding:0.65rem 1.1rem;font-size:0.88rem;font-weight:700;border-radius:10px;display:flex;align-items:center;gap:0.4rem;">
-                                    <i class='bx bx-plus' style="font-size:1.1rem;"></i> Novo Cadastro
-                                </button>
+                                <div style="display:flex;gap:0.5rem;">
+                                    <button id="prospec-tab-btn-list" onclick="ProspecModule.switchViewMode('list')" class="btn btn-primary" style="padding:0.6rem 1rem;font-size:0.85rem;font-weight:700;border-radius:8px;display:flex;align-items:center;gap:0.4rem;">
+                                        <i class='bx bx-list-ul'></i> Planilha
+                                    </button>
+                                    <button id="prospec-tab-btn-kanban" onclick="ProspecModule.switchViewMode('kanban')" class="btn btn-outline" style="padding:0.6rem 1rem;font-size:0.85rem;font-weight:700;border-radius:8px;display:flex;align-items:center;gap:0.4rem;">
+                                        <i class='bx bx-git-repo-forked'></i> Funil (Kanban)
+                                    </button>
+                                    <a href="prospec.html" target="_blank" class="btn btn-outline" style="padding:0.6rem 0.9rem;font-size:0.85rem;font-weight:700;border-radius:8px;display:flex;align-items:center;gap:0.3rem;text-decoration:none;color:#818cf8;border-color:rgba(99,102,241,0.3);">
+                                        <i class='bx bx-fullscreen'></i> App ↗
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
@@ -1570,28 +1667,36 @@
                             </div>
                         </div>
 
-                        <!-- Spreadsheet Grid Table -->
-                        <div class="table-container" style="border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.01);">
-                            <table class="app-table" style="width:100%;border-collapse:collapse;">
-                                <thead>
-                                    <tr style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.1);">
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;min-width:200px;">Cliente / Estabelecimento</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:150px;">Telefone (WhatsApp)</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:120px;text-align:center;">Já Falou?</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:130px;text-align:center;">Avaliação</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:140px;">Cidade / Região</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;min-width:220px;">Anotações da Conversa</th>
-                                        <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:100px;text-align:center;">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="prospec-table-body">
-                                    <!-- Rendered via JS -->
-                                </tbody>
-                            </table>
+                        <!-- VIEW 1: Spreadsheet Grid Table Container -->
+                        <div id="prospec-view-list-container">
+                            <div class="table-container" style="border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.01);">
+                                <table class="app-table" style="width:100%;border-collapse:collapse;">
+                                    <thead>
+                                        <tr style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.1);">
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;min-width:200px;">Cliente / Estabelecimento</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:150px;">Telefone (WhatsApp)</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:120px;text-align:center;">Já Falou?</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:130px;text-align:center;">Avaliação</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:140px;">Cidade / Região</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;min-width:220px;">Anotações da Conversa</th>
+                                            <th style="padding:0.85rem 0.75rem;font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;width:100px;text-align:center;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prospec-table-body">
+                                        <!-- Rendered via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination Footer -->
+                            <div id="prospec-pagination" style="margin-top:1rem;"></div>
                         </div>
 
-                        <!-- Pagination Footer -->
-                        <div id="prospec-pagination" style="margin-top:1rem;"></div>
+                        <!-- VIEW 2: Funil Kanban Container com Drag-and-Drop e Anotações Inline -->
+                        <div id="prospec-view-kanban-container" class="hidden">
+                            <div id="prospec-kanban-board-container" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:1rem;">
+                                <!-- Rendered via JS -->
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -1690,7 +1795,7 @@
     </div>
 
     <!-- Login Overlay -->
-    <div id="login-overlay" class="modal-overlay">
+    <div id="login-overlay" class="modal-overlay hidden" style="display: none;">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <div class="logo-container" style="justify-content: center; margin-bottom: 1.5rem;">
                 <i class='bx bx-lock-alt logo-icon' style="font-size: 3rem;"></i>
@@ -1899,21 +2004,26 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="js/data.js?v=11.0"></script>
-    <script src="js/dashboard.js?v=11.0"></script>
-    <script src="js/sales.js?v=11.0"></script>
-    <script src="js/ai-suggestions.js?v=11.0"></script>
-    <script src="js/crm.js?v=11.0"></script>
-    <script src="js/samples.js?v=11.0"></script>
-    <script src="js/calendar.js?v=11.0"></script>
-    <script src="js/reminders.js?v=11.0"></script>
-    <script src="js/whatsapp.js?v=11.0"></script>
-    <script src="js/kanban.js?v=11.0"></script>
-    <script src="js/prospec.js?v=11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js?v=120.0"></script>
+    <script src="js/sales-data.js?v=120.0"></script>
+    <script src="js/data.js?v=120.0"></script>
+    <script src="js/dashboard.js?v=120.0"></script>
+    <script src="js/sales.js?v=120.0"></script>
+    <script src="js/ai-suggestions.js?v=120.0"></script>
+    <script src="js/crm.js?v=120.0"></script>
+    <script src="js/samples.js?v=120.0"></script>
+    <script src="js/calendar.js?v=120.0"></script>
+    <script src="js/reminders.js?v=120.0"></script>
+    <script src="js/whatsapp.js?v=120.0"></script>
+    <script src="js/kanban.js?v=120.0"></script>
+    <script src="js/prospec.js?v=120.0"></script>
+    <script src="js/inativos-data.js?v=120.0"></script>
+    <script src="js/inativos-app.js?v=120.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="js/whatsapp-analyzer.js?v=8.0"></script>
-    <script src="js/app.js?v=8.0"></script>
-    <script src="js/import.js?v=8.0"></script>
-    <script src="js/analytics.js?v=8.0"></script>
+    <script src="js/whatsapp-analyzer.js?v=120.0"></script>
+    <script src="js/app.js?v=120.0"></script>
+    <script src="js/import.js?v=120.0"></script>
+    <script src="js/analytics.js?v=120.0"></script>
 </body>
 </html>

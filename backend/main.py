@@ -51,155 +51,92 @@ async def global_exception_handler(request, exc):
 
 @app.on_event("startup")
 def startup_event():
-    try:
-        print("Iniciando conexão com banco de dados...")
-        models.Base.metadata.create_all(bind=engine)
-        print("Banco de dados inicializado com sucesso!")
-        
-        migrations = [
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "products" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "source" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "origin" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "temperature" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "region" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "city" VARCHAR;',
-            "ALTER TABLE customers ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
-            "ALTER TABLE sales ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
-            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "productName" VARCHAR;',
-            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "costPrice" FLOAT;',
-            "ALTER TABLE samples ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
-            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR;',
-            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
-            "ALTER TABLE settings ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
-            "ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
-            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingLastEvent" VARCHAR;',
-            'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingUpdatedAt" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "inactiveStatus" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastImportedSessionId" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastPurchaseDate" VARCHAR;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "totalPurchased" FLOAT DEFAULT 0.0;',
-            'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "purchaseCount" INTEGER DEFAULT 0;',
-            'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "reactivationStatus" VARCHAR;',
-            'ALTER TABLE prospects ADD COLUMN IF NOT EXISTS "contacted" VARCHAR DEFAULT \'Não\';',
-            'ALTER TABLE prospects ADD COLUMN IF NOT EXISTS "rating" VARCHAR;',
-        ]
-
-        is_postgres = "postgres" in str(engine.url)
-        print(f"Executando {len(migrations)} migrations (postgres={is_postgres})...")
-
-        for sql in migrations:
-            try:
-                with engine.begin() as conn:
-                    if is_postgres:
-                        conn.execute(text("SET LOCAL lock_timeout = '2s';"))
-                    conn.execute(text(sql))
-            except Exception:
-                pass  # Coluna já existe, ignorar
-                
-        print("Migrations concluídas. Servidor pronto!")
-
-        # Popular usuários padrão no banco de dados
-        from sqlalchemy.orm import sessionmaker
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        db = SessionLocal()
+    """Inicialização em background thread para não bloquear o servidor."""
+    import threading
+    def _init_db():
         try:
-            count = db.query(models.User).count()
-            if count == 0:
-                print("Criando usuários padrão no banco de dados...")
-                def sha256_hash(pw: str) -> str:
-                    return hashlib.sha256(pw.encode()).hexdigest()
-                
-                default_users = [
-                    {"username": "Maciel", "profile": "default", "password": os.getenv("APP_PASSWORD_DEFAULT") or "maciel0602"},
-                    {"username": "karine", "profile": "karine", "password": os.getenv("APP_PASSWORD_KARINE") or "Karine1234"},
-                    {"username": "caio", "profile": "caio", "password": os.getenv("APP_PASSWORD_CAIO") or "Caio1234"},
-                    {"username": "fernanda", "profile": "fernanda", "password": os.getenv("APP_PASSWORD_FERNANDA") or "Fernanda1234"},
-                    {"username": "mateus", "profile": "mateus", "password": os.getenv("APP_PASSWORD_MATEUS") or "Mateus1234"},
-                    {"username": "Albert", "profile": "albert", "password": "Albert123"},
-                    {"username": "Gabriel", "profile": "gabriel", "password": "Gabriel123"},
-                    {"username": "Igor", "profile": "igor", "password": "Igor123"},
-                    {"username": "Almeida", "profile": "almeida", "password": "Almeida123"},
-                    {"username": "Hugo", "profile": "hugo", "password": "Hugo123"},
-                ]
-                
-                for u in default_users:
-                    user = models.User(
-                        username=u["username"],
-                        profile=u["profile"],
-                        password_hash=sha256_hash(u["password"]),
-                        createdAt=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    )
-                    db.add(user)
-                db.commit()
+            print("Iniciando banco de dados em background...")
+            models.Base.metadata.create_all(bind=engine)
+            print("Tabelas verificadas.")
 
-            # Auto-sincronizar Vendas existentes para a tabela de Clientes (Ativos/Inativos)
+            is_postgres = "postgres" in str(engine.url)
+
+            migrations = [
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+                "ALTER TABLE sales ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+                "ALTER TABLE samples ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+                "ALTER TABLE settings ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+                "ALTER TABLE reminders ADD COLUMN IF NOT EXISTS profile VARCHAR DEFAULT 'default';",
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "products" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "buyerName" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "source" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "temperature" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "region" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "city" VARCHAR;',
+                'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "productName" VARCHAR;',
+                'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "costPrice" FLOAT;',
+                'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingCode" VARCHAR;',
+                'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "notes" VARCHAR;',
+                'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingLastEvent" VARCHAR;',
+                'ALTER TABLE samples ADD COLUMN IF NOT EXISTS "trackingUpdatedAt" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "inactiveStatus" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "lastPurchaseDate" VARCHAR;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "totalPurchased" FLOAT DEFAULT 0.0;',
+                'ALTER TABLE customers ADD COLUMN IF NOT EXISTS "purchaseCount" INTEGER DEFAULT 0;',
+                'ALTER TABLE sales ADD COLUMN IF NOT EXISTS "reactivationStatus" VARCHAR;',
+                "ALTER TABLE prospects ADD COLUMN IF NOT EXISTS \"contacted\" VARCHAR DEFAULT 'Não';",
+                'ALTER TABLE prospects ADD COLUMN IF NOT EXISTS "rating" VARCHAR;',
+            ]
+
+            for sql in migrations:
+                try:
+                    with engine.begin() as conn:
+                        if is_postgres:
+                            conn.execute(text("SET LOCAL lock_timeout = '5s';"))
+                        conn.execute(text(sql))
+                except Exception:
+                    pass
+
+            print("Migrations concluídas.")
+
+            from sqlalchemy.orm import sessionmaker as SM
+            db = SM(autocommit=False, autoflush=False, bind=engine)()
             try:
-                all_sales = db.query(models.Sale).all()
-                today = datetime.now().date()
-                sales_by_client = {}
-                for s in all_sales:
-                    c_name = (s.client or "").strip().upper()
-                    if not c_name: continue
-                    key = (s.profile or "default", c_name)
-                    if key not in sales_by_client:
-                        sales_by_client[key] = []
-                    sales_by_client[key].append(s)
-                    
-                for (prof, c_name), c_sales in sales_by_client.items():
-                    total_val = sum(s.value or 0.0 for s in c_sales)
-                    p_count = len(c_sales)
-                    valid_dates = []
-                    for s in c_sales:
-                        d_str = s.saleDate or (s.createdAt[:10] if s.createdAt else None)
-                        if d_str:
-                            try:
-                                d_obj = datetime.strptime(d_str[:10], "%Y-%m-%d").date()
-                                valid_dates.append((d_obj, d_str[:10]))
-                            except Exception: pass
-                    
-                    latest_date_str = max(valid_dates, key=lambda x: x[0])[1] if valid_dates else datetime.now().strftime("%Y-%m-%d")
-                    latest_date_obj = max(valid_dates, key=lambda x: x[0])[0] if valid_dates else today
-                    days_since = (today - latest_date_obj).days
-                    status = "Inativo" if days_since >= 60 else "Ativo"
-                    
-                    cust = db.query(models.Customer).filter(models.Customer.name == c_name, models.Customer.profile == prof).first()
-                    if not cust:
-                        cust = models.Customer(
-                            id=f"cli_auto_sync_{abs(hash(c_name))%1000000}",
-                            profile=prof,
-                            name=c_name,
-                            company="",
-                            phone="",
-                            status=status,
-                            lastPurchaseDate=latest_date_str,
-                            lastContactDate=latest_date_str,
-                            totalPurchased=total_val,
-                            purchaseCount=p_count,
-                            temperature="Pós venda" if status == "Ativo" else "Frio",
-                            origin="Vendas",
-                            source="Venda",
-                            createdAt=latest_date_str,
-                            updatedAt=latest_date_str
-                        )
-                        db.add(cust)
-                    else:
-                        cust.status = status
-                        cust.lastPurchaseDate = latest_date_str
-                        cust.totalPurchased = total_val
-                        cust.purchaseCount = p_count
-                db.commit()
-            except Exception as sync_err:
-                print(f"Erro na auto-sync de vendas para clientes: {sync_err}")
-                print("Usuários padrão criados no banco!")
-        except Exception as err_users:
-            print(f"Erro ao inicializar tabela de usuários: {err_users}")
-        finally:
-            db.close()
-            
-    except Exception as e:
-        print(f"ERRO no startup (servidor sobe mesmo assim): {e}")
-        # Não re-raise — permite o servidor subir mesmo com erro de banco
+                count = db.query(models.User).count()
+                if count == 0:
+                    def _hash(pw): return hashlib.sha256(pw.encode()).hexdigest()
+                    default_users = [
+                        {"username": "Maciel",   "profile": "default",  "password": os.getenv("APP_PASSWORD_DEFAULT") or "maciel0602"},
+                        {"username": "karine",   "profile": "karine",   "password": os.getenv("APP_PASSWORD_KARINE")  or "Karine1234"},
+                        {"username": "caio",     "profile": "caio",     "password": os.getenv("APP_PASSWORD_CAIO")    or "Caio1234"},
+                        {"username": "fernanda", "profile": "fernanda", "password": os.getenv("APP_PASSWORD_FERNANDA") or "Fernanda1234"},
+                        {"username": "mateus",   "profile": "mateus",   "password": os.getenv("APP_PASSWORD_MATEUS")  or "Mateus1234"},
+                        {"username": "Albert",   "profile": "albert",   "password": "Albert123"},
+                        {"username": "Gabriel",  "profile": "gabriel",  "password": "Gabriel123"},
+                        {"username": "Igor",     "profile": "igor",     "password": "Igor123"},
+                        {"username": "Almeida",  "profile": "almeida",  "password": "Almeida123"},
+                        {"username": "Hugo",     "profile": "hugo",     "password": "Hugo123"},
+                    ]
+                    for u in default_users:
+                        db.add(models.User(
+                            username=u["username"],
+                            profile=u["profile"],
+                            password_hash=_hash(u["password"]),
+                            createdAt=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        ))
+                    db.commit()
+                    print("Usuários padrão criados.")
+            except Exception as ue:
+                print(f"Aviso usuários: {ue}")
+            finally:
+                db.close()
+
+            print("Banco de dados pronto!")
+        except Exception as e:
+            print(f"Aviso background DB init: {e}")
+
+    threading.Thread(target=_init_db, daemon=True).start()
+    print("Servidor FastAPI pronto — banco inicializando em background.")
 
 # --- debug endpoint ---
 from fastapi.responses import FileResponse
@@ -294,20 +231,20 @@ def change_password(req: ChangePasswordRequest, username: str = Depends(get_curr
 
 # --- Pydantic Schemas for Validation ---
 class SaleBase(BaseModel):
-    id: str
-    profile: str = "default"
+    id: Optional[str] = None
+    profile: Optional[str] = "default"
     client: str
-    productName: str = None
-    costPrice: float = None
+    productName: Optional[str] = None
+    costPrice: Optional[float] = 0.0
     type: str
-    boxes20056: int = 0
-    saleDate: str
-    invoiceDate: str
+    boxes20056: Optional[int] = 0
+    saleDate: Optional[str] = None
+    invoiceDate: Optional[str] = None
     value: float
-    commission: float
-    reactivationStatus: str = None # "Valida", "Invalida" ou None
-    createdAt: str
-    updatedAt: str = None
+    commission: Optional[float] = 0.0
+    reactivationStatus: Optional[str] = None
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -315,30 +252,30 @@ class SaleBase(BaseModel):
 class CustomerBase(BaseModel):
     id: str
     profile: str = "default"
-    name: str # Nome do cliente
-    company: str = None
-    phone: str = None
-    email: str = None
-    address: str = None
-    cnpj: str = None
-    instagram: str = None
-    segment: str = None
-    status: str = "Ativo"
-    lastContactDate: str = None
-    nextFollowUp: str = None
-    notes: str = None
-    products: str = None
-    buyerName: str = None
-    source: str = None
-    origin: str = None
-    temperature: str = None
-    region: str = None
+    name: Optional[str] = None # Nome do cliente
+    company: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    cnpj: Optional[str] = None
+    instagram: Optional[str] = None
+    segment: Optional[str] = None
+    status: Optional[str] = "Ativo"
+    lastContactDate: Optional[str] = None
+    nextFollowUp: Optional[str] = None
+    notes: Optional[str] = None
+    products: Optional[str] = None
+    buyerName: Optional[str] = None
+    source: Optional[str] = None
+    origin: Optional[str] = None
+    temperature: Optional[str] = None
+    region: Optional[str] = None
     lastPurchaseDate: Optional[str] = None
     totalPurchased: Optional[float] = 0.0
     purchaseCount: Optional[int] = 0
     inactiveStatus: Optional[str] = None # "Novo" ou "Antigo"
     lastImportedSessionId: Optional[str] = None
-    createdAt: str
+    createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
 
     class Config:
@@ -629,27 +566,47 @@ async def ai_proxy(payload: dict, profile: str = Depends(get_current_user)):
 
 # --- SALES ---
 @app.get("/api/sales", response_model=List[SaleBase])
-def get_sales(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Sale).filter(models.Sale.profile == profile).all()
+def get_sales(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    return db.query(models.Sale).filter(models.Sale.profile == target).all()
 
 @app.post("/api/sales", response_model=SaleBase)
 def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Normalizar Nome do Cliente para evitar duplicidade (Espaços/Caixa)
     sale.client = sale.client.strip().upper()
-    
-    # Remove campos virtuais que não pertencem ao modelo físico do banco
     sale_data = sale.dict()
     sale_data.pop("reactivationStatus", None)
-    
+
+    now_str = datetime.now().strftime("%Y-%m-%d")
+    now_iso = datetime.now().strftime("%Y-%m-%d") + "T10:00:00.000Z"
+
+    if not sale_data.get("id"):
+        sale_data["id"] = f"sal_manual_{int(datetime.now().timestamp() * 1000)}"
+    if not sale_data.get("profile") or sale_data.get("profile") == "default":
+        sale_data["profile"] = profile
+    if not sale_data.get("saleDate"):
+        sale_data["saleDate"] = now_str
+    if not sale_data.get("invoiceDate"):
+        sale_data["invoiceDate"] = now_str
+    if not sale_data.get("createdAt"):
+        sale_data["createdAt"] = now_iso
+
     db_sale = models.Sale(**sale_data)
     db.add(db_sale)
+    db.commit()
+    db.refresh(db_sale)
 
-    sale_date_str = sale.saleDate or (sale.createdAt[:10] if sale.createdAt else datetime.now().strftime("%Y-%m-%d"))
+    sale_date_str = sale_data["saleDate"]
 
     # Auto-cria cliente ativo ou atualiza se já existir (pelo nome normalizado)
     db_cust = db.query(models.Customer).filter(
         models.Customer.name == sale.client,
-        models.Customer.profile == sale.profile
+        models.Customer.profile == sale_data["profile"]
     ).first()
     
     if db_cust:
@@ -659,11 +616,11 @@ def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Se
         db_cust.lastContactDate = sale_date_str
         db_cust.purchaseCount = (db_cust.purchaseCount or 0) + 1
         db_cust.totalPurchased = (db_cust.totalPurchased or 0.0) + (sale.value or 0.0)
-        db_cust.updatedAt = sale.createdAt
+        db_cust.updatedAt = sale_data["createdAt"]
     else:
         new_cust = models.Customer(
-            id=f"cli_auto_{sale.id}",
-            profile=sale.profile,
+            id=f"cli_auto_{sale_data['id']}",
+            profile=sale_data["profile"],
             name=sale.client,
             company="",
             phone="",
@@ -676,8 +633,8 @@ def create_sale(sale: SaleBase, profile: str = Depends(get_current_user), db: Se
             temperature="Pós venda",
             origin="Vendas",
             source="Venda",
-            createdAt=sale.createdAt,
-            updatedAt=sale.createdAt
+            createdAt=sale_data["createdAt"],
+            updatedAt=sale_data["createdAt"]
         )
         db.add(new_cust)
 
@@ -713,31 +670,40 @@ def delete_sale(sale_id: str, profile: str = Depends(get_current_user), db: Sess
 
 # --- CUSTOMERS ---
 @app.get("/api/customers", response_model=List[CustomerBase])
-def get_customers(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    customers = db.query(models.Customer).filter(models.Customer.profile == profile).all()
-    today = datetime.now().date()
-    updated = False
-    
-    for c in customers:
-        p_date_str = c.lastPurchaseDate or c.lastContactDate or (c.createdAt[:10] if c.createdAt else None)
-        if p_date_str:
-            try:
-                p_date = datetime.strptime(p_date_str[:10], "%Y-%m-%d").date()
-                days_since = (today - p_date).days
-                # Regra dos 2 meses (60 dias sem compra => Inativo)
-                if days_since >= 60:
-                    if c.status != "Inativo":
-                        c.status = "Inativo"
-                        updated = True
-                else:
-                    if c.status == "Inativo" and c.lastPurchaseDate:
-                        c.status = "Ativo"
-                        updated = True
-            except Exception:
-                pass
-                
-    if updated:
-        db.commit()
+def get_customers(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    customers = db.query(models.Customer).filter(models.Customer.profile == target).all()
+    try:
+        today = datetime.now().date()
+        updated = False
+        
+        for c in customers:
+            p_date_str = c.lastPurchaseDate or c.lastContactDate or (c.createdAt[:10] if c.createdAt else None)
+            if p_date_str:
+                try:
+                    p_date = datetime.strptime(p_date_str[:10], "%Y-%m-%d").date()
+                    days_since = (today - p_date).days
+                    if days_since >= 60:
+                        if c.status != "Inativo":
+                            c.status = "Inativo"
+                            updated = True
+                    else:
+                        if c.status == "Inativo" and c.lastPurchaseDate:
+                            c.status = "Ativo"
+                            updated = True
+                except Exception:
+                    pass
+                    
+        if updated:
+            db.commit()
+    except Exception as e:
+        print("[get_customers warning]:", e)
         
     return customers
 
@@ -843,8 +809,15 @@ def import_facilita(req: ImportFacilitaReq, profile: str = Depends(get_current_u
 
 # --- SAMPLES ---
 @app.get("/api/samples", response_model=List[SampleBase])
-def get_samples(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Sample).filter(models.Sample.profile == profile).all()
+def get_samples(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    return db.query(models.Sample).filter(models.Sample.profile == target).all()
 
 @app.post("/api/samples", response_model=SampleBase)
 def create_sample(sample: SampleBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -901,9 +874,6 @@ async def track_sample(sample_id: str, profile: str = Depends(get_current_user),
             
             if resp.status_code == 200:
                 html = resp.text
-                # Procura por padrões de status no HTML (LinkeTrack injeta dados no HTML)
-                # O status costuma vir em tags <p class="status"> ou similar
-                # Uma forma robusta é procurar por palavras chave conhecidas
                 status_text = ""
                 if "Objeto entregue" in html: status_text = "Objeto entregue ao destinatário"
                 elif "Objeto postado" in html: status_text = "Objeto postado"
@@ -994,8 +964,15 @@ async def track_all_samples(profile: str = Depends(get_current_user), db: Sessio
 
 # --- REMINDERS ---
 @app.get("/api/reminders", response_model=List[ReminderBase])
-def get_reminders(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Reminder).filter(models.Reminder.profile == profile).all()
+def get_reminders(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    return db.query(models.Reminder).filter(models.Reminder.profile == target).all()
 
 @app.post("/api/reminders", response_model=ReminderBase)
 def create_reminder(reminder: ReminderBase, profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -1030,11 +1007,17 @@ def delete_reminder(reminder_id: str, profile: str = Depends(get_current_user), 
 
 # --- SETTINGS ---
 @app.get("/api/settings", response_model=SettingBase)
-def get_settings(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Simple key-value store in db
-    settings = db.query(models.Setting).filter(models.Setting.profile == profile).all()
+def get_settings(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    settings = db.query(models.Setting).filter(models.Setting.profile == target).all()
     result = SettingBase().dict() # defaults
-    result["profile"] = profile
+    result["profile"] = target
     for s in settings:
         if s.key in result:
             result[s.key] = float(s.value) if "." in s.value or s.value.isdigit() else s.value
@@ -1056,8 +1039,15 @@ def save_settings(settings: dict, profile: str = Depends(get_current_user), db: 
 
 # --- PROSPECTS ---
 @app.get("/api/prospects", response_model=List[ProspectBase])
-def get_prospects(profile: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    items = db.query(models.Prospect).filter(models.Prospect.profile == profile).all()
+def get_prospects(
+    profile: Optional[str] = None,
+    auth_profile: str = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    target = (profile or auth_profile or "default").lower().strip()
+    if auth_profile and auth_profile != "default":
+        target = auth_profile.lower().strip()
+    items = db.query(models.Prospect).filter(models.Prospect.profile == target).all()
     if not items:
         try:
             dataset_path = os.path.join(os.path.dirname(__file__), "prospects_dataset.json")

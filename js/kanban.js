@@ -265,6 +265,15 @@ const KanbanModule = {
                 </div>
             </div>
 
+            <!-- Anotações Inline nos Cards com Bloqueio de Drag -->
+            <div style="display:flex;flex-direction:column;gap:0.3rem;" onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()">
+                <textarea class="form-control" rows="2" placeholder="Anotações da negociação..."
+                          draggable="false"
+                          onchange="DataStore.update(STORAGE_KEYS.CUSTOMERS, '${c.id}', { notes: this.value })"
+                          onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()"
+                          style="width:100%;resize:vertical;min-height:42px;font-size:0.78rem;line-height:1.3;padding:0.35rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);color:var(--text-main);box-sizing:border-box;">${this.esc(c.notes || '')}</textarea>
+            </div>
+
             <!-- Rodapé do Card (WhatsApp + Valor + Mover) -->
             <div class="kb-card-footer">
                 <div class="kb-card-footer-left">
@@ -272,6 +281,9 @@ const KanbanModule = {
                     <button onclick="WhatsAppModule.openComposer('${c.id}')" title="WhatsApp" class="kb-wpp-badge">
                         <i class='bx bxl-whatsapp'></i>
                     </button>` : ''}
+                    <button onclick="CRMModule.openEditModal('${c.id}')" title="Painel Completo" style="font-size:0.7rem;padding:0.2rem 0.4rem;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;">
+                        <i class='bx bx-note'></i>
+                    </button>
                     <select class="kb-move-select" onchange="KanbanModule.moveCard('${c.id}',this.value);this.value='';" title="Mover etapa">
                         <option value="">↪ Mover</option>
                         ${moveOptions}

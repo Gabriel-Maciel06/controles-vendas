@@ -1,0 +1,79 @@
+[
+  {
+    "id": "samp_default_01",
+    "profile": "default",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR906186991SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_maciel_01",
+    "profile": "maciel",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR602757773SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_caio_01",
+    "profile": "caio",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR123484489SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_karine_01",
+    "profile": "karine",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR736300929SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_hugo_01",
+    "profile": "hugo",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR452202928SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_fernanda_01",
+    "profile": "fernanda",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR500374755SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  },
+  {
+    "id": "samp_albert_01",
+    "profile": "albert",
+    "client": "EMBALAGENS PRADO LTDA",
+    "product": "Amostra Caixa Kraft 200x56",
+    "trackingCode": "BR116007291SP",
+    "sendDate": "2026-08-12",
+    "estimatedReturn": "2026-08-19",
+    "status": "Enviado",
+    "createdAt": "2026-08-17T09:00:00.000Z"
+  }
+]

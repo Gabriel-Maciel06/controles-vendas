@@ -188,7 +188,7 @@ const DashboardModule = {
     updateQuickStats(customers, samples) {
         if (!this.dom.quickHotClients) return;
 
-        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        const profile = window.getActiveProfile ? window.getActiveProfile() : 'default';
         const today = new Date().toISOString().split('T')[0];
 
         // 1. Clientes Quentes

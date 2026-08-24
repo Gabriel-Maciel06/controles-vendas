@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Prospecção — Isapel Vendas</title>
+    
+    <!-- Boxicons Icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    
+    <!-- App CSS System -->
+    <link rel="stylesheet" href="css/prospec-style.css?v=1.0">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="brand-title">
+            <i class='bx bx-target-lock'></i>
+            <span>Prospecção <span style="color:var(--primary);font-size:0.85rem;font-weight:600;">| Isapel</span></span>
+        </div>
+
+        <nav class="nav-tabs">
+            <button id="tab-list" class="nav-tab active">
+                <i class='bx bx-table'></i> Lista de Prospecção
+            </button>
+            <button id="tab-kanban" class="nav-tab">
+                <i class='bx bx-git-repo-forked'></i> Funil de Negociação
+            </button>
+            <button id="tab-new" class="nav-tab">
+                <i class='bx bx-plus-circle'></i> Novo Cadastro
+            </button>
+            <a href="prospec-mobile.html" target="_blank" class="nav-tab" style="color:#10b981;border:1px solid rgba(16,185,129,0.3);text-decoration:none;">
+                <i class='bx bx-phone-call'></i> App Celular (Ligar) 📱
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+        <!-- TAB 1: LISTA / PLANILHA DE PROSPECÇÃO -->
+        <section id="view-list" class="view-section">
+            <div class="panel-card">
+                
+                <!-- KPI Bar -->
+                <div class="kpi-row">
+                    <div class="kpi-card">
+                        <div class="kpi-info">
+                            <span class="kpi-label">Total Prospectos</span>
+                            <span id="kpi-total-count" class="kpi-val" style="color:var(--text-main);">0</span>
+                        </div>
+                        <i class='bx bx-building-house kpi-icon' style="color:var(--primary);"></i>
+                    </div>
+
+                    <div class="kpi-card" style="border-color:rgba(37,211,102,0.2);">
+                        <div class="kpi-info">
+                            <span class="kpi-label" style="color:var(--wpp-color);">Já Conversou</span>
+                            <span id="kpi-contacted-count" class="kpi-val" style="color:var(--wpp-color);">0</span>
+                        </div>
+                        <i class='bx bx-check-circle kpi-icon' style="color:var(--wpp-color);"></i>
+                    </div>
+
+                    <div class="kpi-card" style="border-color:rgba(245,158,11,0.2);">
+                        <div class="kpi-info">
+                            <span class="kpi-label" style="color:var(--warning);">Pendentes</span>
+                            <span id="kpi-pending-count" class="kpi-val" style="color:var(--warning);">0</span>
+                        </div>
+                        <i class='bx bx-time-five kpi-icon' style="color:var(--warning);"></i>
+                    </div>
+                </div>
+
+                <!-- Filters Bar -->
+                <div class="filter-bar">
+                    <div class="search-input-wrap">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="prospec-search" class="form-control" placeholder="Buscar por empresa, comprador ou telefone...">
+                    </div>
+
+                    <div style="min-width:150px;">
+                        <select id="filter-city" class="form-control">
+                            <option value="">Todas as Cidades</option>
+                        </select>
+                    </div>
+
+                    <div style="min-width:140px;">
+                        <select id="filter-contacted" class="form-control">
+                            <option value="">Status Falar: Todos</option>
+                            <option value="Sim">🟢 Já Falou</option>
+                            <option value="Não">⚪ Não Falou</option>
+                        </select>
+                    </div>
+
+                    <div style="min-width:140px;">
+                        <select id="filter-rating" class="form-control">
+                            <option value="">Avaliação: Todas</option>
+                            <option value="Boa">🟢 Boa</option>
+                            <option value="Média">🟡 Média</option>
+                            <option value="Ruim">🔴 Ruim</option>
+                            <option value="Péssima">🟣 Péssima</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Spreadsheet Grid Table -->
+                <div class="table-responsive">
+                    <table class="spreadsheet-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width:200px;">Cliente / Razão Social</th>
+                                <th style="width:160px;">WhatsApp / Telefone</th>
+                                <th style="width:120px;text-align:center;">Já Falou?</th>
+                                <th style="width:130px;">Avaliação</th>
+                                <th style="width:140px;">Cidade / Região</th>
+                                <th style="min-width:280px;">Anotações da Conversa</th>
+                                <th style="width:80px;text-align:center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spreadsheet-body">
+                            <!-- Rendered dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="prospec-pagination"></div>
+            </div>
+        </section>
+
+        <!-- TAB 2: FUNIL DE NEGOCIAÇÕES (KANBAN) -->
+        <section id="view-kanban" class="view-section hidden">
+            <div class="panel-card" style="background:transparent;border:none;padding:0;box-shadow:none;">
+                <div style="margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h2 style="font-size:1.15rem;font-weight:700;">🤝 Acompanhamento de Negociações</h2>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;">Visualize o avanço dos seus prospectos por etapa comercial</p>
+                    </div>
+                </div>
+
+                <div id="kanban-board-container" class="kanban-board">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: CADASTRO SUPER SIMPLES -->
+        <section id="view-new" class="view-section hidden">
+            <div class="panel-card" style="max-width:700px;margin:0 auto;">
+                <h2 style="font-size:1.2rem;font-weight:800;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.5rem;">
+                    <i class='bx bx-user-plus' style="color:var(--primary);"></i> Cadastro de Novo Prospecto
+                </h2>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1.5rem;">Preencha os dados básicos para iniciar o acompanhamento de vendas</p>
+
+                <form id="simple-register-form">
+                    <div style="display:flex;flex-direction:column;gap:1.1rem;">
+                        <div>
+                            <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Razão Social / Nome da Empresa *</label>
+                            <input type="text" id="reg-razaosocial" class="form-control" required placeholder="Ex: Supermercado Silva LTDA">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Nome do Comprador / Contato</label>
+                                <input type="text" id="reg-buyer" class="form-control" placeholder="Ex: Sr. Antônio / Ana">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Telefone / WhatsApp *</label>
+                                <input type="text" id="reg-phone" class="form-control" required placeholder="(11) 90000-0000">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div>
+                                <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Cidade *</label>
+                                <input type="text" id="reg-city" class="form-control" required placeholder="Ex: Campinas">
+                            </div>
+                            <div>
+                                <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Região (Auto-Preenchida)</label>
+                                <input type="text" id="reg-region" class="form-control" placeholder="Ex: Interior SP">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Instagram ou Site (Opcional)</label>
+                            <input type="text" id="reg-instagram" class="form-control" placeholder="@empresa ou site.com.br">
+                        </div>
+
+                        <div>
+                            <label style="display:block;font-size:0.8rem;font-weight:700;margin-bottom:0.4rem;">Anotações Iniciais / Histórico</label>
+                            <textarea id="reg-notes" class="form-control" rows="4" placeholder="Observações sobre o cliente, produtos de interesse ou histórico inicial..."></textarea>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:0.8rem;margin-top:0.5rem;">
+                            <button type="button" class="btn btn-outline" onclick="ProspecApp.switchTab('list')">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" style="padding:0.7rem 1.4rem;">
+                                <i class='bx bx-check'></i> Salvar e Abrir Lista
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: ANOTAÇÕES EM TELA CHEIA -->
+    <div id="prospec-notes-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3 id="notes-modal-title">📝 Anotações do Prospecto</h3>
+                    <span id="notes-modal-subtitle" style="font-size:0.78rem;color:var(--text-muted);"></span>
+                </div>
+                <button class="modal-close" onclick="document.getElementById('prospec-notes-modal').classList.add('hidden')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="notes-modal-id">
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">
+                    <label style="font-weight:700;font-size:0.85rem;">Histórico da Conversa:</label>
+                    <button class="btn btn-outline btn-sm" onclick="ProspecApp.insertNoteTimestamp()">
+                        <i class='bx bx-time'></i> + Data/Hora
+                    </button>
+                </div>
+
+                <textarea id="notes-modal-text" class="form-control" rows="10" 
+                          placeholder="Digite aqui o histórico de negociação, feedback, datas e conversas com o prospecto..."
+                          style="min-height:220px;font-size:0.9rem;line-height:1.5;"></textarea>
+
+                <div style="display:flex;justify-content:flex-end;gap:0.7rem;margin-top:1.2rem;">
+                    <button class="btn btn-outline" onclick="document.getElementById('prospec-notes-modal').classList.add('hidden')">Cancelar</button>
+                    <button class="btn btn-primary" onclick="ProspecApp.saveNotesModal()">
+                        <i class='bx bx-save'></i> Salvar Anotações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/prospec-data.js?v=3.0"></script>
+    <script src="js/prospec-app.js?v=3.0"></script>
+</body>
+</html>

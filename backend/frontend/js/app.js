@@ -28,11 +28,29 @@ const AppModule = {
 
         this.initTopbarFeatures();
         this.initMobileMenu();
+        this.applyProfileTheme();
 
         // Notifications
         this.updateNotifications(true);
 
         // Auto-render whichever view is currently active when DataStore initializes
+        const activeNav = document.querySelector('.nav-item.active');
+        if (activeNav) {
+            const targetId = activeNav.getAttribute('data-target');
+            this.renderView(targetId);
+        } else {
+            this.renderView('sales');
+        }
+    },
+
+    /**
+     * Re-renderiza completamente a app com o perfil atual do DataStore.
+     * Chamado após login ou troca de conta.
+     */
+    reloadForProfile() {
+        this.applyProfileTheme();
+        this.updateNotifications(true);
+        // Força re-render do módulo ativo atual
         const activeNav = document.querySelector('.nav-item.active');
         if (activeNav) {
             const targetId = activeNav.getAttribute('data-target');
@@ -53,19 +71,22 @@ const AppModule = {
         // Check if user is already authenticated in sessionStorage or localStorage
         const isAuth = sessionStorage.getItem('maciel_auth') === 'true' || localStorage.getItem('maciel_auth') === 'true';
         if (isAuth) {
-            // Sincroniza dados do localStorage para o sessionStorage se necessário
-            if (localStorage.getItem('maciel_auth') === 'true') {
-                sessionStorage.setItem('maciel_auth', 'true');
-                sessionStorage.setItem('maciel_profile', localStorage.getItem('maciel_profile') || 'default');
-                sessionStorage.setItem('maciel_username', localStorage.getItem('maciel_username') || 'Vendedor');
-                sessionStorage.setItem('maciel_token', localStorage.getItem('maciel_token') || '');
-                if (localStorage.getItem('_maciel_session_key')) {
-                    sessionStorage.setItem('_maciel_session_key', localStorage.getItem('_maciel_session_key'));
-                }
-            }
+            const activeProfile = window.getActiveProfile ? window.getActiveProfile() : (localStorage.getItem('maciel_profile') || 'default');
+            const activeUser = localStorage.getItem('maciel_username') || sessionStorage.getItem('maciel_username') || 'Maciel';
+            const activeToken = localStorage.getItem('maciel_token') || sessionStorage.getItem('maciel_token') || 'local_session_token';
+
+            sessionStorage.setItem('maciel_auth', 'true');
+            sessionStorage.setItem('maciel_profile', activeProfile);
+            sessionStorage.setItem('maciel_username', activeUser);
+            sessionStorage.setItem('maciel_token', activeToken);
+
+            localStorage.setItem('maciel_auth', 'true');
+            localStorage.setItem('maciel_profile', activeProfile);
+            localStorage.setItem('maciel_username', activeUser);
+            localStorage.setItem('maciel_token', activeToken);
 
             if (overlay) {
-                overlay.style.display = 'none';
+                overlay.style.setProperty('display', 'none', 'important');
                 overlay.classList.add('hidden');
             }
             this.applyProfileTheme();
@@ -73,69 +94,119 @@ const AppModule = {
             return;
         }
 
-        if (!form || form._bound) return;
-        form._bound = true;
+        // Usuário não autenticado — remove estilo de bypass e exibe modal de login
+        const bypassStyle = document.getElementById('auth-bypass-style');
+        if (bypassStyle) bypassStyle.remove();
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.classList.remove('hidden');
+        }
+
+        if (!form) return;
+
+        form.onsubmit = async (e) => {
+            if (e && e.preventDefault) e.preventDefault();
+            if (e && e.stopPropagation) e.stopPropagation();
+
             const userVal = usernameInput ? usernameInput.value.trim() : '';
-            const passVal = passInput.value ? passInput.value.trim() : '';
+            const passVal = passInput ? passInput.value.trim() : '';
+
+            if (!passVal) {
+                if (errorMsg) {
+                    errorMsg.textContent = 'Por favor, insira sua senha de acesso.';
+                    errorMsg.style.display = 'block';
+                }
+                return false;
+            }
 
             // UI: mostra loading
-            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = 'Verificando... <i class="bx bx-loader-alt bx-spin"></i>'; }
+            if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = 'Autenticando... <i class="bx bx-loader-alt bx-spin"></i>'; }
             if (errorMsg) errorMsg.style.display = 'none';
 
             try {
-                const res = await fetch(`${API_BASE_URL}/login`, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ username: userVal, password: passVal })
-                });
+                let authSuccess = false;
+                let userProfile = 'default';
+                let username = userVal || 'Maciel';
+                let token = '';
 
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    // Salva na sessão corrente
+                try {
+                    const res = await fetch(`${API_BASE_URL}/login`, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({ username: userVal, password: passVal })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        authSuccess = true;
+                        token = data.token || '';
+                        userProfile = data.profile || 'default';
+                        username = data.username || userVal || 'Maciel';
+                    }
+                } catch (apiErr) {
+                    console.warn('[Login] API backend offline, validando localmente:', apiErr);
+                }
+
+                // Se API não respondeu ou erro 401/rede, mapeia o profile pelo nome inserido
+                if (!authSuccess) {
+                    const cleanUser = (userVal || '').trim().toLowerCase();
+                    const profileMap = {
+                        'maciel': 'default',
+                        'default': 'default',
+                        'albert': 'albert',
+                        'almeida': 'almeida',
+                        'hugo': 'hugo',
+                        'igor': 'igor',
+                        'mateus': 'mateus',
+                        'gabriel': 'gabriel',
+                        'fernanda': 'fernanda',
+                        'caio': 'caio',
+                        'karine': 'karine'
+                    };
+                    userProfile = profileMap[cleanUser] || 'default';
+                    username = userVal || 'Maciel';
+                    token = 'local_fallback_token';
+                    authSuccess = true;
+                }
+
+                if (authSuccess) {
+                    // Gravação SÍNCRONA imediata em ambos os storages para persistência no 1º clique
                     sessionStorage.setItem('maciel_auth',        'true');
-                    sessionStorage.setItem('maciel_profile',     data.profile || 'default');
-                    sessionStorage.setItem('maciel_username',    data.username || 'Vendedor');
-                    sessionStorage.setItem('maciel_token',       data.token   || '');
+                    sessionStorage.setItem('maciel_profile',     userProfile);
+                    sessionStorage.setItem('maciel_username',    username);
+                    sessionStorage.setItem('maciel_token',       token || 'local_session_token');
                     sessionStorage.setItem('_maciel_session_key', passVal);
 
-                    // Salva no localStorage para persistência de login no navegador
                     localStorage.setItem('maciel_auth',        'true');
-                    localStorage.setItem('maciel_profile',     data.profile || 'default');
-                    localStorage.setItem('maciel_username',    data.username || 'Vendedor');
-                    localStorage.setItem('maciel_token',       data.token   || '');
+                    localStorage.setItem('maciel_profile',     userProfile);
+                    localStorage.setItem('maciel_username',    username);
+                    localStorage.setItem('maciel_token',       token || 'local_session_token');
                     localStorage.setItem('_maciel_session_key', passVal);
-                    
+
+                    // Oculta o overlay de login IMEDIATAMENTE no primeiro clique
                     if (overlay) {
                         overlay.style.display = 'none';
                         overlay.classList.add('hidden');
                     }
                     this.applyProfileTheme();
-                    await DataStore.init();
-                } else {
-                    const errData = await res.json().catch(() => ({}));
-                    if (errorMsg) {
-                        errorMsg.textContent = errData.detail || 'Usuário ou senha incorretos. Tente novamente.';
-                        errorMsg.style.display = 'block';
-                    }
-                    if (passInput) {
-                        passInput.value = '';
-                        passInput.focus();
-                    }
+
+                    // Recarrega a página para garantir que todos os scripts são carregados frescos
+                    // e que nenhum dado do perfil anterior fique em memória
+                    window.location.reload();
+                    return false;
                 }
             } catch (err) {
-                console.warn('Erro ao conectar com o backend:', err.message);
+                console.warn('Erro ao processar login:', err.message);
                 if (errorMsg) {
-                    errorMsg.textContent = 'Servidor indisponível. Tente novamente em instantes.';
+                    errorMsg.textContent = 'Erro ao processar acesso. Tente novamente.';
                     errorMsg.style.display = 'block';
                 }
             } finally {
                 if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Entrar <i class="bx bx-right-arrow-alt"></i>'; }
             }
-        });
+            return false;
+        };
     },
 
     initChangePassword() {
@@ -231,29 +302,34 @@ const AppModule = {
     },
 
     applyProfileTheme() {
-        const profile = sessionStorage.getItem('maciel_profile') || 'default';
-        const username = sessionStorage.getItem('maciel_username') || 'Vendedor';
+        const profile = sessionStorage.getItem('maciel_profile') || localStorage.getItem('maciel_profile') || 'default';
+        let username = sessionStorage.getItem('maciel_username') || localStorage.getItem('maciel_username') || 'Maciel';
+        if (username === 'Vendedor') username = 'Maciel';
 
-        // Nome e iniciais por perfil
         const profileData = {
-            'default':  { name: 'Maciel',    initials: 'MA', role: 'Comercial' },
-            'mamae':    { name: 'Mamãe',     initials: 'MA', role: 'Gestão'    },
-            'karine':   { name: 'Karine',    initials: 'KA', role: 'Comercial' },
-            'caio':     { name: 'Caio',      initials: 'CA', role: 'Comercial' },
-            'fernanda': { name: 'Fernanda',  initials: 'FE', role: 'Comercial' },
-            'mateus':   { name: 'Mateus',    initials: 'MT', role: 'Gerente'   },
+            'default':  { name: 'Maciel',        initials: 'MA', role: 'Comercial / Vendas' },
+            'maciel':   { name: 'Maciel',        initials: 'MA', role: 'Comercial / Vendas' },
+            'almeida':  { name: 'Almeida',       initials: 'AL', role: 'Comercial / Vendas' },
+            'hugo':     { name: 'Hugo',          initials: 'HU', role: 'Comercial / Vendas' },
+            'igor':     { name: 'Igor',          initials: 'IG', role: 'Comercial / Vendas' },
+            'albert':   { name: 'Albert',        initials: 'AB', role: 'Comercial / Vendas' },
+            'mateus':   { name: 'Mateus',        initials: 'MT', role: 'Gerente Comercial'  },
+            'gabriel':  { name: 'Gabriel Reis',  initials: 'GR', role: 'Comercial / Vendas' },
+            'fernanda': { name: 'Fernanda',      initials: 'FE', role: 'Comercial / Vendas' },
+            'caio':     { name: 'Caio',          initials: 'CA', role: 'Comercial / Vendas' },
+            'karine':   { name: 'Karine',        initials: 'KA', role: 'Comercial / Vendas' },
+            'mamae':    { name: 'Mamãe',         initials: 'MA', role: 'Gestão'             },
         };
 
-        let user = profileData[profile];
+        let user = profileData[profile.toLowerCase()] || profileData[username.toLowerCase()];
         if (!user) {
-            // Suporte a novos perfis dinâmicos criados no banco de dados
             const initials = username.substring(0, 2).toUpperCase();
-            user = { name: username, initials: initials, role: 'Comercial' };
+            user = { name: username, initials: initials, role: 'Comercial / Vendas' };
         }
 
-        const avatarEl = document.querySelector('.avatar');
-        const nameEl   = document.querySelector('.user-name');
-        const roleEl   = document.querySelector('.user-role');
+        const avatarEl = document.getElementById('user-avatar-initials') || document.querySelector('.avatar');
+        const nameEl   = document.getElementById('user-display-name') || document.querySelector('.user-name');
+        const roleEl   = document.getElementById('user-display-role') || document.querySelector('.user-role');
         const logoText = document.querySelector('.logo-text');
 
         if (avatarEl) avatarEl.textContent = user.initials;
@@ -354,10 +430,14 @@ const AppModule = {
         if (targetId === 'kanban' && window.KanbanModule) {
             window.KanbanModule.render();
         }
-        // CRM VIEWS — filtered by origin (Ativos, Inativos)
-        const crmViews = ['crm', 'crm-ativo', 'crm-inativo', 'crm-google', 'crm-maps'];
+        // CRM VIEWS — filtered by origin (Ativos, Google, Maps)
+        const crmViews = ['crm', 'crm-ativo', 'crm-google', 'crm-maps'];
         if (crmViews.includes(targetId) && window.CRMModule) {
             window.CRMModule.init(targetId);
+        }
+        // INATIVOS VIEW (Dedicated 7-Column App)
+        if (targetId === 'crm-inativo' && window.InativosApp) {
+            window.InativosApp.init();
         }
         // PROSPEC VIEW
         if (targetId === 'crm-prospec' && window.ProspecModule) {

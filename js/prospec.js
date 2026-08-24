@@ -31,11 +31,21 @@ const RATING_COLORS = {
     'Péssima': { bg: 'rgba(139,92,246,0.15)', color: '#a78bfa', label: '🟣 Péssima' }
 };
 
+const STAGES_PROSPEC = [
+    { id: 'Novo Prospecto',   label: '🎯 Novo Prospecto',   color: '#6366f1' },
+    { id: 'Em Contato',       label: '📞 Em Contato',       color: '#3b82f6' },
+    { id: 'Proposta Enviada', label: '💡 Proposta Enviada', color: '#f59e0b' },
+    { id: 'Em Negociação',    label: '🤝 Em Negociação',    color: '#8b5cf6' },
+    { id: 'Fechado / Ganho',  label: '✅ Fechado / Ganho',  color: '#10b981' },
+    { id: 'Perdido',          label: '❌ Perdido',          color: '#6b7280' }
+];
+
 const ProspecModule = {
     prospects: [],
     filteredProspects: [],
     currentPage: 1,
     itemsPerPage: 20,
+    currentViewMode: 'list', // 'list' ou 'kanban'
     
     init() {
         this.cacheDOM();
@@ -541,6 +551,166 @@ const ProspecModule = {
         `;
     },
 
+    // ── Alternância entre Planilha e Funil (Kanban) ──
+    switchViewMode(mode) {
+        this.currentViewMode = mode;
+        const btnList = document.getElementById('prospec-tab-btn-list');
+        const btnKanban = document.getElementById('prospec-tab-btn-kanban');
+        const containerList = document.getElementById('prospec-view-list-container');
+        const containerKanban = document.getElementById('prospec-view-kanban-container');
+
+        if (mode === 'list') {
+            if (btnList) { btnList.className = 'btn btn-primary'; }
+            if (btnKanban) { btnKanban.className = 'btn btn-outline'; }
+            if (containerList) containerList.classList.remove('hidden');
+            if (containerKanban) containerKanban.classList.add('hidden');
+            this.renderList();
+        } else {
+            if (btnList) { btnList.className = 'btn btn-outline'; }
+            if (btnKanban) { btnKanban.className = 'btn btn-primary'; }
+            if (containerList) containerList.classList.add('hidden');
+            if (containerKanban) containerKanban.classList.remove('hidden');
+            this.renderKanban();
+        }
+    },
+
+    // ── Funil Kanban com Drag and Drop e Anotações Inline ──
+    renderKanban() {
+        const container = document.getElementById('prospec-kanban-board-container');
+        if (!container) return;
+
+        const stageProspects = {};
+        STAGES_PROSPEC.forEach(s => stageProspects[s.id] = []);
+
+        const filtered = this.getFilteredProspects ? this.getFilteredProspects() : this.prospects;
+        filtered.forEach(p => {
+            const stage = p.stage || 'Novo Prospecto';
+            if (stageProspects[stage]) stageProspects[stage].push(p);
+            else stageProspects['Novo Prospecto'].push(p);
+        });
+
+        container.innerHTML = STAGES_PROSPEC.map(s => {
+            const list = stageProspects[s.id] || [];
+            return `
+            <div class="kanban-column"
+                 ondragover="ProspecModule.handleDragOver(event)"
+                 ondragleave="ProspecModule.handleDragLeave(event)"
+                 ondrop="ProspecModule.handleDrop(event, '${s.id}')"
+                 style="background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:10px;padding:0.8rem;display:flex;flex-direction:column;gap:0.8rem;min-height:350px;">
+                <div style="font-weight:700;font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${s.color};padding-bottom:0.5rem;">
+                    <span>${s.label}</span>
+                    <span style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:10px;font-size:0.75rem;">${list.length}</span>
+                </div>
+                
+                <div class="kanban-cards-wrap" style="display:flex;flex-direction:column;gap:0.6rem;overflow-y:auto;flex:1;">
+                    ${list.length === 0 ? `<div style="text-align:center;padding:1.5rem 0.5rem;font-size:0.75rem;color:var(--text-muted);border:1px dashed var(--border-color);border-radius:8px;">Arraste um prospecto aqui</div>` : list.map(p => this.renderKanbanCard(p, s)).join('')}
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    renderKanbanCard(p, stage) {
+        const name = p.razaoSocial || p.name || 'Prospecto Sem Nome';
+        const buyerVal = p.buyer || 'Contato não informado';
+        const cityVal = p.city || '—';
+        const regionVal = p.region || '';
+        const notesVal = p.notes || '';
+        const phoneVal = p.phone || '';
+        const phoneDigits = phoneVal.replace(/\D/g, '');
+        const wppUrl = phoneDigits ? `https://wa.me/55${phoneDigits}` : '#';
+
+        const stageOpts = STAGES_PROSPEC
+            .filter(x => x.id !== stage.id)
+            .map(x => `<option value="${x.id}">${x.label}</option>`)
+            .join('');
+
+        return `
+        <div class="kanban-card" 
+             draggable="true" 
+             ondragstart="ProspecModule.handleDragStart(event, '${p.id}')"
+             ondragend="ProspecModule.handleDragEnd(event)"
+             style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:8px;padding:0.7rem;font-size:0.8rem;display:flex;flex-direction:column;gap:0.4rem;cursor:grab;">
+            
+            <div style="font-weight:700;color:var(--text-main);line-height:1.25;">${this.escapeHTML(name)}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);">👤 ${this.escapeHTML(buyerVal)} • ${this.escapeHTML(cityVal)} ${regionVal ? '(' + this.escapeHTML(regionVal) + ')' : ''}</div>
+            
+            <!-- Anotações Inline com Bloqueio de Drag -->
+            <div style="display:flex;flex-direction:column;gap:0.3rem;" onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()">
+                <textarea class="form-control" rows="2" placeholder="Digite anotações..."
+                          draggable="false"
+                          onchange="ProspecModule.updateProspectField('${p.id}', { notes: this.value })"
+                          onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()"
+                          style="width:100%;resize:vertical;min-height:44px;font-size:0.78rem;line-height:1.3;padding:0.35rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);color:var(--text-main);box-sizing:border-box;">${this.escapeHTML(notesVal)}</textarea>
+                
+                <button draggable="false" onclick="ProspecModule.openNotesModal('${p.id}')" onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()" style="align-self:flex-end;font-size:0.7rem;padding:0.12rem 0.45rem;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;">
+                    <i class='bx bx-fullscreen'></i> Painel Completo
+                </button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.2rem;padding-top:0.4rem;border-top:1px dashed var(--border-color);" onmousedown="event.stopPropagation()" onpointerdown="event.stopPropagation()">
+                ${phoneDigits ? `<a href="${wppUrl}" target="_blank" draggable="false" style="color:#25D366;font-size:0.75rem;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:0.2rem;">
+                    <i class='bx bxl-whatsapp'></i> WhatsApp
+                </a>` : '<span></span>'}
+                
+                <select draggable="false" onchange="ProspecModule.updateProspectField('${p.id}', { stage: this.value }).then(() => ProspecModule.renderKanban())" style="padding:0.2rem 0.4rem;font-size:0.72rem;border-radius:4px;background:rgba(255,255,255,0.05);color:var(--text-main);border:1px solid var(--border-color);cursor:pointer;">
+                    <option value="">↪ Mover</option>
+                    ${stageOpts}
+                </select>
+            </div>
+        </div>`;
+    },
+
+    // Drag-and-Drop Handlers
+    handleDragStart(e, id) {
+        e.dataTransfer.setData('text/plain', id);
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => {
+            if (e.target) e.target.style.opacity = '0.4';
+        }, 0);
+    },
+
+    handleDragEnd(e) {
+        if (e.target) e.target.style.opacity = '1';
+        document.querySelectorAll('.kanban-column').forEach(c => {
+            c.style.borderColor = 'var(--border-color)';
+            c.style.background = 'rgba(255,255,255,0.02)';
+        });
+    },
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const col = e.currentTarget;
+        if (col) {
+            col.style.borderColor = 'var(--primary)';
+            col.style.background = 'rgba(99,102,241,0.06)';
+        }
+    },
+
+    handleDragLeave(e) {
+        const col = e.currentTarget;
+        if (col) {
+            col.style.borderColor = 'var(--border-color)';
+            col.style.background = 'rgba(255,255,255,0.02)';
+        }
+    },
+
+    async handleDrop(e, targetStage) {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text/plain');
+        if (!id) return;
+
+        const p = this.prospects.find(x => x.id === id);
+        if (p && p.stage !== targetStage) {
+            p.stage = targetStage;
+            await this.updateProspectField(id, { stage: targetStage });
+            this.renderKanban();
+            if (typeof App !== 'undefined' && App.showToast) {
+                App.showToast(`Movido para ${targetStage}`);
+            }
+        }
+    },
+
     // ── Painel / Modal de Anotações Expandido (Tela Cheia) ──
     openNotesModal(id) {
         const p = this.prospects.find(x => x.id === id);
@@ -590,6 +760,9 @@ const ProspecModule = {
 
         await this.updateProspectField(id, { notes });
         document.getElementById('prospec-notes-modal').classList.add('hidden');
+        if (this.currentViewMode === 'kanban') this.renderKanban();
+        else this.renderList();
+
         if (typeof App !== 'undefined' && App.showToast) {
             App.showToast("Anotações salvas com sucesso!");
         }
@@ -600,7 +773,9 @@ const ProspecModule = {
         if (!idEl || !idEl.value) return;
         const id = idEl.value;
         document.getElementById('prospec-notes-modal').classList.add('hidden');
-        WhatsAppModule.openComposer(id);
+        if (typeof WhatsAppModule !== 'undefined' && WhatsAppModule.openComposer) {
+            WhatsAppModule.openComposer(id);
+        }
     },
 
     escapeHTML(str) {

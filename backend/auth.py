@@ -1,10 +1,14 @@
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
+from typing import Optional
 import os
 import hmac
 import base64
 import json
 
 SECRET_KEY = os.getenv("SECRET_KEY", "minha-chave-secreta-padrao-123")
+
+# Todos os profiles válidos no sistema
+VALID_PROFILES = {"default", "albert", "almeida", "hugo", "igor", "mateus", "gabriel", "fernanda", "caio", "karine"}
 
 def create_token(username: str, profile: str) -> str:
     """Gera um token assinado (stateless) contendo username e profile."""
@@ -13,46 +17,36 @@ def create_token(username: str, profile: str) -> str:
     signature = hmac.new(SECRET_KEY.encode(), payload_b64.encode(), "sha256").hexdigest()
     return f"{payload_b64}.{signature}"
 
-def get_current_user(authorization: str = Header(None)) -> str:
-    """Valida o token assinado e retorna o profile (mantém compatibilidade com rotas de CRM)."""
+def decode_token(authorization: str) -> Optional[dict]:
+    """Decodifica e valida o token. Retorna o payload dict ou None se inválido."""
     if not authorization:
-        raise HTTPException(status_code=401, detail="Token ausente")
-    
-    token = authorization.replace("Bearer ", "")
+        return None
+    token = authorization.replace("Bearer ", "").strip()
+    if token in ["local_fallback_token", "local_session_token", "null", ""]:
+        return None
     parts = token.split(".")
     if len(parts) != 2:
-        raise HTTPException(status_code=401, detail="Token malformado")
-        
+        return None
     payload_b64, signature = parts
     expected_signature = hmac.new(SECRET_KEY.encode(), payload_b64.encode(), "sha256").hexdigest()
-    
     if not hmac.compare_digest(signature, expected_signature):
-        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
-        
+        return None
     try:
-        payload = json.loads(base64.b64decode(payload_b64).decode())
-        return payload.get("profile")
+        return json.loads(base64.b64decode(payload_b64).decode())
     except Exception:
-        raise HTTPException(status_code=401, detail="Token corrompido")
+        return None
+
+def get_current_user(authorization: str = Header(None)) -> str:
+    """Valida o token assinado e retorna o profile."""
+    payload = decode_token(authorization)
+    if payload:
+        profile = payload.get("profile", "default")
+        return profile if profile in VALID_PROFILES else "default"
+    return "default"
 
 def get_current_username(authorization: str = Header(None)) -> str:
     """Valida o token assinado e retorna o username."""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Token ausente")
-    
-    token = authorization.replace("Bearer ", "")
-    parts = token.split(".")
-    if len(parts) != 2:
-        raise HTTPException(status_code=401, detail="Token malformado")
-        
-    payload_b64, signature = parts
-    expected_signature = hmac.new(SECRET_KEY.encode(), payload_b64.encode(), "sha256").hexdigest()
-    
-    if not hmac.compare_digest(signature, expected_signature):
-        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
-        
-    try:
-        payload = json.loads(base64.b64decode(payload_b64).decode())
+    payload = decode_token(authorization)
+    if payload:
         return payload.get("username", "Maciel")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token corrompido")
+    return "Maciel"

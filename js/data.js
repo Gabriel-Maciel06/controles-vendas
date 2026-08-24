@@ -1,7 +1,31 @@
 /**
  * Data Management Module - Cloud Sync
  */
-const API_BASE_URL = "/api";
+const API_BASE_URL = (() => {
+    if (typeof window === 'undefined' || !window.location) return '/api';
+    const port = window.location.port;
+    const hostname = window.location.hostname || 'localhost';
+    // Se estiver rodando no próprio FastAPI (porta 8000) ou em produção (Vercel/Render/sem porta)
+    if (port === '8000' || !port || port === '80' || port === '443') {
+        return '/api';
+    }
+    // Servidor de desenvolvimento estático (8080, 5500, 3000, etc.)
+    return `http://${hostname}:8000/api`;
+})();
+window.API_BASE_URL = API_BASE_URL;
+
+window.getActiveProfile = function() {
+    const token = sessionStorage.getItem('maciel_token') || localStorage.getItem('maciel_token') || '';
+    if (token && token.includes('.') && token !== 'local_fallback_token' && token !== 'local_session_token') {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[0] + '=='));
+            if (payload && payload.profile) return String(payload.profile).toLowerCase().trim();
+        } catch(e) {}
+    }
+    const p = sessionStorage.getItem('maciel_profile') || localStorage.getItem('maciel_profile');
+    if (p && p !== 'null' && p !== 'undefined') return String(p).toLowerCase().trim();
+    return 'default';
+};
 
 const STORAGE_MAP = {
     'crm_sales': 'sales',
@@ -20,7 +44,7 @@ const STORAGE_KEYS = {
 };
 
 function getAuthHeaders() {
-    const token = sessionStorage.getItem('maciel_token') || localStorage.getItem('maciel_token');
+    const token = sessionStorage.getItem('maciel_token') || localStorage.getItem('maciel_token') || 'local_session_token';
     return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -28,22 +52,25 @@ function getAuthHeaders() {
 }
 
 /**
- * Faz fetch autenticado. Se receber 401 E o usuário já estiver logado,
- * tenta renovar o token silenciosamente e repete a requisição.
- * NÃO é chamado durante o próprio processo de login.
+ * Faz fetch autenticado seguro sem causar destruição em cadeia de tokens em caso de 401 temporário.
  */
 async function fetchWithAuth(url, options = {}) {
     options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
-    let res = await fetch(url, options);
+    let res;
+    try {
+        res = await fetch(url, options);
+    } catch (err) {
+        console.warn(`[fetchWithAuth] Erro de conexão em ${url}:`, err.message);
+        return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
 
-    // Só tenta renovar se o usuário já estava autenticado (token expirou)
-    const isAuth = sessionStorage.getItem('maciel_auth') === 'true' || localStorage.getItem('maciel_auth') === 'true';
-    if (res.status === 401 && isAuth) {
+    // Tenta renovar o token automaticamente se a requisição retornar 401
+    if (res.status === 401) {
         const cachedPass = sessionStorage.getItem('_maciel_session_key') || localStorage.getItem('_maciel_session_key');
+        const username = sessionStorage.getItem('maciel_username') || localStorage.getItem('maciel_username') || 'Maciel';
 
         if (cachedPass) {
             try {
-                const username = sessionStorage.getItem('maciel_username') || localStorage.getItem('maciel_username') || '';
                 const loginRes = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -52,30 +79,20 @@ async function fetchWithAuth(url, options = {}) {
 
                 if (loginRes.ok) {
                     const data = await loginRes.json();
-                    sessionStorage.setItem('maciel_token', data.token || '');
+                    const newToken = data.token || 'local_token_session';
+                    sessionStorage.setItem('maciel_token', newToken);
                     sessionStorage.setItem('maciel_profile', data.profile || 'default');
-                    localStorage.setItem('maciel_token', data.token || '');
+                    sessionStorage.setItem('maciel_auth', 'true');
+                    localStorage.setItem('maciel_token', newToken);
                     localStorage.setItem('maciel_profile', data.profile || 'default');
-                    console.log('[Auth] Token renovado automaticamente!');
+                    localStorage.setItem('maciel_auth', 'true');
+                    console.log('[Auth] Token renovado automaticamente via /login!');
 
-                    // Repete a requisição original com novo token
                     options.headers = { ...getAuthHeaders(), ...(options.headers || {}) };
                     res = await fetch(url, options);
                 }
             } catch (e) {
-                console.error('[Auth] Falha ao renovar token:', e);
-            }
-        } else {
-            // Sem senha em cache — exibe tela de login sem dar reload na página
-            console.warn('[Auth] Token expirado ou inválido. Exibindo formulário de acesso...');
-            sessionStorage.removeItem('maciel_auth');
-            sessionStorage.removeItem('maciel_token');
-            localStorage.removeItem('maciel_auth');
-            localStorage.removeItem('maciel_token');
-            const overlay = document.getElementById('login-overlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-                overlay.classList.remove('hidden');
+                console.error('[Auth] Falha na renovação automática do token:', e);
             }
         }
     }
@@ -94,9 +111,17 @@ const DataStore = {
     isReady: false,
 
     async init() {
-        const profile = sessionStorage.getItem('maciel_profile') || 'default';
+        const activeProfile = window.getActiveProfile();
+        const token = sessionStorage.getItem('maciel_token') || localStorage.getItem('maciel_token') || '';
 
-        // Limpa cache antes de carregar
+        console.group('%c[DEBUG 0 - DATASTORE.INIT START]', 'background:#1e293b;color:#38bdf8;font-weight:bold;padding:2px 6px;border-radius:3px');
+        console.log('perfil ativo validado (activeProfile):', activeProfile);
+        console.log('token:', token ? token.substring(0, 40) + '...' : 'VAZIO');
+        console.log('maciel_auth:', sessionStorage.getItem('maciel_auth') || localStorage.getItem('maciel_auth'));
+        console.log('API_BASE_URL:', API_BASE_URL);
+        console.groupEnd();
+
+        // Limpa cache antes de carregar — garante que não haja resíduos do perfil anterior
         this.cache = {
             crm_sales:     [],
             crm_customers: [],
@@ -104,34 +129,148 @@ const DataStore = {
             crm_settings:  {},
             crm_reminders: []
         };
-        this.isReady = false;
 
+        // Tier 0: Tenta consulta direta ao Supabase de Produção se o cliente estiver ativo
+        if (typeof window !== 'undefined' && window.SupabaseModule) {
+            try {
+                const supaSales = await window.SupabaseModule.fetchSales(activeProfile);
+                if (Array.isArray(supaSales) && supaSales.length > 0) {
+                    this.cache.crm_sales = supaSales.filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+                    console.log(`[DataStore] Supabase Produção carregou ${this.cache.crm_sales.length} vendas.`);
+                }
+            } catch (e) {
+                console.warn('[DEBUG T0 - SUPABASE ERRO]', e);
+            }
+        }
+
+        // Tier 1: Tenta buscar da API Backend FastAPI
         try {
             const [salesRes, customersRes, samplesRes, settingsRes, remindersRes] = await Promise.all([
-                fetchWithAuth(`${API_BASE_URL}/sales?profile=${profile}`),
-                fetchWithAuth(`${API_BASE_URL}/customers?profile=${profile}`),
-                fetchWithAuth(`${API_BASE_URL}/samples?profile=${profile}`),
-                fetchWithAuth(`${API_BASE_URL}/settings?profile=${profile}`),
-                fetchWithAuth(`${API_BASE_URL}/reminders?profile=${profile}`)
+                fetchWithAuth(`${API_BASE_URL}/sales?profile=${activeProfile}`),
+                fetchWithAuth(`${API_BASE_URL}/customers?profile=${activeProfile}`),
+                fetchWithAuth(`${API_BASE_URL}/samples?profile=${activeProfile}`),
+                fetchWithAuth(`${API_BASE_URL}/settings?profile=${activeProfile}`),
+                fetchWithAuth(`${API_BASE_URL}/reminders?profile=${activeProfile}`)
             ]);
 
-            if (salesRes.ok)    this.cache.crm_sales     = await salesRes.json();
-            if (customersRes.ok) this.cache.crm_customers = await customersRes.json();
-            if (samplesRes.ok)  this.cache.crm_samples    = await samplesRes.json();
-            if (settingsRes.ok) this.cache.crm_settings   = await settingsRes.json();
-            if (remindersRes.ok) this.cache.crm_reminders = await remindersRes.json();
+            if (salesRes && salesRes.ok) {
+                const sData = await salesRes.json().catch(() => []);
+                if (Array.isArray(sData) && sData.length > 0) {
+                    this.cache.crm_sales = sData.filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+                }
+            }
+            if (customersRes && customersRes.ok) {
+                const cData = await customersRes.json().catch(() => []);
+                if (Array.isArray(cData) && cData.length > 0) {
+                    this.cache.crm_customers = cData.filter(c => (c.profile || 'default').toLowerCase() === activeProfile);
+                }
+            }
+            if (samplesRes && samplesRes.ok) {
+                const smData = await samplesRes.json().catch(() => []);
+                if (Array.isArray(smData) && smData.length > 0) {
+                    this.cache.crm_samples = smData.filter(sm => (sm.profile || 'default').toLowerCase() === activeProfile);
+                }
+            }
+            if (settingsRes && settingsRes.ok) {
+                const stData = await settingsRes.json().catch(() => ({}));
+                if (stData && typeof stData === 'object' && Object.keys(stData).length > 0) this.cache.crm_settings = stData;
+            }
+            if (remindersRes && remindersRes.ok) {
+                const rData = await remindersRes.json().catch(() => []);
+                if (Array.isArray(rData) && rData.length > 0) {
+                    this.cache.crm_reminders = rData.filter(r => (r.profile || 'default').toLowerCase() === activeProfile);
+                }
+            }
 
-            console.log(`[DataStore] Carregado: ${this.cache.crm_sales.length} vendas, ${this.cache.crm_customers.length} clientes`);
-
-            this.isReady = true;
-            document.dispatchEvent(new Event('DataStoreReady'));
+            console.log(`[DataStore] FastAPI carregou: ${this.cache.crm_sales.length} vendas para perfil [${activeProfile}]`);
         } catch (error) {
-            console.error("DataStore Init Error", error);
-            document.dispatchEvent(new Event('DataStoreReady'));
+            console.warn('[DEBUG T1 - FASTAPI ERRO CRÍTICO]', error);
         }
+
+        // Tier 2: Fallback para datasets embutidos na window (window.SALES_DATASET, window.CUSTOMERS_DATASET)
+        if (this.cache.crm_sales.length === 0 && typeof window !== 'undefined' && Array.isArray(window.SALES_DATASET) && window.SALES_DATASET.length > 0) {
+            const filteredSales = window.SALES_DATASET.filter(s => {
+                const sProf = (s.profile || 'default').toLowerCase();
+                return sProf === activeProfile;
+            });
+            this.cache.crm_sales = filteredSales;
+            console.log(`[DataStore] Fallback SALES_DATASET embutido carregou ${this.cache.crm_sales.length} vendas para o perfil [${activeProfile}].`);
+        }
+
+        if (this.cache.crm_customers.length === 0 && typeof window !== 'undefined' && Array.isArray(window.CUSTOMERS_DATASET) && window.CUSTOMERS_DATASET.length > 0) {
+            const filteredCust = window.CUSTOMERS_DATASET.filter(c => {
+                const cProf = (c.profile || 'default').toLowerCase();
+                return cProf === activeProfile;
+            });
+            this.cache.crm_customers = filteredCust;
+            console.log(`[DataStore] Fallback CUSTOMERS_DATASET embutido carregou ${this.cache.crm_customers.length} clientes para o perfil [${activeProfile}].`);
+        }
+
+        // Tier 3: Fallback para arquivos JSON estáticos em data/
+        if (this.cache.crm_sales.length === 0) {
+            const candidatePaths = ['data/sales.json', './data/sales.json', '/data/sales.json', 'app/data/sales.json'];
+            for (const path of candidatePaths) {
+                try {
+                    const localSalesRes = await fetch(path);
+                    if (localSalesRes.ok) {
+                        const lSales = await localSalesRes.json();
+                        if (Array.isArray(lSales) && lSales.length > 0) {
+                            const filtered = lSales.filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+                            this.cache.crm_sales = filtered;
+                            console.log(`[DataStore] Fallback JSON local (${path}) carregou ${filtered.length} vendas para o perfil [${activeProfile}].`);
+                            break;
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        if (this.cache.crm_customers.length === 0) {
+            const candidatePaths = ['data/customers.json', './data/customers.json', '/data/customers.json', 'app/data/customers.json'];
+            for (const path of candidatePaths) {
+                try {
+                    const localCustRes = await fetch(path);
+                    if (localCustRes.ok) {
+                        const lCust = await localCustRes.json();
+                        if (Array.isArray(lCust) && lCust.length > 0) {
+                            const filtered = lCust.filter(c => (c.profile || 'default').toLowerCase() === activeProfile);
+                            this.cache.crm_customers = filtered;
+                            console.log(`[DataStore] Fallback JSON local (${path}) carregou ${filtered.length} clientes para o perfil [${activeProfile}].`);
+                            break;
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        console.group('%c[DEBUG 4 - DATASTORE FINAL]', 'background:#1e293b;color:#f59e0b;font-weight:bold;padding:2px 6px;border-radius:3px');
+        console.log('crm_sales no cache:', this.cache.crm_sales.length, 'registros');
+        console.log('crm_customers no cache:', this.cache.crm_customers.length, 'registros');
+        console.log('Primeiras 3 vendas no cache:', this.cache.crm_sales.slice(0, 3));
+        console.groupEnd();
+
+        this.isReady = true;
+        document.dispatchEvent(new Event('DataStoreReady'));
     },
 
-    get(key) { return this.cache[key] || (key === STORAGE_KEYS.SETTINGS ? {} : []); },
+    get(key) {
+        let result = this.cache[key] || (key === STORAGE_KEYS.SETTINGS ? {} : []);
+        const activeProfile = window.getActiveProfile ? window.getActiveProfile() : 'default';
+
+        if (key === STORAGE_KEYS.SALES && Array.isArray(result)) {
+            return result.filter(s => (s.profile || 'default').toLowerCase() === activeProfile);
+        }
+        if (key === STORAGE_KEYS.CUSTOMERS && Array.isArray(result)) {
+            return result.filter(c => (c.profile || 'default').toLowerCase() === activeProfile);
+        }
+        if (key === STORAGE_KEYS.SAMPLES && Array.isArray(result)) {
+            return result.filter(sm => (sm.profile || 'default').toLowerCase() === activeProfile);
+        }
+        if (key === STORAGE_KEYS.REMINDERS && Array.isArray(result)) {
+            return result.filter(r => (r.profile || 'default').toLowerCase() === activeProfile);
+        }
+        return result;
+    },
 
     async set(key, data) {
         this.cache[key] = data;
